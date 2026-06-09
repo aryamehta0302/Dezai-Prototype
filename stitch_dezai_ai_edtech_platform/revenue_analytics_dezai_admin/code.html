@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Global Revenue Analytics | Dezai Admin</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&amp;family=Geist:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#ecedf9",
+                        "error-container": "#ffdad6",
+                        "surface-container-high": "#e6e7f3",
+                        "primary-container": "#0d6efd",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "on-surface": "#191b24",
+                        "error": "#ba1a1a",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-container": "#316bf3",
+                        "on-tertiary-fixed-variant": "#7f2b00",
+                        "on-background": "#191b24",
+                        "surface-container-low": "#f2f3ff",
+                        "surface-container-highest": "#e1e2ee",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed-dim": "#ffb599",
+                        "surface-tint": "#0057ce",
+                        "tertiary-fixed": "#ffdbce",
+                        "on-tertiary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "surface-variant": "#e1e2ee",
+                        "primary-fixed-dim": "#b1c5ff",
+                        "inverse-on-surface": "#eff0fc",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "secondary": "#0051d5",
+                        "primary": "#0057cd",
+                        "on-primary-fixed": "#001946",
+                        "surface-dim": "#d8d9e5",
+                        "outline": "#727787",
+                        "tertiary-container": "#cf4b00",
+                        "surface": "#faf8ff",
+                        "inverse-primary": "#b1c5ff",
+                        "on-tertiary-container": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "secondary-fixed": "#dbe1ff",
+                        "primary-fixed": "#dae2ff",
+                        "on-secondary-container": "#fefcff",
+                        "on-tertiary-fixed": "#370e00",
+                        "inverse-surface": "#2d3039",
+                        "surface-bright": "#faf8ff",
+                        "background": "#faf8ff",
+                        "on-surface-variant": "#424655",
+                        "outline-variant": "#c2c6d8",
+                        "on-primary-container": "#ffffff",
+                        "on-primary-fixed-variant": "#00419e",
+                        "on-secondary": "#ffffff",
+                        "tertiary": "#a63b00",
+                        "on-secondary-fixed": "#00174b"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "xl": "64px",
+                        "margin-mobile": "16px",
+                        "md": "24px",
+                        "margin-desktop": "48px",
+                        "sm": "12px",
+                        "lg": "40px",
+                        "gutter": "24px",
+                        "base": "8px",
+                        "container-max": "1440px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "label-sm": ["Geist"],
+                        "headline-lg-mobile": ["Geist"],
+                        "label-md": ["Geist"],
+                        "headline-sm": ["Geist"],
+                        "display-sm": ["Geist"],
+                        "body-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Geist"],
+                        "display-lg": ["Geist"],
+                        "headline-lg": ["Geist"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "label-sm": ["12px", {"lineHeight": "1", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                        "label-md": ["14px", {"lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "headline-sm": ["20px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                        "display-sm": ["36px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-lg": ["30px", {"lineHeight": "1.3", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+        }
+        .card-elevation {
+            background-color: #ffffff;
+            box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.03);
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
+        }
+        .card-elevation:hover {
+            box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.08);
+        }
+        .scroll-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .active-nav {
+            background-color: #316bf3;
+            color: #ffffff;
+            border-radius: 0.75rem;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md overflow-x-hidden">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-50 bg-surface shadow-sm transition-transform duration-200">
+<div class="flex items-center justify-between px-margin-desktop py-4 max-w-container-max mx-auto">
+<div class="flex items-center gap-base">
+<img alt="Dezai Logo" class="h-10 w-10 object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCxH3DrvKJdzdzB8dn77AkMgwq5VVjkvIMd1vcNTaxKJmjcFSQXh_jk1-HqNYAZToLjogNSME0B6opcEEf_uykZj2W_Kpx_igxa0EOrS6z7Dao44JGKQ3BTn5AzXIwowYQ4u2Ehzouwqw0tSWWArLQDnUUWYpKi5bqWwAuDt2OiDNKnz6HHJTitPXxnlZPQ_bpT_-5Ks9fmxTdkeN8nI4TfAJI2kFR9agTP1cCanbm_wi4cXOKBwGyA7VIer9ojbBH421XTGUhculx5"/>
+<span class="font-headline-md text-headline-md font-bold text-primary">Dezai AI</span>
+</div>
+<nav class="hidden md:flex items-center gap-lg">
+<a class="text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 px-4 py-2 rounded-lg font-label-md text-label-md" href="#">Dashboard</a>
+<a class="text-primary font-bold px-4 py-2 rounded-lg font-label-md text-label-md" href="#">Revenue</a>
+<a class="text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 px-4 py-2 rounded-lg font-label-md text-label-md" href="#">Partners</a>
+<a class="text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 px-4 py-2 rounded-lg font-label-md text-label-md" href="#">Settings</a>
+</nav>
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-outline p-2 hover:bg-surface-container-low rounded-full transition-colors active:scale-95">notifications</button>
+<div class="w-10 h-10 rounded-full bg-secondary-fixed flex items-center justify-center overflow-hidden border-2 border-surface-container-high">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a senior financial executive in a high-end corporate setting. The person has a confident expression, wearing a sharp charcoal suit. The background is a blurred high-rise office with soft, natural morning light filtering through large windows, maintaining a clean and premium professional aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDrWVjoTwVqTEXTAf987hMeEbAhz6sCStubu4Ory5T-XT-Oe_xTgLphH61mHGhw-HPbhjE5AIVXtNHzLuBkeKsLJ-J-ubR4B-LzUKwPajBwE-98FNFiR3gLZzlWpO-NkRr9he9U5AetJhu_tw-5o1lcAlqHciPra2qdZW5K3z8kqyda7cox0XeivPg5TPbhCALLEC2tCO81bZibgAgj0Yg_U9PT9OWeQyy5JPwU6pbrhqu11-FShE-qeQZrKfSsBlxpC-ssjlyVarIc"/>
+</div>
+</div>
+</div>
+</header>
+<main class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-lg">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
+<div>
+<p class="font-label-md text-label-md text-primary font-semibold mb-1">ADMINISTRATIVE PORTAL</p>
+<h1 class="font-display-sm text-display-sm text-on-surface">Global Revenue Analytics</h1>
+</div>
+<div class="flex items-center gap-base">
+<button class="flex items-center gap-xs px-md py-3 bg-surface-container-high text-on-surface-variant rounded-xl font-label-md text-label-md hover:bg-surface-container-highest transition-all active:scale-95">
+<span class="material-symbols-outlined text-[20px]">calendar_today</span>
+                    Last 30 Days
+                </button>
+<button class="flex items-center gap-xs px-md py-3 bg-primary text-on-primary rounded-xl font-label-md text-label-md hover:bg-secondary transition-all active:scale-95 shadow-md">
+<span class="material-symbols-outlined text-[20px]">download</span>
+                    Export Report
+                </button>
+</div>
+</div>
+<!-- Financial Summary Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter mb-lg">
+<div class="card-elevation p-md rounded-xl flex flex-col justify-between h-40">
+<div class="flex justify-between items-start">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Gross Revenue</span>
+<div class="p-2 bg-primary-container/10 rounded-lg">
+<span class="material-symbols-outlined text-primary">payments</span>
+</div>
+</div>
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">$2,840,922</h2>
+<p class="flex items-center gap-xs text-secondary font-label-sm text-label-sm mt-1">
+<span class="material-symbols-outlined text-[16px]">trending_up</span>
+                        +12.4% from last month
+                    </p>
+</div>
+</div>
+<div class="card-elevation p-md rounded-xl flex flex-col justify-between h-40">
+<div class="flex justify-between items-start">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Platform Fee (30%)</span>
+<div class="p-2 bg-secondary-container/10 rounded-lg">
+<span class="material-symbols-outlined text-secondary">account_balance_wallet</span>
+</div>
+</div>
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">$852,276</h2>
+<p class="flex items-center gap-xs text-secondary font-label-sm text-label-sm mt-1">
+<span class="material-symbols-outlined text-[16px]">trending_up</span>
+                        +8.2% fee growth
+                    </p>
+</div>
+</div>
+<div class="card-elevation p-md rounded-xl flex flex-col justify-between h-40">
+<div class="flex justify-between items-start">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">University Payouts</span>
+<div class="p-2 bg-tertiary-container/10 rounded-lg">
+<span class="material-symbols-outlined text-tertiary">school</span>
+</div>
+</div>
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">$1,988,646</h2>
+<p class="flex items-center gap-xs text-on-surface-variant font-label-sm text-label-sm mt-1">
+<span class="material-symbols-outlined text-[16px]">sync</span>
+                        70% settlement rate
+                    </p>
+</div>
+</div>
+<div class="card-elevation p-md rounded-xl flex flex-col justify-between h-40">
+<div class="flex justify-between items-start">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Avg. Order Value</span>
+<div class="p-2 bg-error-container/10 rounded-lg">
+<span class="material-symbols-outlined text-error">analytics</span>
+</div>
+</div>
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">$142.50</h2>
+<p class="flex items-center gap-xs text-error font-label-sm text-label-sm mt-1">
+<span class="material-symbols-outlined text-[16px]">trending_down</span>
+                        -2.1% lower volume
+                    </p>
+</div>
+</div>
+</div>
+<!-- Main Analytics Section -->
+<div class="bento-grid">
+<!-- Revenue by University Chart -->
+<div class="col-span-12 lg:col-span-7 card-elevation rounded-xl p-md">
+<div class="flex items-center justify-between mb-lg">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Revenue by University</h3>
+<div class="flex gap-base">
+<button class="p-2 hover:bg-surface-container-low rounded-lg transition-colors"><span class="material-symbols-outlined text-outline">more_vert</span></button>
+</div>
+</div>
+<div class="h-64 flex items-end justify-between gap-base px-base mb-md">
+<!-- Custom Chart Bars -->
+<div class="flex flex-col items-center gap-base flex-1">
+<div class="w-full bg-primary-fixed-dim rounded-t-lg transition-all duration-700 hover:bg-primary cursor-pointer" style="height: 85%;"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant rotate-[-45deg] md:rotate-0">Stanford</span>
+</div>
+<div class="flex flex-col items-center gap-base flex-1">
+<div class="w-full bg-primary-fixed-dim rounded-t-lg transition-all duration-700 hover:bg-primary cursor-pointer" style="height: 65%;"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant rotate-[-45deg] md:rotate-0">MIT</span>
+</div>
+<div class="flex flex-col items-center gap-base flex-1">
+<div class="w-full bg-primary-fixed-dim rounded-t-lg transition-all duration-700 hover:bg-primary cursor-pointer" style="height: 95%;"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant rotate-[-45deg] md:rotate-0">Harvard</span>
+</div>
+<div class="flex flex-col items-center gap-base flex-1">
+<div class="w-full bg-primary-fixed-dim rounded-t-lg transition-all duration-700 hover:bg-primary cursor-pointer" style="height: 45%;"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant rotate-[-45deg] md:rotate-0">Oxford</span>
+</div>
+<div class="flex flex-col items-center gap-base flex-1">
+<div class="w-full bg-primary-fixed-dim rounded-t-lg transition-all duration-700 hover:bg-primary cursor-pointer" style="height: 70%;"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant rotate-[-45deg] md:rotate-0">ETH Zurich</span>
+</div>
+<div class="flex flex-col items-center gap-base flex-1">
+<div class="w-full bg-primary-fixed-dim rounded-t-lg transition-all duration-700 hover:bg-primary cursor-pointer" style="height: 55%;"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant rotate-[-45deg] md:rotate-0">NUS</span>
+</div>
+</div>
+<div class="pt-base border-t border-outline-variant flex justify-between items-center">
+<p class="font-body-sm text-body-sm text-on-surface-variant">Top performer: <span class="text-primary font-bold">Harvard University</span></p>
+<a class="font-label-md text-label-md text-primary hover:underline" href="#">View All Partners</a>
+</div>
+</div>
+<!-- Distribution Breakdown -->
+<div class="col-span-12 lg:col-span-5 card-elevation rounded-xl p-md">
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-lg">Asset Allocation</h3>
+<div class="space-y-md">
+<div class="flex flex-col gap-xs">
+<div class="flex justify-between items-center">
+<span class="font-label-md text-label-md text-on-surface-variant">Master Classes</span>
+<span class="font-label-md text-label-md text-on-surface font-bold">45%</span>
+</div>
+<div class="w-full h-3 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full transition-all duration-1000" style="width: 45%;"></div>
+</div>
+</div>
+<div class="flex flex-col gap-xs">
+<div class="flex justify-between items-center">
+<span class="font-label-md text-label-md text-on-surface-variant">Professional Certifications</span>
+<span class="font-label-md text-label-md text-on-surface font-bold">30%</span>
+</div>
+<div class="w-full h-3 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-secondary rounded-full transition-all duration-1000" style="width: 30%;"></div>
+</div>
+</div>
+<div class="flex flex-col gap-xs">
+<div class="flex justify-between items-center">
+<span class="font-label-md text-label-md text-on-surface-variant">Institutional Degrees</span>
+<span class="font-label-md text-label-md text-on-surface font-bold">15%</span>
+</div>
+<div class="w-full h-3 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-tertiary-container rounded-full transition-all duration-1000" style="width: 15%;"></div>
+</div>
+</div>
+<div class="flex flex-col gap-xs">
+<div class="flex justify-between items-center">
+<span class="font-label-md text-label-md text-on-surface-variant">Subscription Access</span>
+<span class="font-label-md text-label-md text-on-surface font-bold">10%</span>
+</div>
+<div class="w-full h-3 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-outline rounded-full transition-all duration-1000" style="width: 10%;"></div>
+</div>
+</div>
+</div>
+<div class="mt-lg p-md bg-surface-container-low rounded-xl border border-surface-container-high">
+<div class="flex items-center gap-base">
+<span class="material-symbols-outlined text-primary">info</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Subscription models grew by <span class="font-bold text-on-surface">18%</span> this quarter, indicating a shift toward recurring revenue.</p>
+</div>
+</div>
+</div>
+<!-- Transaction Ledger -->
+<div class="col-span-12 card-elevation rounded-xl overflow-hidden">
+<div class="p-md flex items-center justify-between border-b border-outline-variant">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Transaction Ledger</h3>
+<div class="flex items-center gap-base">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container-low border-outline-variant rounded-lg text-body-sm focus:ring-primary focus:border-primary transition-all w-64" placeholder="Search transactions..." type="text"/>
+</div>
+<button class="p-2 hover:bg-surface-container-low rounded-lg transition-colors border border-outline-variant"><span class="material-symbols-outlined text-outline">filter_list</span></button>
+</div>
+</div>
+<div class="overflow-x-auto scroll-hide">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low">
+<th class="px-md py-4 font-label-md text-label-md text-on-surface-variant">Student</th>
+<th class="px-md py-4 font-label-md text-label-md text-on-surface-variant">Course</th>
+<th class="px-md py-4 font-label-md text-label-md text-on-surface-variant">University</th>
+<th class="px-md py-4 font-label-md text-label-md text-on-surface-variant">Date</th>
+<th class="px-md py-4 font-label-md text-label-md text-on-surface-variant">Amount</th>
+<th class="px-md py-4 font-label-md text-label-md text-on-surface-variant">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-md py-4">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center font-bold text-xs">AM</div>
+<span class="font-body-md text-body-md text-on-surface">Alex Morgan</span>
+</div>
+</td>
+<td class="px-md py-4 text-body-md">Advanced Quantum Computing</td>
+<td class="px-md py-4 text-body-md text-on-surface-variant">MIT</td>
+<td class="px-md py-4 text-body-md text-on-surface-variant">Oct 24, 2024</td>
+<td class="px-md py-4 font-bold">$1,200.00</td>
+<td class="px-md py-4">
+<span class="px-3 py-1 bg-primary-container/10 text-primary rounded-full text-label-sm font-semibold">Success</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-md py-4">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-secondary-fixed flex items-center justify-center font-bold text-xs">SK</div>
+<span class="font-body-md text-body-md text-on-surface">Sarah K.</span>
+</div>
+</td>
+<td class="px-md py-4 text-body-md">AI Ethics &amp; Governance</td>
+<td class="px-md py-4 text-body-md text-on-surface-variant">Stanford</td>
+<td class="px-md py-4 text-body-md text-on-surface-variant">Oct 24, 2024</td>
+<td class="px-md py-4 font-bold">$850.00</td>
+<td class="px-md py-4">
+<span class="px-3 py-1 bg-surface-container-highest text-on-surface-variant rounded-full text-label-sm font-semibold">Pending</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-md py-4">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-tertiary-fixed flex items-center justify-center font-bold text-xs">JL</div>
+<span class="font-body-md text-body-md text-on-surface">James Lee</span>
+</div>
+</td>
+<td class="px-md py-4 text-body-md">Global Finance Theory</td>
+<td class="px-md py-4 text-body-md text-on-surface-variant">Oxford</td>
+<td class="px-md py-4 text-body-md text-on-surface-variant">Oct 23, 2024</td>
+<td class="px-md py-4 font-bold">$1,450.00</td>
+<td class="px-md py-4">
+<span class="px-3 py-1 bg-primary-container/10 text-primary rounded-full text-label-sm font-semibold">Success</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-md py-4">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center font-bold text-xs">DW</div>
+<span class="font-body-md text-body-md text-on-surface">David Wu</span>
+</div>
+</td>
+<td class="px-md py-4 text-body-md">Data Science Fundamentals</td>
+<td class="px-md py-4 text-body-md text-on-surface-variant">NUS</td>
+<td class="px-md py-4 text-body-md text-on-surface-variant">Oct 23, 2024</td>
+<td class="px-md py-4 font-bold">$499.00</td>
+<td class="px-md py-4">
+<span class="px-3 py-1 bg-error-container/10 text-error rounded-full text-label-sm font-semibold">Failed</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-md flex items-center justify-between border-t border-outline-variant bg-surface">
+<p class="font-body-sm text-body-sm text-on-surface-variant">Showing 1 to 4 of 1,280 transactions</p>
+<div class="flex gap-xs">
+<button class="px-3 py-1 border border-outline-variant rounded-lg hover:bg-surface-container-low disabled:opacity-50" disabled="">Previous</button>
+<button class="px-3 py-1 border border-outline-variant rounded-lg hover:bg-surface-container-low active:bg-primary active:text-white">1</button>
+<button class="px-3 py-1 border border-outline-variant rounded-lg hover:bg-surface-container-low">2</button>
+<button class="px-3 py-1 border border-outline-variant rounded-lg hover:bg-surface-container-low">Next</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full py-xl mt-auto bg-surface-container-lowest border-t border-outline-variant">
+<div class="max-w-container-max mx-auto px-margin-desktop flex flex-col md:flex-row justify-between items-center gap-md">
+<div class="flex flex-col gap-xs items-center md:items-start">
+<div class="flex items-center gap-base">
+<img alt="Dezai Logo Small" class="h-6 w-6" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCxH3DrvKJdzdzB8dn77AkMgwq5VVjkvIMd1vcNTaxKJmjcFSQXh_jk1-HqNYAZToLjogNSME0B6opcEEf_uykZj2W_Kpx_igxa0EOrS6z7Dao44JGKQ3BTn5AzXIwowYQ4u2Ehzouwqw0tSWWArLQDnUUWYpKi5bqWwAuDt2OiDNKnz6HHJTitPXxnlZPQ_bpT_-5Ks9fmxTdkeN8nI4TfAJI2kFR9agTP1cCanbm_wi4cXOKBwGyA7VIer9ojbBH421XTGUhculx5"/>
+<span class="font-headline-sm text-headline-sm font-semibold text-on-surface">Dezai AI Institutional Systems</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant text-center md:text-left">© 2024 Dezai AI Institutional Systems. All rights reserved.</p>
+</div>
+<nav class="flex flex-wrap justify-center gap-md">
+<a class="text-on-surface-variant hover:text-primary transition-colors font-body-sm text-body-sm" href="#">Partner Directory</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-body-sm text-body-sm" href="#">Privacy Policy</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-body-sm text-body-sm" href="#">Academic Standards</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-body-sm text-body-sm" href="#">Support</a>
+</nav>
+</div>
+</footer>
+<script>
+        // Micro-interactions for chart bars
+        document.querySelectorAll('.rounded-t-lg').forEach(bar => {
+            bar.addEventListener('mouseenter', () => {
+                bar.style.transform = 'translateY(-5px)';
+            });
+            bar.addEventListener('mouseleave', () => {
+                bar.style.transform = 'translateY(0)';
+            });
+        });
+
+        // Sticky header behavior
+        let lastScroll = 0;
+        window.addEventListener('scroll', () => {
+            const header = document.querySelector('header');
+            const currentScroll = window.pageYOffset;
+            if (currentScroll > lastScroll && currentScroll > 80) {
+                header.style.transform = 'translateY(-100%)';
+            } else {
+                header.style.transform = 'translateY(0)';
+            }
+            lastScroll = currentScroll;
+        });
+    </script>
+</body></html>

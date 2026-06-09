@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Student Profile | Dezai AI</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Geist:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-tint": "#0057ce",
+                        "surface": "#faf8ff",
+                        "on-tertiary-fixed-variant": "#7f2b00",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-container": "#0d6efd",
+                        "tertiary-container": "#cf4b00",
+                        "secondary": "#0051d5",
+                        "on-surface-variant": "#424655",
+                        "error": "#ba1a1a",
+                        "primary-fixed": "#dae2ff",
+                        "on-tertiary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "primary-fixed-dim": "#b1c5ff",
+                        "on-primary-fixed-variant": "#00419e",
+                        "on-tertiary-container": "#ffffff",
+                        "on-secondary-container": "#fefcff",
+                        "surface-container-low": "#f2f3ff",
+                        "outline-variant": "#c2c6d8",
+                        "on-primary-container": "#ffffff",
+                        "background": "#faf8ff",
+                        "error-container": "#ffdad6",
+                        "outline": "#727787",
+                        "inverse-surface": "#2d3039",
+                        "on-primary-fixed": "#001946",
+                        "surface-container": "#ecedf9",
+                        "surface-dim": "#d8d9e5",
+                        "surface-container-highest": "#e1e2ee",
+                        "primary": "#0057cd",
+                        "on-background": "#191b24",
+                        "surface-bright": "#faf8ff",
+                        "inverse-on-surface": "#eff0fc",
+                        "surface-container-high": "#e6e7f3",
+                        "secondary-container": "#316bf3",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed": "#ffdbce",
+                        "on-tertiary-fixed": "#370e00",
+                        "on-secondary-fixed": "#00174b",
+                        "on-error-container": "#93000a",
+                        "on-error": "#ffffff",
+                        "on-surface": "#191b24",
+                        "inverse-primary": "#b1c5ff",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "tertiary": "#a63b00",
+                        "secondary-fixed": "#dbe1ff",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "surface-variant": "#e1e2ee",
+                        "tertiary-fixed-dim": "#ffb599"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "lg": "40px",
+                        "md": "24px",
+                        "sm": "12px",
+                        "xs": "4px",
+                        "margin-desktop": "48px",
+                        "base": "8px",
+                        "margin-mobile": "16px",
+                        "gutter": "24px",
+                        "container-max": "1440px",
+                        "xl": "64px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Geist"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Geist"],
+                        "body-sm": ["Inter"],
+                        "label-sm": ["Geist"],
+                        "label-md": ["Geist"],
+                        "headline-lg-mobile": ["Geist"],
+                        "display-lg": ["Geist"],
+                        "headline-md": ["Geist"],
+                        "display-sm": ["Geist"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["20px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-lg": ["30px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "1", "fontWeight": "600" }],
+                        "label-md": ["14px", { "lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                        "display-sm": ["36px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .shadow-level-1 {
+            box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.03);
+        }
+        .shadow-level-2 {
+            box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.08);
+        }
+        .transition-soft {
+            transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body-md text-body-md overflow-x-hidden">
+<!-- Top Navigation Bar -->
+<header class="w-full top-0 sticky bg-surface dark:bg-on-background shadow-sm z-50">
+<div class="flex items-center justify-between px-margin-desktop py-4 max-w-container-max mx-auto">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary" data-icon="menu">menu</span>
+<span class="font-headline-lg text-headline-lg font-bold text-primary dark:text-primary-fixed">Dezai AI</span>
+</div>
+<div class="hidden md:flex items-center gap-md">
+<nav class="flex gap-md">
+<a class="text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-low transition-colors duration-200 px-xs py-xs rounded" href="#">Dashboard</a>
+<a class="text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-low transition-colors duration-200 px-xs py-xs rounded" href="#">Courses</a>
+<a class="text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-low transition-colors duration-200 px-xs py-xs rounded" href="#">Certificates</a>
+</nav>
+<div class="h-10 w-10 rounded-full bg-secondary-container overflow-hidden active:scale-95 transition-transform cursor-pointer">
+<img alt="User profile photo" data-alt="A professional headshot of a young male student with a confident smile, wearing a modern navy polo shirt. The background is a soft, out-of-focus academic setting with bright, natural lighting. The overall aesthetic is clean, high-key, and institutional, aligning with a premium EdTech SaaS environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAuMtnW9u0Z9jgwWXtziIlKRjyKX3r3IXJkZZ5IYYUCaNH7oYt1x7lGM9Uzxm3wBfA-c--l0ID7xwlHga_W4UYvKBsRMr9Vot9wjLZ2AVP-03Zbuy1bVYpBW6i_fak_XJv11oaCarZdR-AuQGtoZ0QgtOy2-Y876KXiejNgJAuZomdSmSa05i6TgRWxar20D_XN67DYIYRfL1Hb-xIY_MfR-hTF1dBhx4UX5U808YJjWHuQ-pfN3iJE73q4IVMSKW4orBmaCKUXOvHM"/>
+</div>
+</div>
+</div>
+</header>
+<main class="max-w-container-max mx-auto px-margin-desktop py-lg">
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Left Side: Profile Header & Stats (Bento Layout) -->
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-gutter">
+<!-- Profile Header Card -->
+<section class="bg-surface-container-lowest rounded-xl p-md shadow-level-1 flex flex-col md:flex-row items-center md:items-start gap-md border-l-4 border-primary">
+<div class="relative">
+<div class="w-32 h-32 rounded-xl overflow-hidden shadow-level-2">
+<img alt="John Doe" data-alt="Close up portrait of John Doe, a university student in his early twenties with a friendly expression. He is photographed in a bright, modern interior with soft lighting and a minimalist vibe. The image uses a clean, corporate color palette of soft whites and blues to match the Academic Intelligent design system." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDr8FLoS6l5yu4oGeeEsN5tWaugSGLBM_xoaakJGasVoGrrtxZ2-B_X-KRNp6Zz_oz7EYVOijI27UlPOEDOECUpROUqmbpu59CtP05RbKAguXoJDV3wqdtybPYeGNW7mM0HZES-H0LPpBo_-hg9M0J9LblmIo0YEZvcYhNX2BhH_irpp6BJK4nsCobVOuj7xBb3snAcu1GD677et3EDjRVU5sf5sX_WpulVfOhyLVz2JM9AuluAeJMS-7OzIh-OQszw0puNNS_BbrUX"/>
+</div>
+<div class="absolute -bottom-2 -right-2 bg-primary text-on-primary p-xs rounded-lg shadow-md flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="verified" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+</div>
+<div class="flex-1 text-center md:text-left">
+<h1 class="font-headline-lg text-headline-lg text-on-surface mb-xs">John Doe</h1>
+<p class="font-headline-sm text-headline-sm text-on-surface-variant mb-base">Stanford University</p>
+<div class="flex flex-wrap justify-center md:justify-start gap-sm mt-sm">
+<span class="bg-surface-container-high px-sm py-xs rounded-full font-label-md text-label-md text-on-surface">Year 3, Junior</span>
+<span class="bg-surface-container-high px-sm py-xs rounded-full font-label-md text-label-md text-on-surface">Fall Semester 2024</span>
+<span class="bg-secondary-container text-on-secondary-container px-sm py-xs rounded-full font-label-md text-label-md">Computer Science Major</span>
+</div>
+</div>
+<div class="mt-md md:mt-0">
+<button class="bg-primary text-on-primary px-md py-sm rounded-lg font-label-md text-label-md hover:bg-secondary transition-soft active:scale-95 flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]" data-icon="edit">edit</span>
+                            Edit Profile
+                        </button>
+</div>
+</section>
+<!-- Academic Stats Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<div class="bg-surface-container-lowest p-md rounded-xl shadow-level-1 border-t-4 border-primary-container">
+<p class="font-label-md text-label-md text-on-surface-variant mb-xs">Courses Completed</p>
+<div class="flex items-end gap-sm">
+<span class="font-display-sm text-display-sm text-on-surface">24</span>
+<span class="font-label-sm text-label-sm text-primary mb-base">+2 this month</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-md rounded-xl shadow-level-1 border-t-4 border-secondary">
+<p class="font-label-md text-label-md text-on-surface-variant mb-xs">Total Credits</p>
+<div class="flex items-end gap-sm">
+<span class="font-display-sm text-display-sm text-on-surface">112</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant mb-base">/ 140 req.</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-md rounded-xl shadow-level-1 border-t-4 border-tertiary">
+<p class="font-label-md text-label-md text-on-surface-variant mb-xs">Current GPA</p>
+<div class="flex items-end gap-sm">
+<span class="font-display-sm text-display-sm text-on-surface">3.92</span>
+<div class="h-2 w-16 bg-surface-container-high rounded-full overflow-hidden mb-xs">
+<div class="h-full bg-tertiary w-[95%]"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Certificates Gallery -->
+<section class="bg-surface-container-lowest rounded-xl p-md shadow-level-1">
+<div class="flex justify-between items-center mb-md">
+<h2 class="font-headline-md text-headline-md text-on-surface">Certificates Earned</h2>
+<button class="text-primary font-label-md text-label-md hover:underline">View All</button>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-md">
+<!-- Certificate Item -->
+<div class="group relative overflow-hidden rounded-xl bg-surface-container-low p-sm border border-outline-variant hover:border-primary transition-soft">
+<div class="aspect-video mb-sm rounded-lg overflow-hidden bg-white flex items-center justify-center p-md">
+<img alt="AI Fundamentals Certificate" data-alt="A premium digital certificate for 'AI Fundamentals' with intricate guilloche patterns, official Dezai AI branding, and elegant serif typography. The certificate is shown in a clean, bright, and professional setting with soft blue and white tones, emphasizing institutional credibility and modern achievement." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDZwRTPfnSw5DScjfKUb4qmFduu6HtMucMpb6J6XSexL3DDpu4rmp2gMTJGmMgNb6CbYN_6GtjKNkIVzN1RanUh52Qp7jLMdnZuFN3LGdQPO97qp9lTWHEVWRi30W_9b4KVGsqW_5_1Fo8TdkN_zInXLt1tofxATfB9hAGxEFCPkNY_EoFCVEvL3YZhcXuDJ140lPZOhbZFDD6Qvo7KR_b1XfqQ3m7hGti3p1Qich20_w1TOGteZb4GfLi21SAUySAl9U55WdM49JYx"/>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs">AI Fundamentals</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-sm">Issued Oct 2024 • Grade: A+</p>
+<div class="flex gap-sm">
+<button class="flex-1 py-xs bg-surface-container-highest rounded font-label-sm text-label-sm text-on-surface hover:bg-surface-dim transition-soft">View</button>
+<button class="flex-1 py-xs bg-surface-container-highest rounded font-label-sm text-label-sm text-on-surface hover:bg-surface-dim transition-soft flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined text-[14px]" data-icon="share">share</span>
+                                    Share
+                                </button>
+</div>
+</div>
+<!-- Certificate Item 2 -->
+<div class="group relative overflow-hidden rounded-xl bg-surface-container-low p-sm border border-outline-variant hover:border-primary transition-soft">
+<div class="aspect-video mb-sm rounded-lg overflow-hidden bg-white flex items-center justify-center p-md">
+<img alt="Machine Learning Specialization" data-alt="A professional digital certificate for 'Machine Learning Specialization' featuring advanced data visualization motifs and the Dezai AI seal. The visual style is sleek and academic, using a palette of deep blues and crisp whites, set against a bright, airy background that reflects a high-end educational environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBm9msfBxwqqySZWnGp2tD-slzjc8q8Fmws_bdf_prfjZTfZMFL1gZ7gZvNHNdmdrkyUzlMA5eAw1g3MtirmJ7Xw7Q_pPtXwqDS_BPr9snXmbXRSuWnpvYVX2a8JD-F8z8HKOjlDZWlD2gsiCa8ByQ3HwEH8PX24YuLHpa_Jaa_MqwOG2FuM8X2iwVIVM3gtiexYoblAutzPtuesfLmtew7HZp3-elu9Ur3DjVsEMX2m2hHNu0c4j9Vdpbk1CaO6pk9g979UP1vsJA7"/>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs">Neural Networks</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-sm">Issued Aug 2024 • Grade: A</p>
+<div class="flex gap-sm">
+<button class="flex-1 py-xs bg-surface-container-highest rounded font-label-sm text-label-sm text-on-surface hover:bg-surface-dim transition-soft">View</button>
+<button class="flex-1 py-xs bg-surface-container-highest rounded font-label-sm text-label-sm text-on-surface hover:bg-surface-dim transition-soft flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined text-[14px]" data-icon="share">share</span>
+                                    Share
+                                </button>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Side: Activity & Settings -->
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-gutter">
+<!-- Activity History -->
+<section class="bg-surface-container-lowest rounded-xl p-md shadow-level-1 h-full">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-md">Activity History</h2>
+<div class="relative flex flex-col gap-lg">
+<div class="absolute top-2 bottom-2 left-[15px] w-0.5 bg-outline-variant"></div>
+<div class="relative pl-xl">
+<div class="absolute left-0 top-1 w-8 h-8 rounded-full bg-primary-container flex items-center justify-center z-10">
+<span class="material-symbols-outlined text-on-primary-container text-[18px]" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<p class="font-label-md text-label-md text-on-surface">Completed Module 3</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">AI Fundamentals • 2 hours ago</p>
+</div>
+<div class="relative pl-xl">
+<div class="absolute left-0 top-1 w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center z-10">
+<span class="material-symbols-outlined text-on-secondary-container text-[18px]" data-icon="school">school</span>
+</div>
+<p class="font-label-md text-label-md text-on-surface">Submitted Assignment</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Ethics in Data • Yesterday</p>
+</div>
+<div class="relative pl-xl">
+<div class="absolute left-0 top-1 w-8 h-8 rounded-full bg-tertiary-container flex items-center justify-center z-10">
+<span class="material-symbols-outlined text-on-tertiary-container text-[18px]" data-icon="quiz">quiz</span>
+</div>
+<p class="font-label-md text-label-md text-on-surface">Passed Quiz: Intro to NLP</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Score: 94% • 2 days ago</p>
+</div>
+<div class="relative pl-xl">
+<div class="absolute left-0 top-1 w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center z-10 border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant text-[18px]" data-icon="forum">forum</span>
+</div>
+<p class="font-label-md text-label-md text-on-surface">Posted in Community</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Machine Learning Discussion • 3 days ago</p>
+</div>
+</div>
+</section>
+<!-- Account Settings -->
+<section class="bg-surface-container-lowest rounded-xl p-md shadow-level-1">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-md">Account Settings</h2>
+<nav class="flex flex-col gap-xs">
+<a class="flex items-center justify-between p-sm rounded-lg hover:bg-surface-container-low transition-soft group" href="#">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary" data-icon="person">person</span>
+<span class="font-label-md text-label-md">Edit Profile</span>
+</div>
+<span class="material-symbols-outlined text-outline" data-icon="chevron_right">chevron_right</span>
+</a>
+<a class="flex items-center justify-between p-sm rounded-lg hover:bg-surface-container-low transition-soft group" href="#">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary" data-icon="notifications">notifications</span>
+<span class="font-label-md text-label-md">Notification Preferences</span>
+</div>
+<span class="material-symbols-outlined text-outline" data-icon="chevron_right">chevron_right</span>
+</a>
+<a class="flex items-center justify-between p-sm rounded-lg hover:bg-surface-container-low transition-soft group" href="#">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary" data-icon="payments">payments</span>
+<span class="font-label-md text-label-md">Billing &amp; Subscriptions</span>
+</div>
+<span class="material-symbols-outlined text-outline" data-icon="chevron_right">chevron_right</span>
+</a>
+<a class="flex items-center justify-between p-sm rounded-lg hover:bg-surface-container-low transition-soft group" href="#">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary" data-icon="security">security</span>
+<span class="font-label-md text-label-md">Privacy &amp; Security</span>
+</div>
+<span class="material-symbols-outlined text-outline" data-icon="chevron_right">chevron_right</span>
+</a>
+<div class="mt-md pt-md border-t border-outline-variant">
+<button class="w-full flex items-center gap-sm p-sm rounded-lg text-error hover:bg-error-container transition-soft group">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-label-md text-label-md">Log Out</span>
+</button>
+</div>
+</nav>
+</section>
+</div>
+</div>
+</main>
+<footer class="w-full py-xl mt-auto bg-surface-container-lowest border-t border-outline-variant dark:border-outline">
+<div class="max-w-container-max mx-auto px-margin-desktop flex flex-col md:flex-row justify-between items-center gap-md">
+<div class="flex flex-col items-center md:items-start">
+<span class="font-headline-sm text-headline-sm font-semibold text-on-surface mb-xs">Dezai AI</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant text-center md:text-left">© 2024 Dezai AI Institutional Systems. All rights reserved.</p>
+</div>
+<nav class="flex flex-wrap justify-center gap-md">
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Partner Directory</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Academic Standards</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Support</a>
+</nav>
+</div>
+</footer>
+<script>
+        // Micro-interactions and staggering entrance effect
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = document.querySelectorAll('section, div.grid > div');
+            sections.forEach((el, index) => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'all 0.5s cubic-bezier(0.22, 1, 0.36, 1)';
+                
+                setTimeout(() => {
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                }, 100 + (index * 50));
+            });
+        });
+    </script>
+</body></html>

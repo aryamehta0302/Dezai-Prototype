@@ -1,0 +1,535 @@
+<!DOCTYPE html><html class="scroll-smooth" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Dezai AI | University-Grade Micro-Credentials</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Geist:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "surface-container-highest": "#e1e2ee",
+                "background": "#faf8ff",
+                "inverse-primary": "#b1c5ff",
+                "surface-container-lowest": "#ffffff",
+                "secondary-fixed-dim": "#b4c5ff",
+                "on-surface": "#191b24",
+                "on-primary-fixed-variant": "#00419e",
+                "on-tertiary-container": "#ffffff",
+                "primary-fixed-dim": "#b1c5ff",
+                "surface-tint": "#0057ce",
+                "surface-container-low": "#f2f3ff",
+                "tertiary-container": "#cf4b00",
+                "secondary-container": "#316bf3",
+                "surface-container": "#ecedf9",
+                "on-secondary-fixed-variant": "#003ea8",
+                "inverse-on-surface": "#eff0fc",
+                "on-secondary-container": "#fefcff",
+                "on-surface-variant": "#424655",
+                "on-secondary-fixed": "#00174b",
+                "tertiary-fixed-dim": "#ffb599",
+                "inverse-surface": "#2d3039",
+                "secondary": "#0051d5",
+                "tertiary-fixed": "#ffdbce",
+                "error-container": "#ffdad6",
+                "on-error": "#ffffff",
+                "on-primary-fixed": "#001946",
+                "on-secondary": "#ffffff",
+                "surface-variant": "#e1e2ee",
+                "on-tertiary-fixed": "#370e00",
+                "surface-bright": "#faf8ff",
+                "on-tertiary": "#ffffff",
+                "on-primary-container": "#ffffff",
+                "primary-container": "#0d6efd",
+                "outline-variant": "#c2c6d8",
+                "primary-fixed": "#dae2ff",
+                "surface-container-high": "#e6e7f3",
+                "primary": "#0057cd",
+                "surface-dim": "#d8d9e5",
+                "on-background": "#191b24",
+                "outline": "#727787",
+                "error": "#ba1a1a",
+                "tertiary": "#a63b00",
+                "on-tertiary-fixed-variant": "#7f2b00",
+                "on-primary": "#ffffff",
+                "surface": "#faf8ff",
+                "on-error-container": "#93000a",
+                "secondary-fixed": "#dbe1ff"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+            },
+            "spacing": {
+                "sm": "12px",
+                "margin-mobile": "16px",
+                "xl": "64px",
+                "xs": "4px",
+                "base": "8px",
+                "lg": "40px",
+                "margin-desktop": "48px",
+                "gutter": "24px",
+                "container-max": "1440px",
+                "md": "24px"
+            },
+            "fontFamily": {
+                "headline-md": ["Geist"],
+                "label-sm": ["Geist"],
+                "display-lg": ["Geist"],
+                "display-sm": ["Geist"],
+                "body-sm": ["Inter"],
+                "body-md": ["Inter"],
+                "headline-sm": ["Geist"],
+                "headline-lg": ["Geist"],
+                "body-lg": ["Inter"],
+                "headline-lg-mobile": ["Geist"],
+                "label-md": ["Geist"]
+            },
+            "fontSize": {
+                "headline-md": ["24px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                "label-sm": ["12px", {"lineHeight": "1", "fontWeight": "600"}],
+                "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "display-sm": ["36px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                "headline-sm": ["20px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                "headline-lg": ["30px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                "headline-lg-mobile": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                "label-md": ["14px", {"lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .glass-card {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+      }
+      .animate-float { animation: float 6s ease-in-out infinite; }
+      .bento-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 24px;
+      }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-x-hidden">
+<!-- Top Navigation Shell -->
+<header class="fixed top-0 w-full z-50 bg-surface shadow-[0_4px_6px_-1px_rgba(15,23,42,0.05)] h-16 flex justify-between items-center px-margin-mobile md:px-margin-desktop">
+<div class="flex items-center h-10">https://lh3.googleusercontent.com/aida-public/AB6AXuA_WfTQa02j99o7X_t7IYqBqJ368J_9jU3iJMvx_DkCVQGwVNQ7yBeyIFMsCaXzSkidDDGoS7HjLXYaBHd-qbbGgho3Xj_rNvxgVpZzX-yx7ZNOGxEAmsgK5XL92gMZFJcfufVsB5N3XAeiBJkNb-YdvDKlIlsrBg-LVOaFCv45ZiM6yHWq76KNIf8Rmrbhkl77qsYYNinBK2bTUSWTTPEt__SN2M_LivFgFNpsFYfOIBAXHhQdLXnoRnwDBVZT7WsIPOzr9_mq8h6i</div>
+<nav class="hidden md:flex items-center gap-lg">
+<a class="text-label-md font-label-md text-primary font-bold" href="#">Course Catalog</a>
+<a class="text-label-md font-label-md text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 px-3 py-1 rounded-lg" href="#">Institutions</a>
+<a class="text-label-md font-label-md text-on-surface-variant hover:bg-surface-container-low transition-colors duration-200 px-3 py-1 rounded-lg" href="#">About Us</a>
+</nav>
+<div class="flex items-center gap-sm">
+<button class="material-symbols-outlined text-on-surface-variant p-2 hover:bg-surface-container-low rounded-full transition-colors">notifications</button>
+<button class="bg-primary text-on-primary px-5 py-2 rounded-lg text-label-md font-bold hover:bg-secondary transition-all active:scale-95">Sign In</button>
+</div>
+</header>
+<main class="mt-16">
+<!-- Hero Section -->
+<section class="relative min-h-[90vh] flex items-center overflow-hidden py-xl">
+<div class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop grid md:grid-cols-2 gap-xl items-center relative z-10">
+<div class="space-y-lg">
+<div class="inline-flex items-center gap-2 px-3 py-1 bg-primary-fixed text-on-primary-fixed rounded-full text-label-sm font-bold uppercase tracking-wider">
+<span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">stars</span>
+                        Accredited Digital Mastery
+                    </div>
+<h1 class="text-display-sm md:text-display-lg font-display-lg text-on-surface">
+                        Master the Future with <span class="text-primary">University-Grade</span> Micro-Credentials
+                    </h1>
+<p class="text-body-lg text-on-surface-variant max-w-xl">
+                        Bridge the gap between academic theory and industry demand. Fast-track your career with proctored, credit-bearing sprints designed by top-tier institutions.
+                    </p>
+<div class="flex flex-wrap gap-md pt-base">
+<button class="bg-primary text-on-primary px-lg py-sm rounded-xl font-bold shadow-lg hover:bg-secondary hover:shadow-xl transition-all active:scale-95 flex items-center gap-2">
+                            Explore Courses
+                            <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+<button class="bg-surface-container-high text-primary px-lg py-sm rounded-xl font-bold hover:bg-surface-container-highest transition-all active:scale-95 border border-outline-variant">
+                            Start Sprint
+                        </button>
+</div>
+<!-- Stats -->
+<div class="grid grid-cols-2 gap-lg pt-lg border-t border-outline-variant">
+<div>
+<div class="text-headline-lg font-headline-lg text-primary" id="stat-students">10,000+</div>
+<div class="text-label-md text-on-surface-variant">Active Students</div>
+</div>
+<div>
+<div class="text-headline-lg font-headline-lg text-primary" id="stat-univ">50+</div>
+<div class="text-label-md text-on-surface-variant">Partner Universities</div>
+</div>
+</div>
+</div>
+<!-- Hero Visual (Asymmetric Grid/Abstract) -->
+<div class="relative hidden md:block">
+<div class="absolute -top-20 -right-20 w-80 h-80 bg-primary opacity-5 rounded-full blur-3xl"></div>
+<div class="relative grid grid-cols-2 gap-sm animate-float">
+<div class="col-span-2 rounded-2xl overflow-hidden shadow-xl h-64">
+<img alt="Students learning" class="w-full h-full object-cover" data-alt="A professional collaborative workspace with modern aesthetic, featuring diverse students working together on high-end laptops in a bright, university campus environment. The atmosphere is academic yet technologically advanced, utilizing a clean light-mode palette with subtle blue accents." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB1WAsANhl-hqpUTYkaDsSAJ0Dg9dnyM68gJ27P79Xej__KfdPUJV-1a9OPobd8HX9_6Fl-4KGg2bX-dJhpAifMbQfnRcNIMyOIPTR6ApeAyR_H0aP1a-ifQ_rtHLKDHtILRv2Sjpc--zXHyI_OG-KXEhzKLK4JFUh4jUDpFk7O4yU-7cPOzaic81qFCwmDu7YNZdAhfbCnZ2L1x3802Cmo3b0uEGq_-GnyImU8alfjGZ5fm-YCUujgzPqr6gg66s-ahUkPE4MKKnkF">
+</div>
+<div class="rounded-2xl overflow-hidden shadow-lg h-48">
+<img alt="AI Dashboard" class="w-full h-full object-cover" data-alt="A close-up shot of a sophisticated tablet screen displaying complex AI data visualizations and learning metrics. The lighting is crisp and modern, reflecting a premium SaaS interface design. Deep blues and vibrant oranges highlight key statistics against a clean white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8iJI9373ORlgSoTAJd1GafHLyWh16Lax3sVjtN3ziHQkeS7pqnkDALcjewpaszk5-DavI2wv4Rlxy6JVIVPZEOYOu9qFcbSpRDEehYdN7MtrbT86Kcq7XzJXslB1Ut5p-2xDZkgJFwBCEW3FdJGMKBkkPYfit9qWKRik3PPm0MFUN6IVwJOWcvBij1L8iJmr7OWBqJrqh8nJ6VoNLJQLbZhq2o2QvCFrOfnquHt-jCMFKCkJyCZRZVYrbPNkLZAYzw1AYqw65DfE7">
+</div>
+<div class="bg-secondary-container rounded-2xl p-md flex flex-col justify-end text-on-secondary-container">
+<span class="material-symbols-outlined text-display-sm" style="font-variation-settings: 'FILL' 1;">military_tech</span>
+<div class="font-bold text-headline-sm mt-sm">Certified Excellence</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Partners -->
+<section class="py-lg bg-surface-container-lowest overflow-hidden border-y border-outline-variant">
+<div class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+<p class="text-center text-label-sm font-bold text-outline uppercase mb-md tracking-widest">Powering Education for Global Institutions</p>
+<div class="flex gap-xl justify-between items-center opacity-50 grayscale hover:grayscale-0 transition-all duration-500 overflow-x-auto no-scrollbar py-4">
+<div class="flex-shrink-0 font-headline-md font-bold text-on-surface">STANFORD PRO</div>
+<div class="flex-shrink-0 font-headline-md font-bold text-on-surface">MIT GLOBAL</div>
+<div class="flex-shrink-0 font-headline-md font-bold text-on-surface">OXFORD CX</div>
+<div class="flex-shrink-0 font-headline-md font-bold text-on-surface">HARVARD MICRO</div>
+<div class="flex-shrink-0 font-headline-md font-bold text-on-surface">UC BERKELEY</div>
+<div class="flex-shrink-0 font-headline-md font-bold text-on-surface">TECH-U ATHENS</div>
+</div>
+</div>
+</section>
+<!-- How it Works -->
+<section class="py-xl bg-background">
+<div class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+<div class="text-center mb-xl max-w-2xl mx-auto">
+<h2 class="text-headline-lg font-headline-lg mb-sm">A Structured Path to Mastery</h2>
+<p class="text-body-md text-on-surface-variant">Our three-stage academic framework ensures you don't just learn, you demonstrate competency at university standards.</p>
+</div>
+<div class="grid md:grid-cols-3 gap-md">
+<!-- Step 1 -->
+<div class="bg-surface rounded-xl p-md shadow-sm hover:shadow-lg transition-all border border-transparent hover:border-primary/20 group">
+<div class="w-12 h-12 bg-primary-fixed text-primary rounded-lg flex items-center justify-center mb-md group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">bolt</span>
+</div>
+<h3 class="text-headline-sm font-headline-sm mb-xs">Foundational Sprints</h3>
+<p class="text-body-sm text-on-surface-variant">7-day intensive modules focusing on atomic concepts. High-intensity learning with immediate feedback loops.</p>
+</div>
+<!-- Step 2 -->
+<div class="bg-surface rounded-xl p-md shadow-sm hover:shadow-lg transition-all border border-transparent hover:border-primary/20 group">
+<div class="w-12 h-12 bg-secondary-fixed text-secondary rounded-lg flex items-center justify-center mb-md group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">groups</span>
+</div>
+<h3 class="text-headline-sm font-headline-sm mb-xs">Medium-Term Cohorts</h3>
+<p class="text-body-sm text-on-surface-variant">Collaborative 4-week projects led by industry practitioners and university mentors for practical application.</p>
+</div>
+<!-- Step 3 -->
+<div class="bg-surface rounded-xl p-md shadow-sm hover:shadow-lg transition-all border border-transparent hover:border-primary/20 group">
+<div class="w-12 h-12 bg-tertiary-fixed text-tertiary rounded-lg flex items-center justify-center mb-md group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">fact_check</span>
+</div>
+<h3 class="text-headline-sm font-headline-sm mb-xs">Proctored Quizzes</h3>
+<p class="text-body-sm text-on-surface-variant">Standardized final assessments that validate your skills. Earn verifiable credentials that institutions trust.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Course Categories -->
+<section class="py-xl bg-surface-container-low">
+<div class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+<div class="flex flex-col md:flex-row justify-between items-end mb-xl gap-md">
+<div>
+<h2 class="text-headline-lg font-headline-lg">Future-Proof Disciplines</h2>
+<p class="text-body-md text-on-surface-variant">Curated tracks from leading departments.</p>
+</div>
+<button class="text-primary font-bold flex items-center gap-1 hover:gap-2 transition-all">
+                        View All Categories <span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+<div class="grid md:grid-cols-3 gap-md">
+<!-- AI Card -->
+<div class="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all">
+<div class="h-48 overflow-hidden">
+<img alt="AI Engineering" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A sophisticated abstract rendering of neural networks and glowing data nodes. The aesthetic is high-tech and academic, using a deep midnight blue and bright electric blue palette. The lighting creates a sense of depth and intelligent complexity, perfect for an AI-focused education platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCv3x5xOe-AYCQtOiGlv5teMJh6JVDfEGWwjCgOIHoEXVuAV_K07D86ZWxibvWdk5uhxbk12PMIxToTr8UBSxKUIZ-Lqhpm9_cLp0atlimKY51L5FtQYkpZG9YvZL5-M0laWZGSqWAVfQOrHOGefVRciPkzjdh1fULjQW0YYkgyy4jgaj3dK-2ywqad_c_HYnDKh1710FhGpH5FiIBo9TQW9zY8gVb8dvsjzmjd7WvhGvl3sCSXe3lh4Yj40uEII-wHxu8E2rbb7evo">
+</div>
+<div class="p-md">
+<span class="text-label-sm font-bold text-primary uppercase">Artificial Intelligence</span>
+<h3 class="text-headline-sm font-headline-sm mt-1">Generative AI for Leaders</h3>
+<div class="mt-md flex items-center justify-between text-body-sm text-on-surface-variant">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">timer</span> 4 Weeks</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">stars</span> University Partner</span>
+</div>
+</div>
+</div>
+<!-- Commerce Card -->
+<div class="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all">
+<div class="h-48 overflow-hidden">
+<img alt="Commerce &amp; Business" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A clean, modern workspace featuring a high-end laptop with professional financial data charts on screen. The setting is a minimalist office with natural lighting, soft shadows, and a palette of slate greys and crisp whites. The mood represents corporate commerce and advanced business analytics." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAvkekMSv0ZmEE_RwTAHuURVYksuIVCAf_aRYHRWJzy-VVQhWGMSsJu1X02V14J5w6mMiGcKV4jAbTDV1pj1j8s_QDnKUtS6TE3D72YAaqO5xQ0gihzgZFPyFlY5nOvM1HbXssp467SryaahM6w07piIPt3Z9YvbJqFEOOZb-plck4HhmePE7aXOz0ATjtnmyYsOw8rBbkHjzJswzovKZ4UdEHhOrQTB6idq0TYafltt3FgoUym0R5ERqr6YdYSb2S8bj_e7d1Qjg7R">
+</div>
+<div class="p-md">
+<span class="text-label-sm font-bold text-tertiary uppercase">Digital Commerce</span>
+<h3 class="text-headline-sm font-headline-sm mt-1">Algorithmic Trading Basics</h3>
+<div class="mt-md flex items-center justify-between text-body-sm text-on-surface-variant">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">timer</span> 6 Weeks</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">trending_up</span> Advanced Level</span>
+</div>
+</div>
+</div>
+<!-- Design Card -->
+<div class="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all">
+<div class="h-48 overflow-hidden">
+<img alt="Design System" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A designer's studio desk with a focus on a large monitor showing a beautiful, minimalist UI design system. High-quality textures, typography samples, and a neutral, professional color scheme of off-whites and soft blues. The scene is bathed in diffused daylight, emphasizing clarity and creative precision." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD5fofQqYeN9gERcJNRGQcgkE-Q98TDCnoVvamCsJvpgrEOCN4HH1kKF6tXbFdirvAKkTo4P9kH60MkBmn-PuPUgrioiU39_Gebe8hmWkwC6lplJaD7FAwNamVnVuVWElF6ttVgmw7yzCN1qDB06apUCqDcytPGRTbIsyvS1X0M2qisc4deL7VTw3EYUUwCJZ0Y4uYP38Kc9wkHcrzOuho5ukTGBiMnSzCd6_txeZofCYdxXIcO8A3wasdMGBDZ4WCFeeBYr2M3jFjk">
+</div>
+<div class="p-md">
+<span class="text-label-sm font-bold text-secondary uppercase">Visual Design</span>
+<h3 class="text-headline-sm font-headline-sm mt-1">Applied Systems Thinking</h3>
+<div class="mt-md flex items-center justify-between text-body-sm text-on-surface-variant">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">timer</span> 2 Weeks</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">palette</span> Portfolio Credit</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Certification Tiers -->
+<section class="py-xl bg-background border-y border-outline-variant">
+<div class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+<div class="grid md:grid-cols-2 gap-xl items-center">
+<div>
+<h2 class="text-headline-lg font-headline-lg mb-md">Multi-Dimensional Validation</h2>
+<p class="text-body-md text-on-surface-variant mb-lg">Our credentials are tiered to provide a holistic view of your expertise, ranging from foundational skills to professional industry recognition.</p>
+<ul class="space-y-md">
+<li class="flex gap-md">
+<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary font-bold flex-shrink-0">1</div>
+<div>
+<h4 class="text-headline-sm font-headline-sm">Tier 1: Dezai Core</h4>
+<p class="text-body-sm text-on-surface-variant">Skill-based micro-badges validating competency in specific atomic tasks and modern toolsets.</p>
+</div>
+</li>
+<li class="flex gap-md">
+<div class="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-on-secondary font-bold flex-shrink-0">2</div>
+<div>
+<h4 class="text-headline-sm font-headline-sm">Tier 2: University Accredited</h4>
+<p class="text-body-sm text-on-surface-variant">Formal credits recognized by our partner institutions, transferable to full degree programs.</p>
+</div>
+</li>
+<li class="flex gap-md">
+<div class="w-10 h-10 rounded-full bg-tertiary flex items-center justify-center text-on-tertiary font-bold flex-shrink-0">3</div>
+<div>
+<h4 class="text-headline-sm font-headline-sm">Tier 3: Industry Verified</h4>
+<p class="text-body-sm text-on-surface-variant">Endorsed by Fortune 500 partners, ensuring your certificate matches real-world job requirements.</p>
+</div>
+</li>
+</ul>
+</div>
+<div class="relative bg-surface-container-high rounded-3xl p-lg aspect-square flex items-center justify-center overflow-hidden">
+<!-- Abstract Visual for Certification Layers -->
+<div class="relative z-10 w-full h-full flex flex-col items-center justify-center gap-sm">
+<div class="w-48 h-48 bg-primary rounded-2xl shadow-xl flex items-center justify-center rotate-3 animate-float">
+<span class="material-symbols-outlined text-[64px] text-on-primary">workspace_premium</span>
+</div>
+<div class="w-40 h-40 bg-secondary rounded-2xl shadow-xl flex items-center justify-center -rotate-6 absolute top-1/4 right-1/4 -z-10 opacity-80">
+<span class="material-symbols-outlined text-[48px] text-on-secondary">school</span>
+</div>
+<div class="w-36 h-36 bg-tertiary rounded-2xl shadow-xl flex items-center justify-center rotate-12 absolute bottom-1/4 left-1/4 -z-20 opacity-60">
+<span class="material-symbols-outlined text-[40px] text-on-tertiary">verified</span>
+</div>
+</div>
+<div class="absolute inset-0 bg-gradient-to-tr from-primary/10 to-transparent"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Success Stories -->
+<section class="py-xl bg-surface-container-lowest">
+<div class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+<h2 class="text-headline-lg font-headline-lg text-center mb-xl">Voices of Progress</h2>
+<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-md">
+<!-- Testimonial 1 -->
+<div class="bg-white p-lg rounded-2xl shadow-[0_4px_6px_-1px_rgba(15,23,42,0.05)] flex flex-col justify-between">
+<p class="text-body-md text-on-surface mb-lg italic">"The transition from my liberal arts degree to a data role felt impossible until Dezai. The University-proctored sprints gave me the technical confidence I needed."</p>
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-full bg-surface-variant overflow-hidden">
+<img alt="Student" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBWY4cMnR093C_CqlI2AsOcIRaTcv8jkelRCFoSoC10ZP5p_cnCEU2R6wQsGvo7pL_jofvJ0VeUK5uOhD47r7WhHvGTjZJg5zKM0OMBqagmq-TmWes6ifHffeyGJbVfsOyV03lZllmVSpsZCQ9jeWnH5GLBiPSxN07Ngi15QM95_UKuvPt9If4nPPm6EDEgDB25chTbkN8IzXA2gorRiAyHBUshZAo0q88ZtmIedWlh-Vs_aYpi8wCWtTnuuJ5Xe2hVeg4zAXQPeiX9">
+</div>
+<div>
+<div class="font-bold text-on-surface">Elena Rodriguez</div>
+<div class="text-label-sm text-on-surface-variant">Data Analyst at NeoBank</div>
+</div>
+</div>
+</div>
+<!-- Testimonial 2 -->
+<div class="bg-white p-lg rounded-2xl shadow-[0_4px_6px_-1px_rgba(15,23,42,0.05)] flex flex-col justify-between border-t-4 border-primary">
+<p class="text-body-md text-on-surface mb-lg italic">"Dezai's proctored quizzes are the gold standard. When I present my Dezai certification, recruiters know I've actually mastered the material, not just watched videos."</p>
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-full bg-surface-variant overflow-hidden">
+<img alt="Student" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHkw_L4iAad1ll4qUMch2aXjeXlsK4DHnLKLSRUZaOqSxI5l9Ms9ZAEvon3kk8A_rWJFSx3IO3AyKwqy16R77psiZrO266R_m0IL3kqivLcsj0mM7g6y2qX3FdP4odwWzItBzWCQrrXkBzjn1sbcLI9uwAUvvaxBVdFQMPdN74jN2_GKczIsbeiwyk2xL4sEHSwdCg_WAC6aYGgc4W06BC7_kQNyVu5v0VSFv6e5YPz5Yln8GXobIfD2-ZAJyU-AEMNg2Hm0sV0JDg">
+</div>
+<div>
+<div class="font-bold text-on-surface">Marcus Chen</div>
+<div class="text-label-sm text-on-surface-variant">AI Researcher</div>
+</div>
+</div>
+</div>
+<!-- Testimonial 3 -->
+<div class="bg-white p-lg rounded-2xl shadow-[0_4px_6px_-1px_rgba(15,23,42,0.05)] flex flex-col justify-between">
+<p class="text-body-md text-on-surface mb-lg italic">"The cohort-based learning model provided networking opportunities I never expected. My group project actually turned into a funded startup prototype."</p>
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-full bg-surface-variant overflow-hidden">
+<img alt="Student" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAyp-wB8GPQ5xZr2CbGVhC9fJjaguLSil0eW2mOY6rplLArb2iJL6OrwVktaNL4R8z2YeFjkj_k2xMU7etaqCAVXXBvivHc72vvWRFPLANLRDa8O6ogLELGdUfrpSX6-8JsWsegQjWV5Tkwkj8Abp_RC9EE-qWpqlHL8uvRuRmyvUxAmWZ4mkduCgOHHm3Xzj0QV03OnW5ltMD2L5vcGAJ-w3bQIxE2oIdxS9B0ioAg1z9sTQdOLkxRNwaadZ7kJOaduyoK2acSMhc6">
+</div>
+<div>
+<div class="font-bold text-on-surface">Sarah Jenkins</div>
+<div class="text-label-sm text-on-surface-variant">Product Designer</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- FAQ -->
+<section class="py-xl bg-background">
+<div class="max-w-3xl mx-auto px-margin-mobile">
+<h2 class="text-headline-lg font-headline-lg text-center mb-xl">Frequently Asked Questions</h2>
+<div class="space-y-sm">
+<details class="group bg-surface rounded-xl border border-outline-variant overflow-hidden" open="">
+<summary class="flex justify-between items-center p-md cursor-pointer list-none font-bold text-on-surface group-open:bg-surface-container-low transition-colors">
+                            How do credit transfers work?
+                            <span class="material-symbols-outlined group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="p-md text-body-sm text-on-surface-variant">
+                            Dezai AI partners directly with university registrars. Upon completion of a Tier 2 course, you receive an official digital transcript that can be submitted for ECTS or Credit Hour equivalency at participating institutions.
+                        </div>
+</details>
+<details class="group bg-surface rounded-xl border border-outline-variant overflow-hidden">
+<summary class="flex justify-between items-center p-md cursor-pointer list-none font-bold text-on-surface group-open:bg-surface-container-low transition-colors">
+                            Are the exams live-proctored?
+                            <span class="material-symbols-outlined group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="p-md text-body-sm text-on-surface-variant">
+                            Yes, all Tier 2 and Tier 3 final assessments utilize AI-assisted remote proctoring to ensure the highest academic integrity, including identity verification and environment scanning.
+                        </div>
+</details>
+<details class="group bg-surface rounded-xl border border-outline-variant overflow-hidden">
+<summary class="flex justify-between items-center p-md cursor-pointer list-none font-bold text-on-surface group-open:bg-surface-container-low transition-colors">
+                            Can my employer pay for my sprint?
+                            <span class="material-symbols-outlined group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="p-md text-body-sm text-on-surface-variant">
+                            Absolutely. We provide enterprise billing and corporate learning reimbursement documentation for all our courses. Many Fortune 500 companies have Dezai in their pre-approved education list.
+                        </div>
+</details>
+</div>
+</div>
+</section>
+<!-- Final CTA -->
+<section class="py-xl bg-primary text-on-primary overflow-hidden relative">
+<div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
+<div class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop text-center relative z-10">
+<h2 class="text-display-sm font-display-sm mb-md">Ready to Certify Your Skills?</h2>
+<p class="text-body-lg mb-xl opacity-90 max-w-2xl mx-auto">Join the 10,000+ professionals already advancing their careers through University-Grade Micro-Credentials.</p>
+<div class="flex flex-col sm:flex-row justify-center gap-md">
+<button class="bg-white text-primary px-xl py-md rounded-full font-bold text-headline-sm hover:bg-surface-container-lowest transition-all shadow-xl active:scale-95">
+                        Get Started Free
+                    </button>
+<button class="bg-transparent border-2 border-white/30 text-white px-xl py-md rounded-full font-bold text-headline-sm hover:bg-white/10 transition-all active:scale-95">
+                        Contact Sales
+                    </button>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full border-t border-outline-variant bg-surface-container-lowest py-lg">
+<div class="max-w-container-max mx-auto px-margin-desktop flex flex-col md:flex-row justify-between items-start gap-xl">
+<div class="max-w-xs">
+<div class="h-10 mb-sm flex items-center">https://lh3.googleusercontent.com/aida-public/AB6AXuAOfcTW4wZHpCZQJ-5vaXrTE1_sqFbfe67UIZOIeLJygbRR72IzPJykW-tuPZ4C_9_XGdkOZHz13CRRyhRiZPzHKBEK4zUSuKno8B6oTrQUMe0DApQT7OaAg0jTiVHiOAb48HtxgqCerzmzM_ReW9dkx7kWTlokkTLjjaoD11Iti_bxitaCbJ05c43wCFZglGmK6g_-OUJWFwxQFlyFRkebQ_kAXQH0NbY1laana4a3krLKql56i9V4AziXpR6HDJy0bcvk5KrWJvuj</div>
+<p class="text-body-sm text-on-surface-variant">University-Grade Micro-Credentials. Bridging the gap between knowledge and certification for the AI-driven economy.</p>
+<div class="flex gap-md mt-md">
+<span class="material-symbols-outlined text-outline cursor-pointer hover:text-primary transition-colors">public</span>
+<span class="material-symbols-outlined text-outline cursor-pointer hover:text-primary transition-colors">mail</span>
+<span class="material-symbols-outlined text-outline cursor-pointer hover:text-primary transition-colors">forum</span>
+</div>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-3 gap-xl">
+<div class="flex flex-col gap-sm">
+<div class="text-label-md font-bold text-on-surface">Education</div>
+<a class="text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Course Catalog</a>
+<a class="text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Universities</a>
+<a class="text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Accreditation</a>
+</div>
+<div class="flex flex-col gap-sm">
+<div class="text-label-md font-bold text-on-surface">Institutional</div>
+<a class="text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Terms of Service</a>
+<a class="text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Partners</a>
+</div>
+<div class="flex flex-col gap-sm">
+<div class="text-label-md font-bold text-on-surface">Support</div>
+<a class="text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Help Center</a>
+<a class="text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Student Advisor</a>
+<a class="text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Enterprise</a>
+</div>
+</div>
+</div>
+<div class="max-w-container-max mx-auto px-margin-desktop mt-xl pt-lg border-t border-outline-variant flex flex-col md:flex-row justify-between items-center gap-md">
+<div class="text-label-sm text-on-surface-variant">© 2024 Dezai AI. University-Grade Micro-Credentials. All rights reserved.</div>
+<div class="flex gap-lg">
+<span class="text-label-sm text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">language</span> English (US)</span>
+<span class="text-label-sm text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">verified_user</span> Institutional Trust</span>
+</div>
+</div>
+</footer>
+<script>
+        // Simple counter animation for stats
+        function animateCounter(id, target) {
+            const el = document.getElementById(id);
+            let current = 0;
+            const increment = target / 50;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    el.innerText = target.toLocaleString() + (id === 'stat-students' ? '+' : '+');
+                    clearInterval(timer);
+                } else {
+                    el.innerText = Math.floor(current).toLocaleString() + '+';
+                }
+            }, 30);
+        }
+
+        // Initialize counters when they enter view
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    animateCounter('stat-students', 10000);
+                    animateCounter('stat-univ', 50);
+                    observer.unobserve(entry.target);
+                }
+            });
+        });
+
+        observer.observe(document.getElementById('stat-students'));
+
+        // Interaction scale effect
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('mousedown', () => btn.classList.add('scale-95'));
+            btn.addEventListener('mouseup', () => btn.classList.remove('scale-95'));
+            btn.addEventListener('mouseleave', () => btn.classList.remove('scale-95'));
+        });
+    </script>
+
+
+</body></html>

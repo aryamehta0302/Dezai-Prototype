@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Generative AI for Leaders | Dezai AI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Geist:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-tint": "#0057ce",
+                    "surface": "#faf8ff",
+                    "on-tertiary-fixed-variant": "#7f2b00",
+                    "surface-container-lowest": "#ffffff",
+                    "primary-container": "#0d6efd",
+                    "tertiary-container": "#cf4b00",
+                    "secondary": "#0051d5",
+                    "on-surface-variant": "#424655",
+                    "error": "#ba1a1a",
+                    "primary-fixed": "#dae2ff",
+                    "on-tertiary": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "primary-fixed-dim": "#b1c5ff",
+                    "on-primary-fixed-variant": "#00419e",
+                    "on-tertiary-container": "#ffffff",
+                    "on-secondary-container": "#fefcff",
+                    "surface-container-low": "#f2f3ff",
+                    "outline-variant": "#c2c6d8",
+                    "on-primary-container": "#ffffff",
+                    "background": "#faf8ff",
+                    "error-container": "#ffdad6",
+                    "outline": "#727787",
+                    "inverse-surface": "#2d3039",
+                    "on-primary-fixed": "#001946",
+                    "surface-container": "#ecedf9",
+                    "surface-dim": "#d8d9e5",
+                    "surface-container-highest": "#e1e2ee",
+                    "primary": "#0057cd",
+                    "on-background": "#191b24",
+                    "surface-bright": "#faf8ff",
+                    "inverse-on-surface": "#eff0fc",
+                    "surface-container-high": "#e6e7f3",
+                    "secondary-container": "#316bf3",
+                    "on-secondary": "#ffffff",
+                    "tertiary-fixed": "#ffdbce",
+                    "on-tertiary-fixed": "#370e00",
+                    "on-secondary-fixed": "#00174b",
+                    "on-error-container": "#93000a",
+                    "on-error": "#ffffff",
+                    "on-surface": "#191b24",
+                    "inverse-primary": "#b1c5ff",
+                    "secondary-fixed-dim": "#b4c5ff",
+                    "tertiary": "#a63b00",
+                    "secondary-fixed": "#dbe1ff",
+                    "on-secondary-fixed-variant": "#003ea8",
+                    "surface-variant": "#e1e2ee",
+                    "tertiary-fixed-dim": "#ffb599"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "lg": "40px",
+                    "md": "24px",
+                    "sm": "12px",
+                    "xs": "4px",
+                    "margin-desktop": "48px",
+                    "base": "8px",
+                    "margin-mobile": "16px",
+                    "gutter": "24px",
+                    "container-max": "1440px",
+                    "xl": "64px"
+            },
+            "fontFamily": {
+                    "headline-sm": ["Geist"],
+                    "body-md": ["Inter"],
+                    "headline-lg": ["Geist"],
+                    "body-sm": ["Inter"],
+                    "label-sm": ["Geist"],
+                    "label-md": ["Geist"],
+                    "headline-lg-mobile": ["Geist"],
+                    "display-lg": ["Geist"],
+                    "headline-md": ["Geist"],
+                    "display-sm": ["Geist"],
+                    "body-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-sm": ["20px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "headline-lg": ["30px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "1", "fontWeight": "600"}],
+                    "label-md": ["14px", {"lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                    "display-sm": ["36px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.5);
+        }
+        .custom-shadow {
+            box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.03);
+        }
+        .custom-shadow-hover:hover {
+            box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.08);
+        }
+        details > summary { list-style: none; }
+        details > summary::-webkit-details-marker { display: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body-md overflow-x-hidden">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-50 bg-surface dark:bg-on-background shadow-sm">
+<div class="flex items-center justify-between px-margin-desktop py-4 max-w-container-max mx-auto">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-primary cursor-pointer">menu</span>
+<span class="font-headline-lg text-headline-lg font-bold text-primary dark:text-primary-fixed">Dezai AI</span>
+</div>
+<nav class="hidden md:flex items-center gap-md">
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="font-label-md text-label-md text-primary dark:text-primary-fixed-dim font-bold" href="#">Courses</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" href="#">Certificates</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" href="#">Institutions</a>
+</nav>
+<div class="flex items-center gap-sm">
+<button class="material-symbols-outlined p-2 hover:bg-surface-container transition-colors rounded-full">search</button>
+<div class="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center overflow-hidden border border-outline-variant">
+<img alt="User profile photo" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB85NGv7EzMn_4bReq271kC7xncNE3BFW-6iE-k9n4v28q7695wAAZvcuMMfi_eaVZHAHENSOROKz29SV9wh21kjh4zz_cnfvQBHKT-RJytfbEMNSR-579riNQiCEV1Umnj7SAAjBy9vjkE-GtxYrcfv-7U4JW-A94tVRYCPk1IQ5W46FKWtQD1sLoWTrPj516LgDuAYQ--JUtBygsNtijNVtlbsUc2bWrBf845btBVDVnLf-vhUzlbpEDJLLMSlbBpCvvrNC5S7xIX"/>
+</div>
+</div>
+</div>
+</header>
+<main class="max-w-container-max mx-auto px-margin-desktop py-lg">
+<!-- Hero Section -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-lg mb-xl items-center">
+<div class="lg:col-span-7 space-y-md">
+<div class="flex items-center gap-xs">
+<span class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full font-label-sm text-label-sm">Professional Certificate</span>
+<span class="text-on-surface-variant material-symbols-outlined text-[16px]">stars</span>
+<span class="text-on-surface-variant font-label-md text-label-md">Tier 2 Accredited</span>
+</div>
+<h1 class="font-display-lg text-display-lg text-on-surface leading-tight">Generative AI for Leaders: Strategic Implementation</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">
+                    Master the frameworks to integrate Generative AI into your organizational workflow. Bridge the gap between technological potential and business value with institutional-grade leadership strategies.
+                </p>
+<div class="flex flex-wrap items-center gap-md pt-sm">
+<button class="bg-primary text-on-primary px-xl py-4 rounded-xl font-headline-sm text-headline-sm hover:bg-secondary active:scale-95 transition-all flex items-center gap-base">
+                        Enroll Now — $899
+                    </button>
+<button class="border border-outline text-primary px-lg py-4 rounded-xl font-headline-sm text-headline-sm hover:bg-surface-container-low transition-all">
+                        View Curriculum
+                    </button>
+</div>
+</div>
+<div class="lg:col-span-5">
+<div class="relative group cursor-pointer rounded-xl overflow-hidden custom-shadow">
+<img class="w-full h-[400px] object-cover group-hover:scale-105 transition-transform duration-700" data-alt="A high-end cinematic shot of a modern glass-walled boardroom where a soft blue holographic representation of a neural network floats above a polished oak table. The lighting is cold and professional with soft morning light entering through floor-to-ceiling windows. The aesthetic is clean, academic, and highly technological, reflecting the premium nature of the Generative AI leadership course." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZlOf7zA_lPFLOdGlipnNYyBoQskop37cwF3MOs6oPu5rDhVPWx69MDwrdwgDIPq2-nDatU62C43998idfsJ107Ur1quIhLTGG3jCTyfW9vJBP_PL2BIOSd_RNhOS5ypsQpPaNpbM4wnEaRdU2FZh4om56NyHSGq2A_BqdAbxnFidj8AqLgB7MIy9q1SNT2Z6bAy-8e4dBABjHHVZvKto6Jkt_ogzoLQAWOY9tK39OgYtswpcIht_sx8N9ijHdqmjjo8icuVB-BQmO"/>
+<div class="absolute inset-0 bg-on-background/30 flex items-center justify-center">
+<div class="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center group-hover:bg-white/40 transition-all">
+<span class="material-symbols-outlined text-white text-[48px]" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Instructor & University Section -->
+<section class="mb-xl">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-lg bg-surface-container-lowest p-lg rounded-xl custom-shadow">
+<div class="flex items-start gap-md">
+<div class="w-24 h-24 rounded-xl overflow-hidden shrink-0 border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a female university professor in her late 40s wearing a smart navy blazer. She stands in a sunlit university library with blurred books in the background. The lighting is soft and flattering, emphasizing expertise and institutional authority. The color palette is warm and academic with soft blues and neutral wood tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCIIDPexVilwSPIbO1pfn6BFXZTzBHNnkbp9JjEx2-hrTs_Ct8qMVumSS8HdIUqGAqa0hp_-2y_FfY0IJfskg30XLH9PN0mhWG6BG0zn-gbhMyv5mHKkyjNss2mW8WMhmNslFKVoKvC9KEjfVwtiiMZ72crNArw4hTExRyrZFWO7uBhmLVp1aXHF-cHrviNwqmHDOdxeyzTeGRhI0sasYGUELQPgClvXcCdmA7QaFSwkFWngdKO5pymKM0gdAXkGNSBxHjm23e-u1sA"/>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Dr. Elena Rostova</h3>
+<p class="font-label-md text-label-md text-primary mb-base">Lead Instructor &amp; AI Ethicist</p>
+<p class="font-body-md text-body-md text-on-surface-variant">Professor of Applied Intelligence with over 15 years of experience in digital transformation at Global 500 firms.</p>
+</div>
+</div>
+<div class="flex items-start gap-md border-t md:border-t-0 md:border-l border-outline-variant pt-md md:pt-0 md:pl-md">
+<div class="w-24 h-24 flex items-center justify-center bg-surface-container rounded-xl shrink-0">
+<span class="material-symbols-outlined text-on-surface-variant text-[40px]">account_balance</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Stanford Institute for AI</h3>
+<p class="font-label-md text-label-md text-on-surface-variant mb-base">Academic Partner</p>
+<p class="font-body-md text-body-md text-on-surface-variant">Accredited by the Board of Academic Excellence, providing rigorous theoretical foundations for practical leadership.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Syllabus & Certificate Section (Asymmetric Grid) -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-lg mb-xl">
+<!-- Syllabus Accordion -->
+<div class="lg:col-span-8 space-y-md">
+<div class="flex items-center justify-between">
+<h2 class="font-display-sm text-display-sm">Course Syllabus</h2>
+<span class="font-label-md text-label-md text-on-surface-variant">6 Modules • 24 Lessons</span>
+</div>
+<div class="space-y-base">
+<details class="group bg-surface-container-low rounded-xl" open="">
+<summary class="p-md cursor-pointer flex items-center justify-between hover:bg-surface-container-high transition-all rounded-xl">
+<div class="flex items-center gap-md">
+<span class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-md">01</span>
+<span class="font-headline-sm text-headline-sm">Foundations of Generative Models</span>
+</div>
+<span class="material-symbols-outlined group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="px-md pb-md pt-base space-y-sm">
+<div class="flex items-center justify-between p-sm hover:bg-white rounded-lg transition-colors">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-on-surface-variant">play_circle</span>
+<span class="font-body-md text-body-md">History and Evolution of LLMs</span>
+</div>
+<span class="text-body-sm text-on-surface-variant">12:45</span>
+</div>
+<div class="flex items-center justify-between p-sm hover:bg-white rounded-lg transition-colors">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-on-surface-variant">article</span>
+<span class="font-body-md text-body-md">Reading: The Transformer Architecture</span>
+</div>
+<span class="text-body-sm text-on-surface-variant">20 min</span>
+</div>
+</div>
+</details>
+<details class="group bg-surface-container-low rounded-xl">
+<summary class="p-md cursor-pointer flex items-center justify-between hover:bg-surface-container-high transition-all rounded-xl">
+<div class="flex items-center gap-md">
+<span class="w-8 h-8 rounded-full bg-surface-container-highest text-on-surface flex items-center justify-center font-label-md">02</span>
+<span class="font-headline-sm text-headline-sm">Prompt Engineering for Executive Workflows</span>
+</div>
+<span class="material-symbols-outlined group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="px-md pb-md pt-base">
+<p class="text-on-surface-variant p-sm">Exploring chain-of-thought prompting and few-shot learning for business intelligence.</p>
+</div>
+</details>
+<details class="group bg-surface-container-low rounded-xl">
+<summary class="p-md cursor-pointer flex items-center justify-between hover:bg-surface-container-high transition-all rounded-xl">
+<div class="flex items-center gap-md">
+<span class="w-8 h-8 rounded-full bg-surface-container-highest text-on-surface flex items-center justify-center font-label-md">03</span>
+<span class="font-headline-sm text-headline-sm">Risk, Bias, and Ethical AI Governance</span>
+</div>
+<span class="material-symbols-outlined group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="px-md pb-md pt-base">
+<p class="text-on-surface-variant p-sm">Frameworks for mitigating algorithmic bias and ensuring data privacy.</p>
+</div>
+</details>
+</div>
+</div>
+<!-- Certificate Details (Sidebar) -->
+<div class="lg:col-span-4">
+<div class="sticky top-28 bg-primary-container text-on-primary-container p-lg rounded-xl space-y-md overflow-hidden relative">
+<!-- Subtle background decoration -->
+<div class="absolute -right-10 -bottom-10 opacity-10">
+<span class="material-symbols-outlined text-[160px]">verified</span>
+</div>
+<span class="material-symbols-outlined text-[48px]">verified</span>
+<h3 class="font-headline-lg text-headline-lg">Tier 2 Accreditation</h3>
+<p class="font-body-md text-body-md opacity-90">
+                        Upon completion, you earn a verified digital certificate accredited by our university partners.
+                    </p>
+<ul class="space-y-sm">
+<li class="flex items-center gap-base">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+<span class="font-label-md">Shareable on LinkedIn</span>
+</li>
+<li class="flex items-center gap-base">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+<span class="font-label-md">Verified via Blockchain ID</span>
+</li>
+<li class="flex items-center gap-base">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+<span class="font-label-md">University Credit Transferable</span>
+</li>
+</ul>
+<div class="pt-md">
+<img class="rounded-lg shadow-lg" data-alt="A clean, high-resolution mockup of a professional academic certificate. It features elegant typography, a gold-embossed seal of authenticity, and a classic border. The background is a soft, textured cream paper. The overall impression is one of prestige, achievement, and institutional recognition." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9XVFy9PA4-Fr0cdSSx2AqFU2x3bMkjFcH4P5QuG3wtKPLcs-QCRFAxAafo-YP2zL0WvvHBKs2ALuqElMvHy4bx_NKkSmJMPOWhEyWQMErmy2dZ1Ua3Qq4cOdxOrIYiNdRhE-W_W_-JEsQ4l2NJ_Y9h93LxFrIe8FarbFXlJkOHOsFFZgupiYSDOvLyQC6xEwwNuSPutcoIwyQUOa4oKwqHyiWg-TYxLxGu5N1T9AO3oT80xG5ph5uJG158l01wNfY6oQGrs1Vualn"/>
+</div>
+</div>
+</div>
+</section>
+<!-- FAQ Section -->
+<section class="mb-xl max-w-4xl mx-auto text-center">
+<h2 class="font-display-sm text-display-sm mb-lg">Frequently Asked Questions</h2>
+<div class="text-left space-y-md">
+<div class="p-md border border-outline-variant rounded-xl">
+<h4 class="font-headline-sm text-headline-sm mb-xs">Do I need a technical background?</h4>
+<p class="font-body-md text-body-md text-on-surface-variant">No. This course is specifically designed for business leaders. While we cover technological foundations, the focus is on strategy, implementation, and ROI.</p>
+</div>
+<div class="p-md border border-outline-variant rounded-xl">
+<h4 class="font-headline-sm text-headline-sm mb-xs">What is the time commitment?</h4>
+<p class="font-body-md text-body-md text-on-surface-variant">We recommend 4-6 hours per week over the course of 6 weeks. The curriculum is self-paced with weekly live office hours.</p>
+</div>
+<div class="p-md border border-outline-variant rounded-xl">
+<h4 class="font-headline-sm text-headline-sm mb-xs">Are there group discounts?</h4>
+<p class="font-body-md text-body-md text-on-surface-variant">Yes, for teams of 5 or more, we offer customized corporate enrollment packages including dedicated workshops.</p>
+</div>
+</div>
+</section>
+<!-- Related Courses Carousel -->
+<section class="mb-xl">
+<div class="flex items-center justify-between mb-lg">
+<h2 class="font-display-sm text-display-sm">Related Courses</h2>
+<div class="flex gap-sm">
+<button class="w-10 h-10 rounded-full border border-outline flex items-center justify-center hover:bg-surface-container transition-all">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="w-10 h-10 rounded-full border border-outline flex items-center justify-center hover:bg-surface-container transition-all">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-md">
+<!-- Course Card 1 -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden custom-shadow custom-shadow-hover transition-all flex flex-col">
+<img class="w-full h-48 object-cover" data-alt="A futuristic cybersecurity theme with blue glowing lines of code reflecting on a person's face. The lighting is dark and moody, punctuated by neon cyan circuit patterns. The aesthetic is modern, sleek, and security-focused, aligning with a high-level course on enterprise data security in the age of AI." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBk0ml-gDIhuEchI1RYjUVHOcsJxpqidiZfSgMmd3lvrjAmB0WV-rJE9nGsrS9FctQaT-5lM8WQITm_g0OcRdY9fbxFi0qL48cwGH5YdK6QdWSCMVJFb3iPkv06wt2nVb0Eqz3mqw5qGpSf6P3sT2kZmHUK67_RyDiYJzqvxlppMHjErysSWPas5rtlDLiVG0h5V1WneB22_Oa7HNDA6gyXC8pK189_IRoDj4SbB--gINuH2eZ6WL21U27fCfbtC_GJUlJPs0nZtmRM"/>
+<div class="p-md flex flex-col grow">
+<span class="text-primary font-label-sm text-label-sm mb-xs uppercase tracking-wider">Cybersecurity</span>
+<h4 class="font-headline-sm text-headline-sm mb-base">AI-Driven Data Privacy</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-md grow">Protecting enterprise assets in the age of large-scale generative models.</p>
+<div class="flex items-center justify-between pt-md border-t border-outline-variant">
+<span class="font-headline-sm text-headline-sm">$599</span>
+<span class="flex items-center gap-xs font-label-md text-label-md text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">schedule</span> 4 Weeks
+                            </span>
+</div>
+</div>
+</div>
+<!-- Course Card 2 -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden custom-shadow custom-shadow-hover transition-all flex flex-col">
+<img class="w-full h-48 object-cover" data-alt="A clean, minimalist workspace showing a laptop screen with complex data visualization charts and graphs. Soft natural light spills across the desk. The color palette is professional, using shades of slate blue and crisp white. It conveys a sense of high-level business analytics and strategic decision-making." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCSIAuT-Yn-oAhkpi7IkXPGGi_AXEmusFBm558x8qA1jzW3S6eoLzYIHcSJYyCuzlOjItuE4kBkmFMz1bW4F_WG5q3IrxNjB89VplG5iVGMclDWM_9iC3G2NN5Ecfgp_7PlSoeSIgLNc_xvI5xYAB2GSzB-cQmGvGxQibm7ZKzgbrGxOAj6sQlcI_FrrQlvIQicMXvgYbFz0UICmvKfEBhQzTu6cq1-kTDTZPy5ZED76Vczv0jVzgkTLFcvi8xNJ1sbXUed3qbgWYkY"/>
+<div class="p-md flex flex-col grow">
+<span class="text-primary font-label-sm text-label-sm mb-xs uppercase tracking-wider">Strategy</span>
+<h4 class="font-headline-sm text-headline-sm mb-base">Algorithmic Decision Making</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-md grow">How to use predictive modeling to steer corporate growth and risk assessment.</p>
+<div class="flex items-center justify-between pt-md border-t border-outline-variant">
+<span class="font-headline-sm text-headline-sm">$649</span>
+<span class="flex items-center gap-xs font-label-md text-label-md text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">schedule</span> 5 Weeks
+                            </span>
+</div>
+</div>
+</div>
+<!-- Course Card 3 -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden custom-shadow custom-shadow-hover transition-all flex flex-col">
+<img class="w-full h-48 object-cover" data-alt="A diverse group of professional adults collaborating in a bright, modern office space. They are gathered around a large monitor, looking engaged and productive. The lighting is high-key and optimistic. The visual style is polished and corporate, emphasizing teamwork and professional development in a modern educational context." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDpzfzMCKqywxPSwdS0VxdtXWhzBqFACd-UHaKEaLcZuwWrOmUCovxPVc8bNMGT1qaZXdslvcmqmZKlU84GhZ8dBfRVU6-U1L-VQyqhc2sB4ibPAdWgzz5Mh_oBXiOnLOakAxIbyOP-rfXzvOVjgwJ9Ee4epFvuB-ktjzDytz1bKsZDrMNtmHe2CwM9qG_tv71G19oHf9alhX95qI7OHKzaQdscPBeRbpkdOjxPUWpnh5gEdGiZl8qlaTtFT3zwJ5_BbY7k8WNO9ff6"/>
+<div class="p-md flex flex-col grow">
+<span class="text-primary font-label-sm text-label-sm mb-xs uppercase tracking-wider">Management</span>
+<h4 class="font-headline-sm text-headline-sm mb-base">Leading Hybrid AI Teams</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-md grow">Organizational design and management tactics for integrated human-AI workforce.</p>
+<div class="flex items-center justify-between pt-md border-t border-outline-variant">
+<span class="font-headline-sm text-headline-sm">$499</span>
+<span class="flex items-center gap-xs font-label-md text-label-md text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">schedule</span> 3 Weeks
+                            </span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full py-xl mt-auto bg-surface-container-lowest dark:bg-on-background border-t border-outline-variant dark:border-outline">
+<div class="max-w-container-max mx-auto px-margin-desktop flex flex-col md:flex-row justify-between items-center gap-md">
+<div class="space-y-xs">
+<span class="font-headline-sm text-headline-sm font-semibold text-on-surface">Dezai AI</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant opacity-80">© 2024 Dezai AI Institutional Systems. All rights reserved.</p>
+</div>
+<div class="flex flex-wrap justify-center gap-md">
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Partner Directory</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Academic Standards</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Support</a>
+</div>
+</div>
+</footer>
+<!-- Enrollment FAB (Mobile) -->
+<div class="md:hidden fixed bottom-6 right-6 z-50">
+<button class="w-16 h-16 bg-primary text-on-primary rounded-full shadow-lg flex items-center justify-center active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[28px]">shopping_cart</span>
+</button>
+</div>
+<script>
+        // Smooth entrance animations for cards
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.custom-shadow');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    card.style.transition = 'all 0.6s cubic-bezier(0.22, 1, 0.36, 1)';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+
+        // Simple accordion logic for ensuring only one is open if desired
+        const detailsElements = document.querySelectorAll('details');
+        detailsElements.forEach((targetDetail) => {
+            targetDetail.addEventListener('click', () => {
+                detailsElements.forEach((detail) => {
+                    if (detail !== targetDetail) {
+                        detail.removeAttribute('open');
+                    }
+                });
+            });
+        });
+    </script>
+</body></html>

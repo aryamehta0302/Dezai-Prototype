@@ -1,0 +1,59 @@
+"use client";
+
+import { PageContainer } from "@/shared/components/page-container";
+import { CourseCard } from "../components/course-card";
+import { CourseFilters } from "../components/course-filters";
+import { EmptyState } from "@/shared/components/empty-state";
+import { useCourses } from "../hooks/useCourses";
+import { SearchX } from "lucide-react";
+
+export function CatalogPage() {
+  const {
+    courses,
+    filters,
+    updateFilter,
+    resetFilters,
+    hasActiveFilters,
+    totalResults,
+  } = useCourses();
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="bg-white border-b border-border-light">
+        <PageContainer className="py-8">
+          <h1 className="text-2xl font-bold text-on-surface">Course Catalog</h1>
+          <p className="text-muted mt-1">
+            Explore university-grade courses across AI, Commerce, and Design
+          </p>
+        </PageContainer>
+      </div>
+
+      <PageContainer className="py-8 space-y-6">
+        {/* Filters */}
+        <CourseFilters
+          filters={filters}
+          onFilterChange={updateFilter}
+          onReset={resetFilters}
+          hasActiveFilters={hasActiveFilters}
+          totalResults={totalResults}
+        />
+
+        {/* Course Grid */}
+        {courses.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 fade-in-staggered">
+            {courses.map((course) => (
+              <CourseCard key={course.id} course={course} />
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            icon={SearchX}
+            title="No courses found"
+            description="Try adjusting your filters or search terms."
+          />
+        )}
+      </PageContainer>
+    </div>
+  );
+}

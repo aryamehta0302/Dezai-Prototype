@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Dezai AI | University Admin Dashboard</title>
+<!-- Google Fonts & Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#ecedf9",
+                        "error-container": "#ffdad6",
+                        "surface-container-high": "#e6e7f3",
+                        "primary-container": "#0d6efd",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "on-surface": "#191b24",
+                        "error": "#ba1a1a",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-container": "#316bf3",
+                        "on-tertiary-fixed-variant": "#7f2b00",
+                        "on-background": "#191b24",
+                        "surface-container-low": "#f2f3ff",
+                        "surface-container-highest": "#e1e2ee",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed-dim": "#ffb599",
+                        "surface-tint": "#0057ce",
+                        "tertiary-fixed": "#ffdbce",
+                        "on-tertiary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "surface-variant": "#e1e2ee",
+                        "primary-fixed-dim": "#b1c5ff",
+                        "inverse-on-surface": "#eff0fc",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "secondary": "#0051d5",
+                        "primary": "#0057cd",
+                        "on-primary-fixed": "#001946",
+                        "surface-dim": "#d8d9e5",
+                        "outline": "#727787",
+                        "tertiary-container": "#cf4b00",
+                        "surface": "#faf8ff",
+                        "inverse-primary": "#b1c5ff",
+                        "on-tertiary-container": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "secondary-fixed": "#dbe1ff",
+                        "primary-fixed": "#dae2ff",
+                        "on-secondary-container": "#fefcff",
+                        "on-tertiary-fixed": "#370e00",
+                        "inverse-surface": "#2d3039",
+                        "surface-bright": "#faf8ff",
+                        "background": "#faf8ff",
+                        "on-surface-variant": "#424655",
+                        "outline-variant": "#c2c6d8",
+                        "on-primary-container": "#ffffff",
+                        "on-primary-fixed-variant": "#00419e",
+                        "on-secondary": "#ffffff",
+                        "tertiary": "#a63b00",
+                        "on-secondary-fixed": "#00174b"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "xl": "64px",
+                        "margin-mobile": "16px",
+                        "md": "24px",
+                        "margin-desktop": "48px",
+                        "sm": "12px",
+                        "lg": "40px",
+                        "gutter": "24px",
+                        "base": "8px",
+                        "container-max": "1440px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "label-sm": ["Geist"],
+                        "headline-lg-mobile": ["Geist"],
+                        "label-md": ["Geist"],
+                        "headline-sm": ["Geist"],
+                        "display-sm": ["Geist"],
+                        "body-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Geist"],
+                        "display-lg": ["Geist"],
+                        "headline-lg": ["Geist"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "label-sm": ["12px", {"lineHeight": "1", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                        "label-md": ["14px", {"lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "headline-sm": ["20px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                        "display-sm": ["36px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-lg": ["30px", {"lineHeight": "1.3", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #F8FAFC;
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .bento-card {
+            background: #FFFFFF;
+            box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.03);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .bento-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.08);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- Navigation Drawer (Sidebar) -->
+<aside class="hidden md:flex flex-col h-screen p-md gap-base bg-surface-container-low fixed left-0 top-0 w-80 shadow-md z-50" id="sidebar">
+<div class="flex items-center gap-sm mb-lg">
+<img alt="Dezai Logo" class="w-10 h-10 object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCxH3DrvKJdzdzB8dn77AkMgwq5VVjkvIMd1vcNTaxKJmjcFSQXh_jk1-HqNYAZToLjogNSME0B6opcEEf_uykZj2W_Kpx_igxa0EOrS6z7Dao44JGKQ3BTn5AzXIwowYQ4u2Ehzouwqw0tSWWArLQDnUUWYpKi5bqWwAuDt2OiDNKnz6HHJTitPXxnlZPQ_bpT_-5Ks9fmxTdkeN8nI4TfAJI2kFR9agTP1cCanbm_wi4cXOKBwGyA7VIer9ojbBH421XTGUhculx5"/>
+<span class="font-headline-sm text-headline-sm font-bold text-primary">Academic Portal</span>
+</div>
+<div class="flex flex-col gap-xs flex-grow">
+<!-- DASHBOARD IS ACTIVE -->
+<a class="flex items-center gap-sm px-4 py-3 bg-secondary-container text-on-secondary-container rounded-xl font-bold transition-all active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-sm px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined">school</span>
+<span class="font-label-md text-label-md">Courses</span>
+</a>
+<a class="flex items-center gap-sm px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined">verified</span>
+<span class="font-label-md text-label-md">Certificates</span>
+</a>
+<a class="flex items-center gap-sm px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined">account_balance</span>
+<span class="font-label-md text-label-md">Institutions</span>
+</a>
+</div>
+<div class="mt-auto pt-md border-t border-outline-variant">
+<div class="flex items-center gap-sm p-2 rounded-lg">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div>
+<p class="font-label-md text-label-md font-bold">MIT Global Admin</p>
+<p class="text-[12px] text-on-surface-variant">Institutional Tier</p>
+</div>
+</div>
+<p class="text-[10px] text-outline text-center mt-md">v1.0.4 • © 2024 Dezai AI</p>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="md:ml-80 min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky bg-surface shadow-sm z-40">
+<div class="flex items-center justify-between px-6 md:px-margin-desktop py-4 max-w-container-max mx-auto">
+<div class="flex items-center gap-sm">
+<button class="md:hidden p-2 hover:bg-surface-container-low rounded-full transition-colors active:scale-95">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-primary">Institution Overview</h1>
+</div>
+<div class="flex items-center gap-md">
+<div class="hidden lg:flex items-center bg-surface-container-low px-4 py-2 rounded-full border border-outline-variant focus-within:border-primary transition-all">
+<span class="material-symbols-outlined text-outline text-[20px] mr-2">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-sm w-48" placeholder="Search analytics..." type="text"/>
+</div>
+<button class="p-2 hover:bg-surface-container-low rounded-full relative transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span>
+</button>
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-fixed cursor-pointer transition-transform active:scale-95">
+<img class="w-full h-full object-cover" data-alt="Close up headshot of a professional university administrator with a friendly expression. They are wearing professional business attire in a brightly lit, modern academic setting. The lighting is crisp and the background is softly blurred to show a high-end university campus aesthetic with neutral tones and blue accents." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfK-hokXdndyTCpix2jBjbc4oMGmxUJzLYa6g5tx2VYsfagfOq_fIp5SUNhkUvUWCOf8QXPIXp_JTuRCoh538-9jwLd3naY_jHpJSNGGBp71Wf6TbASlhUtYYIYcieY_nLCZINRFRqLxIOPiEXy6qiigIj2cSmrkIxUKnyaU0dDm-inKUDykJIUy0HvOLhWoJZbhp-XYAIHh3_uIlcuupCq02XjLBtTzncEWLAPjlVB0P1SmgZGRYSFIYN6DsRHMRkBPzWJgCElAhr"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Content Area -->
+<div class="px-6 md:px-margin-desktop py-8 max-w-container-max w-full mx-auto flex-grow flex flex-col gap-lg">
+<!-- Dashboard Intro -->
+<section class="flex flex-col md:flex-row md:items-end justify-between gap-md">
+<div>
+<h2 class="font-headline-lg text-headline-lg font-bold text-on-surface">Welcome back, Administrator</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Academic data summary for <span class="text-primary font-semibold">MIT Global Institutional Program</span>.</p>
+</div>
+<div class="flex gap-sm">
+<button class="flex items-center gap-xs px-4 py-2 border border-outline-variant rounded-lg font-label-md text-label-md hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+                        Last 30 Days
+                    </button>
+<button class="flex items-center gap-xs px-4 py-2 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:opacity-90 transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                        Export Report
+                    </button>
+</div>
+</section>
+<!-- Overview Stats Grid -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
+<div class="bento-card p-md rounded-xl flex flex-col gap-base">
+<div class="flex items-center justify-between">
+<span class="material-symbols-outlined text-primary p-2 bg-primary-fixed/20 rounded-lg">group</span>
+<span class="text-secondary font-label-sm text-label-sm">+12% vs LY</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant">Active Students</p>
+<h3 class="font-display-sm text-display-sm font-bold">14,802</h3>
+</div>
+</div>
+<div class="bento-card p-md rounded-xl flex flex-col gap-base">
+<div class="flex items-center justify-between">
+<span class="material-symbols-outlined text-tertiary p-2 bg-tertiary-fixed/20 rounded-lg">verified</span>
+<span class="text-secondary font-label-sm text-label-sm">+5.4%</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant">Course Completions</p>
+<h3 class="font-display-sm text-display-sm font-bold">8,291</h3>
+</div>
+</div>
+<div class="bento-card p-md rounded-xl flex flex-col gap-base">
+<div class="flex items-center justify-between">
+<span class="material-symbols-outlined text-primary p-2 bg-primary-fixed/20 rounded-lg">monetization_on</span>
+<span class="text-on-surface-variant font-label-sm text-label-sm">Stable</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant">Net Revenue Share</p>
+<h3 class="font-display-sm text-display-sm font-bold">$1.24M</h3>
+</div>
+</div>
+<div class="bento-card p-md rounded-xl flex flex-col gap-base">
+<div class="flex items-center justify-between">
+<span class="material-symbols-outlined text-secondary p-2 bg-secondary-fixed/20 rounded-lg">analytics</span>
+<span class="text-error font-label-sm text-label-sm">-2.1%</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant">Avg. Quiz Score</p>
+<h3 class="font-display-sm text-display-sm font-bold">88.4%</h3>
+</div>
+</div>
+</section>
+<!-- Middle Section: Course Performance & Instructor Directory -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-lg">
+<!-- Course Performance -->
+<section class="lg:col-span-2 flex flex-col gap-md">
+<div class="flex items-center justify-between">
+<h3 class="font-headline-sm text-headline-sm font-bold">Course Performance</h3>
+<a class="text-primary font-label-md text-label-md hover:underline" href="#">View All Courses</a>
+</div>
+<div class="bento-card rounded-xl overflow-hidden overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant">
+<th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant">Course Name</th>
+<th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant">Enrolled</th>
+<th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant">Rating</th>
+<th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant">Trend</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container-lowest transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-sm">
+<div class="w-12 h-12 rounded bg-surface-container-highest flex-shrink-0">
+<img class="w-full h-full object-cover rounded" data-alt="Abstract academic-themed digital illustration featuring geometric shapes and stylized book icons. The colors are dominated by institutional blue and clean white, with a soft professional glow. The composition is structured and modern, suggesting high-level technical or scientific learning materials." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCwPsm1Zgj10DGQ_D3N7Rqsp_vrKi0ri11qpD3E15LfxiXehyFrpe2CTnWI9XG8WxGNeFJ-PrcniBR33LNZ4UrL_ffdE1OTJqkqkeEIS0Jmbqq8zwfasZqKZNWx5c8_NRD6g2nL8Oc3ElL5toiGIhYNPq4n8LOKTCLr6Xa1LJyjWeu5xOc-axS8ixwMh6VvU2l3Qrre_rm3fQ_48X0EY1TqUWlZyZDg3i0MzEO1Bfu1-ervEB-l-yzK9bAUYUVb2nIlUiEQQjil8q_V"/>
+</div>
+<div>
+<p class="font-label-md text-label-md font-bold text-on-surface">Intro to Quantum Computing</p>
+<p class="text-xs text-outline">Computer Science</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 font-body-sm text-body-sm">3,412</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px] text-[#FFB800]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-body-sm text-body-sm">4.9</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="h-8 w-24 bg-surface-container rounded p-1 flex items-end gap-[2px]">
+<div class="w-2 bg-primary/20 h-1/4 rounded-full"></div>
+<div class="w-2 bg-primary/40 h-2/4 rounded-full"></div>
+<div class="w-2 bg-primary/60 h-3/4 rounded-full"></div>
+<div class="w-2 bg-primary h-full rounded-full"></div>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-sm">
+<div class="w-12 h-12 rounded bg-surface-container-highest flex-shrink-0">
+<img class="w-full h-full object-cover rounded" data-alt="Minimalist top-down view of a professional workspace with a digital tablet and financial charts. The scene is bright and airy with high-key lighting, featuring a clean white and soft blue color palette. The aesthetic is corporate and modern, reflecting business strategy and data-driven intelligence." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBMG0NR8qrII0Y-FsOzJi6RewIS1JJ6OpuYcGDI1TFWVyI1AYy4gMKpZGMpuiqtu6NB9MMD2viJ8pDqZH5Myxbto3O68315JCMiiKCEGoLyzVFOkAeKdHYg2nHGKH1IdVN9i4kdY-x6HgH6P9ERLDl__RtfgGgBlQVbA5R6p4r5xaT-NO21GZ46Q1C5un1vcIDTNHAIV4ZvZkJsWvn-KnK8-Bn5z2TI60eUUs918CQ8Jvcmqknv6k3EvTeBFtgoVRXsOYvke1-XxMhb"/>
+</div>
+<div>
+<p class="font-label-md text-label-md font-bold text-on-surface">Algorithmic Trading</p>
+<p class="text-xs text-outline">Finance &amp; Econ</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 font-body-sm text-body-sm">2,890</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px] text-[#FFB800]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-body-sm text-body-sm">4.7</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="h-8 w-24 bg-surface-container rounded p-1 flex items-end gap-[2px]">
+<div class="w-2 bg-primary h-full rounded-full"></div>
+<div class="w-2 bg-primary/80 h-3/4 rounded-full"></div>
+<div class="w-2 bg-primary/60 h-2/4 rounded-full"></div>
+<div class="w-2 bg-primary/40 h-1/3 rounded-full"></div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- Instructor Directory Quick View -->
+<section class="flex flex-col gap-md">
+<div class="flex items-center justify-between">
+<h3 class="font-headline-sm text-headline-sm font-bold">Instructors</h3>
+<span class="bg-surface-container px-2 py-1 rounded text-[10px] font-bold">12 TOTAL</span>
+</div>
+<div class="bento-card rounded-xl p-md flex flex-col gap-md h-full">
+<div class="flex items-center justify-between p-2 rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer">
+<div class="flex items-center gap-sm">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="Portrait of a sophisticated female professor with glasses, looking knowledgeable and professional. She is in a high-tech academic environment with a glass chalkboard in the background. The lighting is clean and professional, focusing on her expression of intellectual authority and approachability in an institutional blue-themed setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAevtkIQzKVSye8H1uOL8HtE5HWLbfrUHoFWym0v0L9lNTl8XrMY-Falmh7VMDQbxDk5o-gPctT7rJ0EEATQd5Sr8wGe7ESIR_0zxCseqOIC1BqejcnIKeXdEHq00pvOVPRnFyZtQNgWh-N-linXtCl1bQoFKHqRLLiwI8OJWoGsrIjaqoIH7aWFKuLs1MMkyADKT-vOPYt100KMpSR3jnRN2h2gFc7BceKUUKsxnrmRuftYVQ_KkCzdlkZFxWPlaXJ1hiErYUGdFW1"/>
+<div>
+<p class="font-label-md text-label-md font-bold">Dr. Sarah Chen</p>
+<p class="text-xs text-outline">Lead Quantum AI</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-primary text-[20px]">chevron_right</span>
+</div>
+<div class="flex items-center justify-between p-2 rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer">
+<div class="flex items-center gap-sm">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="Portrait of a senior male lecturer with a grey beard and sharp features, wearing a dark blazer. He stands in a modern university library with shelves of books visible in the background. The lighting is warm and intellectual, highlighting his expertise and the professional academic environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHuaE582eLLKx75vKI8NS4rYutIixOZvR9WxuhLkAtCWQZAofNQGnS1ZZLKl9k1xtcJYX_w8DLGKwUyD6PWzFiPkAtSsFuX_uQfgUVnyZdEr4xDHqYqhJrLNuFzyuVf3WTYR0BXxUZMcMnEYmC_yikERzH6PT9ArZO26hEuVTuJ3jDGrx-5PeHr7BgH3YUn7ST1Xuyboyb4l4-wGklKjD1Nj2woyt8rGQyj6jnCCUmRlsPBuaSwALiRIy9JfQuiDohgsO5dXHV4QdO"/>
+<div>
+<p class="font-label-md text-label-md font-bold">Prof. James Miller</p>
+<p class="text-xs text-outline">Systemic Economics</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-primary text-[20px]">chevron_right</span>
+</div>
+<div class="flex items-center justify-between p-2 rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer">
+<div class="flex items-center gap-sm">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="A focused female instructor in her late 30s, gesturing while teaching. She has a modern academic look, in a clean, brightly-lit lab setting. The image uses high-contrast, clean lighting with a focus on her engaging expression, set against a background of technological monitors and white surfaces." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAjsJVATbuRuTj69VnRg26H5EPRkvRRRZR5_NYH3A3fU3qmd2uP6ukyIT4Z9KLEnDRtb4kvMZ0uG-ErldodBzamuh4ihWAc6YuqPQsUupXv1twxD1nBfRSvgIIy9GdSKqK5oBYKro9mjhcj3zsxVjtARxzkHSiyvVCpqlc-c6CBRTdwzm2MeDenMia2KtnC7es-cqBlz0M5R37iqbQX34_Szqx29JIxWNElzJW1iAb13nhRAkowjFZrr1SpRzzGeZU0RFAtzF1P-BO0"/>
+<div>
+<p class="font-label-md text-label-md font-bold">Dr. Elena Rodriguez</p>
+<p class="text-xs text-outline">Digital Humanities</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-primary text-[20px]">chevron_right</span>
+</div>
+<button class="w-full py-3 mt-auto border border-dashed border-outline-variant rounded-lg text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-low transition-all">
+                            Manage Directory
+                        </button>
+</div>
+</section>
+</div>
+<!-- Bottom Section: Recent Certifications -->
+<section class="flex flex-col gap-md">
+<div class="flex items-center justify-between">
+<h3 class="font-headline-sm text-headline-sm font-bold">Recent Certifications</h3>
+<div class="flex gap-xs">
+<span class="px-3 py-1 bg-surface-container-highest text-on-surface font-label-sm text-label-sm rounded-full">Tier 2: Advanced</span>
+<span class="px-3 py-1 bg-primary text-on-primary font-label-sm text-label-sm rounded-full">Tier 3: Professional</span>
+</div>
+</div>
+<div class="bento-card rounded-xl overflow-hidden overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant">
+<th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant">Student</th>
+<th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant">Certificate Title</th>
+<th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant">Completion Date</th>
+<th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant">Status</th>
+<th class="px-6 py-4 font-label-md text-label-md text-on-surface-variant text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-bold text-xs">AH</div>
+<span class="font-body-sm text-body-sm font-medium">Alex Holloway</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary text-[18px]">workspace_premium</span>
+<span class="font-body-sm text-body-sm">Global AI Ethics Certificate (T3)</span>
+</div>
+</td>
+<td class="px-6 py-4 font-body-sm text-body-sm text-on-surface-variant">Oct 24, 2024</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 rounded-full bg-primary-container/10 text-primary-container font-label-sm text-[10px] uppercase">Verified</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="p-2 hover:bg-surface-container-high rounded-full transition-colors">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-tertiary-fixed text-on-tertiary-fixed flex items-center justify-center font-bold text-xs">MK</div>
+<span class="font-body-sm text-body-sm font-medium">Mila Kunis</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary text-[18px]">workspace_premium</span>
+<span class="font-body-sm text-body-sm">Adv. Neural Networks (T2)</span>
+</div>
+</td>
+<td class="px-6 py-4 font-body-sm text-body-sm text-on-surface-variant">Oct 22, 2024</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 rounded-full bg-primary-container/10 text-primary-container font-label-sm text-[10px] uppercase">Verified</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="p-2 hover:bg-surface-container-high rounded-full transition-colors">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+<!-- Footer -->
+<footer class="w-full py-xl mt-auto bg-surface-container-lowest border-t border-outline-variant">
+<div class="max-w-container-max mx-auto px-6 md:px-margin-desktop flex flex-col md:flex-row justify-between items-center gap-md">
+<div class="flex flex-col gap-xs text-center md:text-left">
+<span class="font-headline-sm text-headline-sm font-semibold text-on-surface">Dezai AI</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant">© 2024 Dezai AI Institutional Systems. All rights reserved.</p>
+</div>
+<div class="flex flex-wrap justify-center gap-md">
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Partner Directory</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Academic Standards</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Support</a>
+</div>
+</div>
+</footer>
+</main>
+<!-- Simple Interactivity -->
+<script>
+        // Simple sidebar toggle for mobile
+        const menuBtn = document.querySelector('button.md\\:hidden');
+        const sidebar = document.getElementById('sidebar');
+        let isSidebarOpen = false;
+
+        menuBtn?.addEventListener('click', () => {
+            isSidebarOpen = !isSidebarOpen;
+            if (isSidebarOpen) {
+                sidebar.classList.remove('hidden');
+                sidebar.classList.add('flex');
+                sidebar.style.width = '100%';
+            } else {
+                sidebar.classList.add('hidden');
+                sidebar.classList.remove('flex');
+            }
+        });
+
+        // Micro-interactions for stats
+        const cards = document.querySelectorAll('.bento-card');
+        cards.forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                // Potential for framer-motion like entrance or hover effects
+            });
+        });
+    </script>
+</body></html>

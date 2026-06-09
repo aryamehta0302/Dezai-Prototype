@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Dezai AI - Quiz Module</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Geist:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container": "#ecedf9",
+                    "error-container": "#ffdad6",
+                    "surface-container-high": "#e6e7f3",
+                    "primary-container": "#0d6efd",
+                    "on-secondary-fixed-variant": "#003ea8",
+                    "on-surface": "#191b24",
+                    "error": "#ba1a1a",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary-container": "#316bf3",
+                    "on-tertiary-fixed-variant": "#7f2b00",
+                    "on-background": "#191b24",
+                    "surface-container-low": "#f2f3ff",
+                    "surface-container-highest": "#e1e2ee",
+                    "on-error-container": "#93000a",
+                    "tertiary-fixed-dim": "#ffb599",
+                    "surface-tint": "#0057ce",
+                    "tertiary-fixed": "#ffdbce",
+                    "on-tertiary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "surface-variant": "#e1e2ee",
+                    "primary-fixed-dim": "#b1c5ff",
+                    "inverse-on-surface": "#eff0fc",
+                    "secondary-fixed-dim": "#b4c5ff",
+                    "secondary": "#0051d5",
+                    "primary": "#0057cd",
+                    "on-primary-fixed": "#001946",
+                    "surface-dim": "#d8d9e5",
+                    "outline": "#727787",
+                    "tertiary-container": "#cf4b00",
+                    "surface": "#faf8ff",
+                    "inverse-primary": "#b1c5ff",
+                    "on-tertiary-container": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "secondary-fixed": "#dbe1ff",
+                    "primary-fixed": "#dae2ff",
+                    "on-secondary-container": "#fefcff",
+                    "on-tertiary-fixed": "#370e00",
+                    "inverse-surface": "#2d3039",
+                    "surface-bright": "#faf8ff",
+                    "background": "#faf8ff",
+                    "on-surface-variant": "#424655",
+                    "outline-variant": "#c2c6d8",
+                    "on-primary-container": "#ffffff",
+                    "on-primary-fixed-variant": "#00419e",
+                    "on-secondary": "#ffffff",
+                    "tertiary": "#a63b00",
+                    "on-secondary-fixed": "#00174b"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xs": "4px",
+                    "xl": "64px",
+                    "margin-mobile": "16px",
+                    "md": "24px",
+                    "margin-desktop": "48px",
+                    "sm": "12px",
+                    "lg": "40px",
+                    "gutter": "24px",
+                    "base": "8px",
+                    "container-max": "1440px"
+            },
+            "fontFamily": {
+                    "body-md": ["Inter"],
+                    "label-sm": ["Geist"],
+                    "headline-lg-mobile": ["Geist"],
+                    "label-md": ["Geist"],
+                    "headline-sm": ["Geist"],
+                    "display-sm": ["Geist"],
+                    "body-sm": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-md": ["Geist"],
+                    "display-lg": ["Geist"],
+                    "headline-lg": ["Geist"]
+            },
+            "fontSize": {
+                    "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "1", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                    "label-md": ["14px", {"lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                    "headline-sm": ["20px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                    "display-sm": ["36px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-sm": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "headline-md": ["24px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg": ["30px", {"lineHeight": "1.3", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .fade-in-staggered > * {
+            opacity: 0;
+            transform: translateY(10px);
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .no-select { user-select: none; }
+        .active-ring { ring: 2px solid theme('colors.primary'); }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex flex-col no-select overflow-x-hidden">
+<!-- Top Navigation Bar (High-Focus Mode: No Main Menu) -->
+<header class="w-full top-0 sticky z-50 bg-surface dark:bg-on-background shadow-sm px-margin-desktop py-4 max-w-container-max mx-auto flex items-center justify-between border-b border-surface-container">
+<div class="flex items-center gap-md">
+<span class="font-headline-md text-headline-md font-bold text-primary">Dezai AI</span>
+<div class="h-6 w-px bg-outline-variant hidden md:block"></div>
+<h1 class="font-headline-sm text-headline-sm text-on-surface font-semibold hidden md:block">Module 4 Assessment</h1>
+</div>
+<div class="flex items-center gap-lg">
+<!-- Timer Component -->
+<div class="flex items-center gap-xs px-md py-base bg-error-container text-on-error-container rounded-xl font-label-md text-label-md" id="quiz-timer">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 600;">timer</span>
+<span class="tabular-nums" id="countdown-display">14:59</span>
+</div>
+<button class="flex items-center gap-xs text-on-surface-variant hover:bg-surface-container-low p-2 rounded-lg transition-colors" id="fullscreen-btn">
+<span class="material-symbols-outlined">fullscreen</span>
+<span class="text-label-md font-label-md">Fullscreen</span>
+</button>
+</div>
+</header>
+<!-- Global Progress Bar -->
+<div class="w-full bg-surface-container-lowest h-1">
+<div class="bg-primary h-full w-[45%] transition-all duration-700 ease-in-out"></div>
+</div>
+<!-- Main Content Area -->
+<main class="flex-grow max-w-container-max mx-auto w-full px-margin-mobile md:px-margin-desktop py-lg grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
+<!-- Left: Question Area (8/12 Cols) -->
+<section class="lg:col-span-8 space-y-md fade-in-staggered">
+<div class="bg-surface p-md md:p-lg rounded-xl shadow-sm border border-surface-container-high transition-all duration-300">
+<div class="flex items-center justify-between mb-lg">
+<span class="text-label-sm font-label-sm uppercase tracking-widest text-outline">Question 12 of 25</span>
+<span class="text-label-sm font-label-sm bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full">4 Points</span>
+</div>
+<h2 class="font-headline-md text-headline-md text-on-surface mb-xl leading-relaxed">
+                    When designing a Residual Network (ResNet), what is the primary structural mechanism that allows for training extremely deep neural architectures without suffering from the vanishing gradient problem?
+                </h2>
+<!-- Options List -->
+<div class="space-y-sm">
+<label class="group relative flex items-center p-md border border-outline-variant rounded-xl cursor-pointer hover:bg-surface-container-low hover:border-primary transition-all duration-200">
+<input class="hidden peer" name="question-opt" type="radio"/>
+<div class="w-6 h-6 border-2 border-outline-variant rounded-full flex items-center justify-center peer-checked:border-primary peer-checked:bg-primary transition-all">
+<div class="w-2.5 h-2.5 bg-white rounded-full opacity-0 peer-checked:opacity-100"></div>
+</div>
+<span class="ml-md font-body-md text-on-surface">The introduction of Bottleneck Layers to compress feature maps.</span>
+</label>
+<label class="group relative flex items-center p-md border-2 border-primary bg-surface-container-low rounded-xl cursor-pointer shadow-md">
+<input checked="" class="hidden peer" name="question-opt" type="radio"/>
+<div class="w-6 h-6 border-2 border-primary bg-primary rounded-full flex items-center justify-center">
+<div class="w-2.5 h-2.5 bg-white rounded-full"></div>
+</div>
+<span class="ml-md font-body-md text-on-surface font-medium">Skip connections that bypass one or more layers, performing identity mapping.</span>
+</label>
+<label class="group relative flex items-center p-md border border-outline-variant rounded-xl cursor-pointer hover:bg-surface-container-low hover:border-primary transition-all duration-200">
+<input class="hidden peer" name="question-opt" type="radio"/>
+<div class="w-6 h-6 border-2 border-outline-variant rounded-full flex items-center justify-center peer-checked:border-primary peer-checked:bg-primary transition-all">
+<div class="w-2.5 h-2.5 bg-white rounded-full opacity-0 peer-checked:opacity-100"></div>
+</div>
+<span class="ml-md font-body-md text-on-surface">Asymmetric convolutional kernels that reduce spatial dimensions rapidly.</span>
+</label>
+<label class="group relative flex items-center p-md border border-outline-variant rounded-xl cursor-pointer hover:bg-surface-container-low hover:border-primary transition-all duration-200">
+<input class="hidden peer" name="question-opt" type="radio"/>
+<div class="w-6 h-6 border-2 border-outline-variant rounded-full flex items-center justify-center peer-checked:border-primary peer-checked:bg-primary transition-all">
+<div class="w-2.5 h-2.5 bg-white rounded-full opacity-0 peer-checked:opacity-100"></div>
+</div>
+<span class="ml-md font-body-md text-on-surface">Dense connectivity patterns where every layer is connected to every other layer.</span>
+</label>
+</div>
+</div>
+<!-- Interaction Bar -->
+<div class="flex items-center justify-between pt-md">
+<button class="flex items-center gap-xs px-lg py-md text-primary font-label-md text-label-md hover:bg-surface-container-low rounded-xl transition-all active:scale-95">
+<span class="material-symbols-outlined">arrow_back</span>
+                    Previous
+                </button>
+<div class="flex items-center gap-md">
+<button class="px-lg py-md text-outline font-label-md text-label-md hover:text-on-surface transition-all">
+                        Flag Question
+                    </button>
+<button class="bg-primary text-on-primary px-xl py-md rounded-xl font-label-md text-label-md shadow-md hover:bg-secondary transition-all active:scale-95 flex items-center gap-xs">
+                        Next Question
+                        <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Right: Side Navigation & Proctored Tools (4/12 Cols) -->
+<aside class="lg:col-span-4 space-y-md fade-in-staggered" style="animation-delay: 0.1s;">
+<!-- Proctored Feed / Visual Aid -->
+<div class="bg-surface-container rounded-xl overflow-hidden shadow-sm aspect-video relative group">
+<img alt="Proctoring surveillance visualization" class="w-full h-full object-cover" data-alt="A futuristic AI-powered proctoring dashboard screen showing a student's webcam feed in the corner with a heatmap overlay on their face. The interface displays biometric data lines and a 'Secure Session Active' green banner. The overall aesthetic is university-grade, clean, and technological, utilizing a deep blue and slate palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXtJPjmZTCk5cUWXK3kJ13Ds7YC-QWSVUIyJX4zFE2jvW6gYZFGEPYSJNNZHKFjAXWta0q0W8ipBlxVFj5EHJE2D9BME200HppSfTBtYfax5_14eCeIjs4_ZnHMaix8zAHIlJ4TiZuwtPlniJLUT23LhAlyxx8P5xCbb-5vKNiqyZGQ3bJQ7cw54Be08tFxTYfJR8kuGG0Q4DPjoFJ96Gub93ERhI7EGhyzkGU63mhyv90eIj4VI_bTURqxKytps9FMOcGmzqe6FU0"/>
+<div class="absolute inset-0 bg-gradient-to-t from-on-background/60 to-transparent flex items-end p-md">
+<div class="flex items-center gap-xs text-white">
+<span class="w-2 h-2 bg-error rounded-full animate-pulse"></span>
+<span class="text-label-sm font-label-sm">Secure Live Proctoring Active</span>
+</div>
+</div>
+</div>
+<!-- Question Grid Card -->
+<div class="bg-surface p-md rounded-xl shadow-sm border border-surface-container-high">
+<h3 class="font-label-md text-label-md text-on-surface-variant mb-md font-bold uppercase tracking-wider">Question Navigator</h3>
+<div class="grid grid-cols-5 gap-xs">
+<!-- Completed -->
+<script>
+                        for(let i=1; i<=10; i++) {
+                            document.write(`<button class="h-10 w-full flex items-center justify-center rounded-lg bg-primary-container/10 text-primary border border-primary/20 font-label-sm text-label-sm transition-all hover:bg-primary-container/20">${i}</button>`);
+                        }
+                    </script>
+<!-- Current -->
+<button class="h-10 w-full flex items-center justify-center rounded-lg bg-primary text-on-primary font-label-sm text-label-sm ring-4 ring-primary/20">11</button>
+<!-- Remaining -->
+<script>
+                        for(let i=12; i<=25; i++) {
+                            const isFlagged = i === 15;
+                            const flaggedClass = isFlagged ? 'bg-tertiary-fixed text-on-tertiary-fixed border-tertiary' : 'bg-surface-container-low text-on-surface-variant border-transparent';
+                            const icon = isFlagged ? '<span class="absolute -top-1 -right-1 material-symbols-outlined text-[12px] text-tertiary" style="font-variation-settings: \'FILL\' 1;">flag</span>' : '';
+                            document.write(`<button class="relative h-10 w-full flex items-center justify-center rounded-lg ${flaggedClass} border font-label-sm text-label-sm transition-all hover:border-outline-variant">${i}${icon}</button>`);
+                        }
+                    </script>
+</div>
+<div class="mt-md pt-md border-t border-surface-container-high flex flex-wrap gap-md text-label-sm font-label-sm text-outline">
+<div class="flex items-center gap-xs"><span class="w-3 h-3 bg-primary rounded-sm"></span> Current</div>
+<div class="flex items-center gap-xs"><span class="w-3 h-3 bg-primary-container/20 border border-primary/20 rounded-sm"></span> Answered</div>
+<div class="flex items-center gap-xs"><span class="w-3 h-3 bg-tertiary-fixed rounded-sm"></span> Flagged</div>
+</div>
+</div>
+<!-- Institutional Status -->
+<div class="bg-surface-container-lowest p-md rounded-xl border border-outline-variant/30">
+<div class="flex items-center justify-between mb-xs">
+<span class="text-label-sm font-label-sm text-outline">Network Latency</span>
+<span class="text-label-sm font-label-sm text-secondary font-bold">12ms</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-label-sm font-label-sm text-outline">System Health</span>
+<span class="text-label-sm font-label-sm text-on-primary-container bg-primary-container px-2 py-0.5 rounded text-[10px] font-bold">OPTIMAL</span>
+</div>
+</div>
+</aside>
+</main>
+<!-- Floating Security Toast (Simulated Tab Switch Warning) -->
+<div class="fixed bottom-margin-desktop left-1/2 -translate-x-1/2 z-[100] transform translate-y-20 opacity-0 transition-all duration-500 ease-in-out" id="security-toast">
+<div class="bg-inverse-surface text-inverse-on-surface px-lg py-md rounded-xl shadow-2xl flex items-center gap-md min-w-[320px]">
+<span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">warning</span>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md font-bold">Tab Switch Detected</span>
+<span class="text-body-sm text-body-sm opacity-80">This event has been logged for proctor review.</span>
+</div>
+<button class="ml-auto text-inverse-on-surface/60 hover:text-white" onclick="hideToast()">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+</div>
+<!-- Background Decoration (Subtle Animated Mesh) -->
+<div class="fixed inset-0 -z-10 opacity-30 pointer-events-none">
+
+</div>
+<!-- Footer Systems Content -->
+<footer class="mt-auto border-t border-outline-variant bg-surface-container-lowest py-md px-margin-desktop flex flex-col md:flex-row justify-between items-center">
+<div class="text-body-sm text-body-sm text-on-surface-variant">
+            © 2024 Dezai AI Institutional Systems. Proctored Exam Environment v1.0.4
+        </div>
+<div class="flex gap-lg mt-md md:mt-0">
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Emergency Support</a>
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Report Issue</a>
+</div>
+</footer>
+<script>
+        // Timer Logic
+        let timeLeft = 14 * 60 + 59;
+        const display = document.getElementById('countdown-display');
+        const timerContainer = document.getElementById('quiz-timer');
+
+        const timerInterval = setInterval(() => {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            display.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            
+            if (timeLeft <= 300) { // 5 minutes left warning
+                timerContainer.classList.remove('bg-error-container', 'text-on-error-container');
+                timerContainer.classList.add('bg-error', 'text-on-error', 'animate-pulse');
+            }
+            
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                alert("Time is up! Your assessment is being submitted.");
+            }
+            timeLeft--;
+        }, 1000);
+
+        // Simulated Tab Switch Warning
+        window.addEventListener('blur', () => {
+            showToast();
+        });
+
+        function showToast() {
+            const toast = document.getElementById('security-toast');
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+        }
+
+        function hideToast() {
+            const toast = document.getElementById('security-toast');
+            toast.classList.add('translate-y-20', 'opacity-0');
+            toast.classList.remove('translate-y-0', 'opacity-100');
+        }
+
+        // Fullscreen Toggle
+        document.getElementById('fullscreen-btn').addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        // Prevention of context menu for exam security
+        document.addEventListener('contextmenu', event => event.preventDefault());
+    </script>
+</body></html>
