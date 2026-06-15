@@ -16,7 +16,7 @@ export function EnrolledCourseCard({ course, className }: EnrolledCourseCardProp
 
   return (
     <Link
-      href={`/courses/${course.courseSlug}`}
+      href={`/programs/${course.courseSlug}`}
       className={cn(
         "group card-elevation flex flex-col overflow-hidden",
         className

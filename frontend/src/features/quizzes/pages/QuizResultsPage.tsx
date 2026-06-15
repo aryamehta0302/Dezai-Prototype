@@ -112,17 +112,17 @@ export function QuizResultsPage({ slug, quizId }: QuizResultsPageProps) {
             </Button>
           </Link>
         ) : (
-          <Link href={`/courses/${slug}/quiz/${quizId}`}>
+          <Link href={`/programs/${slug}/quiz/${quizId}`}>
             <Button size="lg" className="gap-2">
               <RotateCcw className="h-5 w-5" />
               Retake Assessment
             </Button>
           </Link>
         )}
-        <Link href={`/courses/${slug}`}>
+        <Link href={`/programs/${slug}`}>
           <Button variant="outline" size="lg" className="gap-2">
             <ArrowRight className="h-5 w-5" />
-            Back to Course
+            Back to Program
           </Button>
         </Link>
       </div>

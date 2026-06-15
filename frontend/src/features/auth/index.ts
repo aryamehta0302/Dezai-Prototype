@@ -8,8 +8,6 @@
  */
 
 // Components
-export { LoginForm } from "./components/login-form";
-export { SignupForm } from "./components/signup-form";
 export { AuthGuard } from "./components/auth-guard";
 
 // Hooks
@@ -24,3 +22,4 @@ export type { AuthUser, LoginCredentials, SignupData, AuthSession } from "./type
 // Pages
 export { LoginPage } from "./pages/LoginPage";
 export { SignupPage } from "./pages/SignupPage";
+export { OnboardingPage } from "./pages/OnboardingPage";

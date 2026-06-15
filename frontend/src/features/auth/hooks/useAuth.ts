@@ -1,93 +1,108 @@
 "use client";
 
-import { useCallback } from "react";
+import { useEffect, useCallback } from "react";
+import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/stores/auth.store";
-import { authService } from "../services/auth.service";
 import { UserRole } from "@/shared/types/common.types";
-import type { LoginCredentials, SignupData } from "../types/auth.types";
+import { getDashboardForRole } from "@/core/auth/permissions";
 import { toast } from "sonner";
 
+/**
+ * useAuth — Primary auth hook for client components.
+ *
+ * Bridges NextAuth session ↔ Zustand store.
+ * Provides login/logout actions, role checks, and session sync.
+ */
 export function useAuth() {
+  const { data: session, status, update: updateSession } = useSession();
   const router = useRouter();
   const {
     user,
     isAuthenticated,
     isLoading,
-    login: storeLogin,
-    logout: storeLogout,
+    syncSession,
+    clearSession,
     setLoading,
     isStudent,
+    isFaculty,
     isUniversityAdmin,
     isDezaiAdmin,
     hasRole,
   } = useAuthStore();
 
+  // Sync NextAuth session → Zustand store
+  useEffect(() => {
+    if (status === "authenticated" && session?.user) {
+      syncSession({
+        id: session.user.id,
+        name: session.user.name ?? "",
+        email: session.user.email ?? "",
+        role: session.user.role ?? UserRole.STUDENT,
+        image: session.user.image ?? undefined,
+        avatar: session.user.image ?? undefined,
+        onboarded: session.user.onboarded ?? false,
+      });
+    } else if (status === "unauthenticated") {
+      clearSession();
+    }
+  }, [session, status, syncSession, clearSession]);
+
+  /**
+   * Sign in with a provider (provider-agnostic).
+   * Defaults to Google. Future: pass provider id dynamically.
+   */
   const login = useCallback(
-    async (credentials: LoginCredentials) => {
+    async (providerId: string = "google") => {
       setLoading(true);
-      const result = await authService.login(credentials);
-
-      if (result.success && result.user) {
-        storeLogin(result.user);
-        toast.success(`Welcome back, ${result.user.name.split(" ")[0]}!`);
-
-        // Route by role
-        switch (result.user.role) {
-          case UserRole.STUDENT:
-            router.push("/dashboard");
-            break;
-          case UserRole.UNIVERSITY_ADMIN:
-            router.push("/university/dashboard");
-            break;
-          case UserRole.DEZAI_ADMIN:
-            router.push("/admin/dashboard");
-            break;
-        }
-      } else {
+      try {
+        await signIn(providerId, { callbackUrl: "/onboarding" });
+      } catch {
         setLoading(false);
-        toast.error(result.error || "Login failed");
+        toast.error("Sign-in failed. Please try again.");
       }
-
-      return result;
     },
-    [storeLogin, setLoading, router]
+    [setLoading]
   );
 
-  const signup = useCallback(
-    async (data: SignupData) => {
-      setLoading(true);
-      const result = await authService.signup(data);
-
-      if (result.success && result.user) {
-        storeLogin(result.user);
-        toast.success("Account created successfully!");
-        router.push("/dashboard");
-      } else {
-        setLoading(false);
-        toast.error(result.error || "Signup failed");
-      }
-
-      return result;
-    },
-    [storeLogin, setLoading, router]
-  );
-
+  /**
+   * Sign out and redirect to login.
+   */
   const logout = useCallback(async () => {
-    await authService.logout();
-    storeLogout();
+    clearSession();
+    await signOut({ callbackUrl: "/login" });
     toast.success("Signed out successfully");
-    router.push("/login");
-  }, [storeLogout, router]);
+  }, [clearSession]);
+
+  /**
+   * Complete onboarding — update session with assigned role.
+   */
+  const completeOnboarding = useCallback(
+    async (role: UserRole) => {
+      try {
+        // Update the NextAuth session with the new role
+        await updateSession({ role, onboarded: true });
+
+        toast.success("Welcome to Dezai!");
+        router.push(getDashboardForRole(role));
+      } catch {
+        toast.error("Failed to complete onboarding. Please try again.");
+      }
+    },
+    [updateSession, router]
+  );
 
   return {
     user,
+    session,
     isAuthenticated,
     isLoading,
+    isSessionLoading: status === "loading",
     login,
-    signup,
     logout,
+    completeOnboarding,
     isStudent,
+    isFaculty,
     isUniversityAdmin,
     isDezaiAdmin,
     hasRole,

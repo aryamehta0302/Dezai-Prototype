@@ -23,7 +23,7 @@ export default function StudentLayout({
   }, [initialize]);
 
   return (
-    <AuthGuard allowedRoles={[UserRole.STUDENT, UserRole.DEZAI_ADMIN]}>
+    <AuthGuard>
       <div className="flex min-h-screen flex-col">
         <TopAppBar
           variant="student"

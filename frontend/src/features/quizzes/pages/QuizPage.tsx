@@ -38,7 +38,7 @@ export function QuizPage({ slug, quizId }: QuizPageProps) {
       const result = quizService.calculateScore(quiz, answers);
       setSubmitted(true);
       router.push(
-        `/courses/${slug}/quiz/${quizId}/results?score=${result.score}&total=${result.totalPoints}&pct=${result.percentage}&passed=${result.passed}`
+        `/programs/${slug}/quiz/${quizId}/results?score=${result.score}&total=${result.totalPoints}&pct=${result.percentage}&passed=${result.passed}`
       );
     }
   }, [submitted, quiz, answers, router, slug, quizId]);
@@ -66,8 +66,8 @@ export function QuizPage({ slug, quizId }: QuizPageProps) {
           title="Quiz not found"
           description="This assessment doesn't exist or has been removed."
           action={
-            <Link href={`/courses/${slug}`}>
-              <Button>Back to Course</Button>
+            <Link href={`/programs/${slug}`}>
+              <Button>Back to Program</Button>
             </Link>
           }
         />
@@ -82,7 +82,7 @@ export function QuizPage({ slug, quizId }: QuizPageProps) {
     const result = quizService.calculateScore(quiz, answers);
     setSubmitted(true);
     router.push(
-      `/courses/${slug}/quiz/${quizId}/results?score=${result.score}&total=${result.totalPoints}&pct=${result.percentage}&passed=${result.passed}`
+      `/programs/${slug}/quiz/${quizId}/results?score=${result.score}&total=${result.totalPoints}&pct=${result.percentage}&passed=${result.passed}`
     );
   };
 

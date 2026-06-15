@@ -3,19 +3,36 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { UserRole } from "@/shared/types/common.types";
-import type { MockUser } from "@/lib/mock-data/students";
+
+/**
+ * Auth Store — Client-side auth state
+ *
+ * Works alongside NextAuth's session. The session is the source of truth,
+ * but the store provides role helpers and sync state for UI reactivity.
+ */
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  image?: string;
+  avatar?: string;
+  onboarded: boolean;
+}
 
 export interface AuthState {
-  user: MockUser | null;
+  user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
 
-  login: (user: MockUser) => void;
-  logout: () => void;
+  syncSession: (user: AuthUser) => void;
+  clearSession: () => void;
   setLoading: (loading: boolean) => void;
 
   // Role helpers
   isStudent: () => boolean;
+  isFaculty: () => boolean;
   isUniversityAdmin: () => boolean;
   isDezaiAdmin: () => boolean;
   hasRole: (role: UserRole) => boolean;
@@ -28,14 +45,14 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: false,
 
-      login: (user) =>
+      syncSession: (user) =>
         set({
           user,
           isAuthenticated: true,
           isLoading: false,
         }),
 
-      logout: () =>
+      clearSession: () =>
         set({
           user: null,
           isAuthenticated: false,
@@ -45,6 +62,7 @@ export const useAuthStore = create<AuthState>()(
       setLoading: (loading) => set({ isLoading: loading }),
 
       isStudent: () => get().user?.role === UserRole.STUDENT,
+      isFaculty: () => get().user?.role === UserRole.FACULTY,
       isUniversityAdmin: () => get().user?.role === UserRole.UNIVERSITY_ADMIN,
       isDezaiAdmin: () => get().user?.role === UserRole.DEZAI_ADMIN,
       hasRole: (role) => get().user?.role === role,

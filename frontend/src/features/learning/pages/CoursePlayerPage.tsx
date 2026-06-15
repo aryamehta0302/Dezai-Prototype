@@ -56,10 +56,10 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
         <EmptyState
           icon={BookOpen}
           title="Not enrolled"
-          description="You need to enroll in this course to access lessons."
+          description="You need to enroll in this program to access lessons."
           action={
-            <Link href={`/courses/${slug}`}>
-              <Button>View Course</Button>
+            <Link href={`/programs/${slug}`}>
+              <Button>View Program</Button>
             </Link>
           }
         />
@@ -77,7 +77,7 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
 
   const goToLesson = (id: string) => {
     setCurrentLessonId(id);
-    router.replace(`/courses/${slug}/learn/${id}`, { scroll: false });
+    router.replace(`/programs/${slug}/learn/${id}`, { scroll: false });
   };
 
   const goPrev = () => {
@@ -102,11 +102,11 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
           <div className="p-4 border-b border-border-light space-y-3">
             <div className="flex items-center justify-between">
               <Link
-                href={`/courses/${slug}`}
+                href={`/programs/${slug}`}
                 className="flex items-center gap-1.5 text-sm text-muted hover:text-primary transition-colors"
               >
                 <ArrowLeft className="h-3 w-3" />
-                Back to course
+                Back to program
               </Link>
               <button
                 onClick={() => setSidebarOpen(false)}

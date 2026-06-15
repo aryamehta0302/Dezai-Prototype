@@ -14,7 +14,7 @@ interface ContinueLearningCardProps {
 export function ContinueLearningCard({ course, className }: ContinueLearningCardProps) {
   return (
     <Link
-      href={`/courses/${course.courseSlug}/learn/${course.lastAccessedLessonId || "les-1-1-1"}`}
+      href={`/programs/${course.courseSlug}/learn/${course.lastAccessedLessonId || "les-1-1-1"}`}
       className={cn(
         "group relative flex flex-col sm:flex-row gap-4 rounded-xl border border-border-light bg-white p-4 hover:border-primary/30 hover:shadow-level-2 transition-all",
         className

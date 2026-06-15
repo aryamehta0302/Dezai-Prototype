@@ -4,13 +4,15 @@ import { cn } from "@/shared/utils/cn";
 import { Badge } from "@/shared/ui/badge";
 import { Mail, Calendar, GraduationCap } from "lucide-react";
 import { formatDate } from "@/shared/utils/format";
-import type { MockUser } from "@/lib/mock-data/students";
+import type { AuthUser } from "@/lib/stores/auth.store";
 
 interface ProfileHeaderCardProps {
-  user: MockUser;
+  user: AuthUser;
 }
 
 export function ProfileHeaderCard({ user }: ProfileHeaderCardProps) {
+  const joinedAt = (user as any).joinedAt || new Date().toISOString();
+  const enrolledCourseIds = (user as any).enrolledCourseIds || [];
   return (
     <div className="card-elevation p-6">
       <div className="flex flex-col sm:flex-row items-start gap-6">
@@ -41,11 +43,11 @@ export function ProfileHeaderCard({ user }: ProfileHeaderCardProps) {
             </span>
             <span className="flex items-center gap-1.5">
               <Calendar className="h-4 w-4" />
-              Joined {formatDate(user.joinedAt)}
+              Joined {formatDate(joinedAt)}
             </span>
             <span className="flex items-center gap-1.5">
               <GraduationCap className="h-4 w-4" />
-              {user.enrolledCourseIds.length} courses enrolled
+              {enrolledCourseIds.length} courses enrolled
             </span>
           </div>
         </div>

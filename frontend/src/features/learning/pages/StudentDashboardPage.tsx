@@ -29,12 +29,13 @@ export function StudentDashboardPage() {
 
   // Seed initial enrollments from mock user data on first load
   useEffect(() => {
-    if (user?.enrolledCourseIds) {
-      user.enrolledCourseIds.forEach((courseId) => {
+    const enrolledCourseIds = (user as any)?.enrolledCourseIds;
+    if (enrolledCourseIds) {
+      enrolledCourseIds.forEach((courseId: string) => {
         enroll(courseId);
       });
     }
-  }, [user?.enrolledCourseIds, enroll]);
+  }, [user, enroll]);
 
   const greeting = () => {
     const hour = new Date().getHours();

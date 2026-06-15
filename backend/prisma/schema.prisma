@@ -1,0 +1,476 @@
+// Dezai — Prisma Schema
+// https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  name         String?
+  passwordHash String?
+  role         UserRole  @default(STUDENT)
+  onboarded    Boolean   @default(false)
+  xp           Int       @default(0)
+  streakCount  Int       @default(0)
+  lastActiveAt DateTime? @default(now())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  enrollments    Enrollment[]
+  attempts       AssessmentAttempt[]
+  notes          Note[]
+  bookmarks      Bookmark[]
+  progresses     Progress[]
+  credentials    Credential[]        @relation("EarnedCredentials")
+  issuedCerts    Credential[]        @relation("IssuedCredentials")
+  violations     ViolationLog[]
+  xpTransactions XpTransaction[]
+  chatSessions   ChatSession[]
+  notifications  Notification[]
+  uploads        Upload[]
+  auditLogs      AuditLog[]
+
+  facultyInfo   FacultyMember?
+  instAdminInfo InstitutionAdmin?
+
+  @@map("users")
+}
+
+enum UserRole {
+  STUDENT
+  FACULTY
+  UNIVERSITY_ADMIN
+  DEZAI_ADMIN
+}
+
+model Institution {
+  id          String   @id @default(uuid())
+  name        String
+  logoUrl     String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  faculty       FacultyMember[]
+  admins        InstitutionAdmin[]
+  programs      Program[]
+  credentials   Credential[]
+  questionBanks QuestionBank[]
+
+  @@map("institutions")
+}
+
+model InstitutionAdmin {
+  id            String      @id @default(uuid())
+  userId        String      @unique
+  institutionId String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@map("institution_admins")
+}
+
+model FacultyMember {
+  id            String         @id @default(uuid())
+  userId        String         @unique
+  institutionId String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  institution   Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  programs      Program[]
+  questionBanks QuestionBank[]
+
+  @@map("faculty_members")
+}
+
+model Program {
+  id            String   @id @default(uuid())
+  title         String
+  description   String
+  institutionId String
+  facultyId     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution  Institution    @relation(fields: [institutionId], references: [id])
+  faculty      FacultyMember? @relation(fields: [facultyId], references: [id])
+  tracks       ProgramTrack[]
+  enrollments  Enrollment[]
+  credentials  Credential[]
+  chatSessions ChatSession[]
+
+  @@map("programs")
+}
+
+model ProgramTrack {
+  id          String    @id @default(uuid())
+  programId   String
+  type        TrackType
+  title       String?
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  program Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  modules Module[]
+
+  @@map("program_tracks")
+}
+
+enum TrackType {
+  ROOTS
+  EDGE
+}
+
+model Enrollment {
+  id          String    @id @default(uuid())
+  userId      String
+  programId   String
+  createdAt   DateTime  @default(now())
+  progress    Int       @default(0)
+  completedAt DateTime?
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, programId])
+  @@map("enrollments")
+}
+
+model Module {
+  id        String   @id @default(uuid())
+  trackId   String
+  title     String
+  order     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  track        ProgramTrack  @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  lessons      Lesson[]
+  assessments  Assessment[]
+  chatSessions ChatSession[]
+
+  @@map("modules")
+}
+
+model Lesson {
+  id        String   @id @default(uuid())
+  moduleId  String
+  title     String
+  content   String // Markdown or Rich Text structure
+  videoUrl  String?
+  order     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  module       Module        @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  progresses   Progress[]
+  bookmarks    Bookmark[]
+  notes        Note[]
+  chatSessions ChatSession[]
+
+  @@map("lessons")
+}
+
+model Progress {
+  id          String   @id @default(uuid())
+  userId      String
+  lessonId    String
+  completedAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("progresses")
+}
+
+model Bookmark {
+  id        String   @id @default(uuid())
+  userId    String
+  lessonId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("bookmarks")
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  userId    String
+  lessonId  String
+  content   String
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("notes")
+}
+
+model QuestionBank {
+  id            String   @id @default(uuid())
+  title         String
+  description   String?
+  institutionId String
+  facultyId     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution Institution            @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  faculty     FacultyMember?         @relation(fields: [facultyId], references: [id])
+  questions   QuestionBankQuestion[]
+  assessments Assessment[]
+
+  @@map("question_banks")
+}
+
+model QuestionBankQuestion {
+  id             String   @id @default(uuid())
+  questionBankId String
+  text           String
+  category       String?
+  timerSeconds   Int      @default(60) // countdown-per-question limit
+  createdAt      DateTime @default(now())
+
+  questionBank   QuestionBank     @relation(fields: [questionBankId], references: [id], onDelete: Cascade)
+  options        QuestionOption[]
+  attemptAnswers AttemptAnswer[]
+
+  @@map("question_bank_questions")
+}
+
+model QuestionOption {
+  id         String  @id @default(uuid())
+  questionId String
+  text       String
+  isCorrect  Boolean @default(false)
+
+  question       QuestionBankQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  attemptAnswers AttemptAnswer[]
+
+  @@map("question_options")
+}
+
+model Assessment {
+  id             String   @id @default(uuid())
+  moduleId       String
+  questionBankId String
+  title          String
+  passingScore   Int      @default(80) // Passing percentage
+  sampleSize     Int      @default(15) // Dynamic question pull count
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  module       Module              @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  questionBank QuestionBank        @relation(fields: [questionBankId], references: [id])
+  attempts     AssessmentAttempt[]
+
+  @@map("assessments")
+}
+
+model AssessmentAttempt {
+  id           String    @id @default(uuid())
+  userId       String
+  assessmentId String
+  score        Int       @default(0)
+  passed       Boolean   @default(false)
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assessment     Assessment      @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  violations     ViolationLog[]
+  attemptAnswers AttemptAnswer[]
+
+  @@map("assessment_attempts")
+}
+
+model AttemptAnswer {
+  id               String   @id @default(uuid())
+  attemptId        String
+  questionId       String
+  selectedOptionId String
+  isCorrect        Boolean  @default(false)
+  answeredAt       DateTime @default(now())
+
+  attempt        AssessmentAttempt    @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question       QuestionBankQuestion @relation(fields: [questionId], references: [id])
+  selectedOption QuestionOption       @relation(fields: [selectedOptionId], references: [id])
+
+  @@map("attempt_answers")
+}
+
+model ViolationLog {
+  id        String        @id @default(uuid())
+  attemptId String
+  userId    String
+  type      ViolationType
+  loggedAt  DateTime      @default(now())
+
+  attempt AssessmentAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("violation_logs")
+}
+
+enum ViolationType {
+  TAB_SWITCH
+  COPY_PASTE
+  FOCUS_LOSS
+}
+
+model XpTransaction {
+  id        String   @id @default(uuid())
+  userId    String
+  amount    Int
+  type      XpType
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("xp_transactions")
+}
+
+enum XpType {
+  DAILY_STREAK
+  MODULE_COMPLETION
+  ASSESSMENT_PASS
+}
+
+model Credential {
+  id                 String         @id @default(uuid())
+  userId             String
+  programId          String
+  institutionId      String
+  issuedById         String
+  tier               CredentialTier
+  verificationCode   String         @unique
+  verificationUrl    String
+  verificationStatus VerifyStatus   @default(ACTIVE)
+  metadata           String?
+  issuedAt           DateTime       @default(now())
+
+  user        User        @relation("EarnedCredentials", fields: [userId], references: [id], onDelete: Cascade)
+  program     Program     @relation(fields: [programId], references: [id], onDelete: Cascade)
+  institution Institution @relation(fields: [institutionId], references: [id])
+  issuer      User        @relation("IssuedCredentials", fields: [issuedById], references: [id])
+
+  @@map("credentials")
+}
+
+enum CredentialTier {
+  FORGE
+  ARENA
+  CITADEL
+}
+
+enum VerifyStatus {
+  ACTIVE
+  REVOKED
+  SUSPENDED
+}
+
+model Upload {
+  id         String   @id @default(uuid())
+  userId     String
+  fileName   String
+  fileType   String
+  fileUrl    String
+  sizeBytes  Int
+  entityType String? // Optional type of entity attached (e.g. ProgramLogo)
+  entityId   String? // Optional ID of entity attached
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("uploads")
+}
+
+model ChatSession {
+  id              String   @id @default(uuid())
+  userId          String
+  activeProgramId String?
+  activeModuleId  String?
+  activeLessonId  String?
+  createdAt       DateTime @default(now())
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  program  Program?      @relation(fields: [activeProgramId], references: [id])
+  module   Module?       @relation(fields: [activeModuleId], references: [id])
+  lesson   Lesson?       @relation(fields: [activeLessonId], references: [id])
+  messages ChatMessage[]
+
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id        String     @id @default(uuid())
+  sessionId String
+  sender    ChatSender
+  content   String
+  createdAt DateTime   @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
+
+enum ChatSender {
+  USER
+  MENTOR
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+enum NotificationType {
+  REMINDER
+  CREDENTIAL
+  UPDATE
+  SYSTEM
+  ANNOUNCEMENT
+}
+
+enum AuditAction {
+  LOGIN
+  PROGRAM_CREATED
+  PROGRAM_UPDATED
+  ASSESSMENT_PUBLISHED
+  CREDENTIAL_ISSUED
+  ROLE_CHANGED
+}
+
+model AuditLog {
+  id        String      @id @default(uuid())
+  userId    String?
+  action    AuditAction
+  details   String?     // Description or JSON metadata
+  ipAddress String?
+  createdAt DateTime    @default(now())
+
+  user      User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+}
