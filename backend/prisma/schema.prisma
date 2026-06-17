@@ -36,6 +36,7 @@ model User {
   notifications  Notification[]
   uploads        Upload[]
   auditLogs      AuditLog[]
+  examSessions   ExamSession[]
 
   facultyInfo   FacultyMember?
   instAdminInfo InstitutionAdmin?
@@ -275,6 +276,7 @@ model Assessment {
   module       Module              @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   questionBank QuestionBank        @relation(fields: [questionBankId], references: [id])
   attempts     AssessmentAttempt[]
+  examSessions ExamSession[]
 
   @@map("assessments")
 }
@@ -313,13 +315,15 @@ model AttemptAnswer {
 
 model ViolationLog {
   id        String        @id @default(uuid())
-  attemptId String
+  attemptId String?
+  sessionId String?
   userId    String
   type      ViolationType
   loggedAt  DateTime      @default(now())
 
-  attempt AssessmentAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attempt   AssessmentAttempt? @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  session   ExamSession?       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("violation_logs")
 }
@@ -473,4 +477,30 @@ model AuditLog {
   user      User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@map("audit_logs")
+}
+
+model ExamSession {
+  id             String         @id @default(uuid())
+  userId         String
+  assessmentId   String
+  status         ExamStatus     @default(ACTIVE)
+  warningsCount  Int            @default(0)
+  scoreDeduction Int            @default(0)
+  startedAt      DateTime       @default(now())
+  endedAt        DateTime?
+  lockoutUntil   DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assessment     Assessment     @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  violations     ViolationLog[]
+
+  @@map("exam_sessions")
+}
+
+enum ExamStatus {
+  ACTIVE
+  SUBMITTED
+  TERMINATED
 }
