@@ -452,23 +452,7 @@ npm run build   # Zero TypeScript errors
 npm run dev     # Manual smoke test all routes
 ```
 
-### P0 Smoke Test Checklist
-- [ ] Login with all 3 demo accounts
-- [ ] RBAC redirects unauthorized users
-- [ ] Catalog displays 12 courses with filters
-- [ ] Course detail page loads by slug
-- [ ] Mock payment modal completes enrollment
-- [ ] Dashboard shows enrolled courses
-- [ ] Course player navigates modules/lessons
-- [ ] Mark lesson complete updates progress
-- [ ] Notes save and persist
-- [ ] Quiz timer counts down
-- [ ] Quiz submission calculates score
-- [ ] Tab-switch warning fires
-- [ ] Certificate gallery shows earned certs
-- [ ] Certificate detail has QR code
-- [ ] /verify/[id] resolves publicly
-- [ ] Profile page shows student data
+
 
 ### Architecture Compliance
 - [ ] No business components in `shared/`

@@ -13,6 +13,7 @@ import Link from "next/link";
 import { Button } from "@/shared/ui/button";
 import { Shield } from "lucide-react";
 import { mockCourses } from "@/lib/mock-data/courses";
+import { useEnrollmentStore } from "@/lib/stores/enrollment.store";
 
 export default function StudentLayout({
   children,
@@ -23,11 +24,26 @@ export default function StudentLayout({
   const { logout, session } = useAuth();
   const { unreadCount, initialize } = useNotificationStore();
   const [activeSession, setActiveSession] = useState<any>(null);
+  const { fetchEnrollments, fetchXp } = useEnrollmentStore();
   const pathname = usePathname();
 
   useEffect(() => {
     initialize();
-  }, [initialize]);
+    fetchEnrollments();
+    fetchXp();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const isProgramPage = pathname.startsWith("/programs/");
+
+  const getVariant = () => {
+    if (!user) return "default";
+    switch (user.role) {
+      case UserRole.DEZAI_ADMIN: return "admin";
+      case UserRole.FACULTY:
+      case UserRole.UNIVERSITY_ADMIN: return "university";
+      default: return "student";
+    }
+  };
 
   // Query database for any active proctoring session
   useEffect(() => {
@@ -79,7 +95,7 @@ export default function StudentLayout({
       <div className="flex min-h-screen flex-col">
         {!isTakingQuiz && (
           <TopAppBar
-            variant="student"
+            variant={getVariant()}
             user={
               user
                 ? {
@@ -113,9 +129,9 @@ export default function StudentLayout({
             </div>
           </div>
         ) : (
-          <main className="flex-1">{children}</main>
+          <main className="flex-1 bg-surface-lowest">{children}</main>
         )}
-        {!isTakingQuiz && <Footer />}
+        {!isTakingQuiz && !isProgramPage && <Footer />}
       </div>
     </AuthGuard>
   );

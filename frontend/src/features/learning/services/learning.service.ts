@@ -1,81 +1,67 @@
-import { getCourseById } from "@/lib/mock-data/courses";
-import { getCertificatesByUser } from "@/lib/mock-data/certificates";
 import type { CourseProgress, DashboardStats } from "../types/learning.types";
 import type { CourseEnrollment } from "@/lib/stores/enrollment.store";
+import { courseService } from "@/features/programs/services/course.service";
+import type { ApiTrack } from "@/features/programs/types/program.types";
+
+function getTotalLessons(tracks: ApiTrack[]): number {
+  return tracks.reduce((sum, t) =>
+    sum + t.modules.reduce((msum, m) => msum + m.lessons.length, 0), 0);
+}
 
 export const learningService = {
-  /**
-   * Build CourseProgress objects from enrollment data + mock courses.
-   */
-  getEnrolledCourses: (enrollments: Record<string, CourseEnrollment>): CourseProgress[] => {
-    return Object.values(enrollments)
-      .map((enrollment) => {
-        const course = getCourseById(enrollment.courseId);
-        if (!course) return null;
+  async getEnrolledCourses(enrollments: Record<string, CourseEnrollment>): Promise<CourseProgress[]> {
+    const programs = await courseService.loadPrograms();
+    const programMap = new Map(programs.map(p => [p.id, p]));
 
-        const totalLessons = course.modules.reduce(
-          (sum, m) => sum + m.lessons.length,
-          0
-        );
+    const result: CourseProgress[] = [];
 
-        return {
-          courseId: course.id,
-          courseTitle: course.title,
-          courseSlug: course.slug,
-          thumbnailUrl: course.thumbnailUrl,
-          universityName: course.universityName,
-          instructorName: course.instructorName,
-          progress: enrollment.progress,
-          totalLessons,
-          completedLessons: enrollment.lessonsCompleted.length,
-          lastAccessedLessonId: enrollment.lastAccessedLessonId,
-          lastAccessedAt: enrollment.enrolledAt,
-        } as CourseProgress;
-      })
-      .filter(Boolean) as CourseProgress[];
+    for (const enrollment of Object.values(enrollments)) {
+      const program = programMap.get(enrollment.courseId);
+      if (!program) continue;
+
+      const totalLessons = getTotalLessons(program.tracks);
+
+      result.push({
+        courseId: program.id,
+        courseTitle: program.title,
+        courseSlug: program.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
+        thumbnailUrl: "",
+        universityName: program.institution?.name ?? "",
+        instructorName: program.faculty?.user.name ?? "",
+        progress: enrollment.progress,
+        totalLessons,
+        completedLessons: enrollment.lessonsCompleted.length,
+        lastAccessedLessonId: enrollment.lastAccessedLessonId,
+        lastAccessedAt: enrollment.enrolledAt,
+      });
+    }
+
+    return result;
   },
 
-  /**
-   * Get dashboard statistics for a student.
-   */
-  getDashboardStats: (
-    userId: string,
-    enrollments: Record<string, CourseEnrollment>,
+  getDashboardStats(
+    _userId: string,
+    enrollments: Record<string, any>,
     xpEarned: number
-  ): DashboardStats => {
-    const enrolled = Object.keys(enrollments).length;
-    const completed = Object.values(enrollments).filter(
-      (e) => e.progress >= 100
-    ).length;
-    const certificates = getCertificatesByUser(userId).length;
+  ): DashboardStats {
+    const enrolledArr = Object.values(enrollments);
+    const enrolled = enrolledArr.length;
+    const completed = enrolledArr.filter((e) => e.progress >= 100).length;
 
     return {
       enrolledCourses: enrolled,
       completedCourses: completed,
-      certificatesEarned: certificates,
+      certificatesEarned: 0,
       xpEarned,
-      learningStreak: 7, // Mock streak
+      learningStreak: 1,
       hoursLearned: Math.round(enrolled * 12.5),
     };
   },
 
-  /**
-   * Get the next lesson to continue for a course.
-   */
-  getNextLesson: (
-    courseId: string,
-    completedLessonIds: string[]
-  ): { moduleId: string; lessonId: string } | null => {
-    const course = getCourseById(courseId);
-    if (!course) return null;
-
-    for (const mod of course.modules) {
-      for (const lesson of mod.lessons) {
-        if (!completedLessonIds.includes(lesson.id)) {
-          return { moduleId: mod.id, lessonId: lesson.id };
-        }
-      }
-    }
+  getNextLesson(
+    _courseId: string,
+    _completedLessonIds: string[]
+  ): { moduleId: string; lessonId: string } | null {
     return null;
   },
 };
