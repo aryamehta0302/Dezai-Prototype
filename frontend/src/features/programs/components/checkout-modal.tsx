@@ -4,12 +4,11 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/shared/ui/dialog";
 import { Button } from "@/shared/ui/button";
 import { useEnrollment } from "../hooks/useEnrollment";
-import { formatCurrency } from "@/shared/utils/format";
 import { CheckCircle, CreditCard, Loader2, Lock } from "lucide-react";
-import type { MockCourse } from "@/lib/mock-data/courses";
+import type { ApiProgram } from "../types/program.types";
 
 interface CheckoutModalProps {
-  course: MockCourse;
+  course: ApiProgram;
   open: boolean;
   onClose: () => void;
 }
@@ -20,11 +19,9 @@ export function CheckoutModal({ course, open, onClose }: CheckoutModalProps) {
 
   const handlePayment = async () => {
     setStatus("processing");
-
-    // Simulate payment processing
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    const success = handleEnroll(course.id, course.title);
+    const success = await handleEnroll(course.id, course.title);
     if (success) {
       setStatus("success");
       setTimeout(() => {
@@ -55,7 +52,7 @@ export function CheckoutModal({ course, open, onClose }: CheckoutModalProps) {
             <div className="space-y-2 text-center">
               <h3 className="text-2xl font-bold text-on-surface">Enrollment Successful!</h3>
               <p className="text-sm text-muted">
-                You&apos;re now enrolled in <span className="font-semibold text-on-surface">&quot;{course.title}&quot;</span>. Start learning now!
+                You&apos;re now enrolled in <span className="font-semibold text-on-surface">&quot;{course.title}&quot;</span>.
               </p>
             </div>
           </div>
@@ -64,7 +61,7 @@ export function CheckoutModal({ course, open, onClose }: CheckoutModalProps) {
             <DialogHeader className="border-b border-border-light px-5 py-4 pr-12 sm:px-6">
               <DialogTitle className="text-xl leading-tight">Complete Enrollment</DialogTitle>
               <DialogDescription className="text-sm">
-                Review your order and proceed to payment
+                Review and confirm enrollment
               </DialogDescription>
             </DialogHeader>
 
@@ -75,22 +72,15 @@ export function CheckoutModal({ course, open, onClose }: CheckoutModalProps) {
                     {course.title}
                   </h4>
                   <p className="text-xs text-muted">
-                    {course.universityName} &bull; Prof. {course.instructorName}
+                    {course.institution?.name}
                   </p>
-                </div>
-
-                <div className="flex items-center justify-between border-t border-border-light pt-3">
-                  <span className="text-xs font-medium uppercase tracking-wider text-muted">Total</span>
-                  <span className="text-2xl font-bold text-on-surface">
-                    {formatCurrency(course.price)}
-                  </span>
                 </div>
               </div>
 
               <div className="flex gap-2 rounded-lg border border-warning-container bg-warning-container/40 p-3">
                 <Lock className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                 <p className="text-xs text-on-surface-variant">
-                  This is a demo environment. No real payment will be processed.
+                  Free enrollment. No payment required.
                 </p>
               </div>
 
@@ -103,12 +93,12 @@ export function CheckoutModal({ course, open, onClose }: CheckoutModalProps) {
                 {status === "processing" ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    Processing Payment...
+                    Enrolling...
                   </>
                 ) : (
                   <>
-                    <CreditCard className="h-5 w-5" />
-                    Pay {formatCurrency(course.price)}
+                    <CheckCircle className="h-5 w-5" />
+                    Confirm Enrollment
                   </>
                 )}
               </Button>

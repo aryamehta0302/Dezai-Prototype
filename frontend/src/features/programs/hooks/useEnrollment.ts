@@ -12,7 +12,7 @@ export function useEnrollment() {
   const router = useRouter();
 
   const handleEnroll = useCallback(
-    (courseId: string, courseTitle: string) => {
+    async (courseId: string, courseTitle: string) => {
       if (!isAuthenticated) {
         toast.error("Please sign in to enroll");
         router.push("/login");
@@ -24,9 +24,13 @@ export function useEnrollment() {
         return false;
       }
 
-      enroll(courseId);
-      toast.success(`Enrolled in "${courseTitle}"! Start learning now.`);
-      return true;
+      const success = await enroll(courseId);
+      if (success) {
+        toast.success(`Enrolled in "${courseTitle}"! Start learning now.`);
+      } else {
+        toast.error("Failed to enroll. Please try again.");
+      }
+      return success;
     },
     [enroll, isEnrolled, isAuthenticated, router]
   );

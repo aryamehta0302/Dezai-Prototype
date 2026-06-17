@@ -371,16 +371,18 @@ Week 18-20: Hardening + Launch
 
 | Milestone | % of MVP | Cumulative |
 |-----------|----------|------------|
-| Design prototypes (current) | 18% | 18% |
-| + Foundation + DB | 12% | 30% |
-| + Auth | 10% | 40% |
-| + Catalog + Details | 12% | 52% |
-| + Payments | 10% | 62% |
-| + Player + Dashboard | 12% | 74% |
+| Design prototypes (original) | 18% | 18% |
+| + Foundation + DB + Seed | 12% | 30% |
+| + Auth + RBAC + Onboarding | 10% | 40% |
+| + Catalog + Course Details | 12% | **52%** ✅ |
+| + Enrollment + Learning + Dashboard | 12% | **64%** ✅ |
+| + Payments | 10% | 74% |
 | + Quiz | 10% | 84% |
 | + Certificates | 6% | 90% |
 | + Admin dashboards | 6% | 96% |
 | + Polish + Launch | 4% | 100% |
+
+> **Sprint 1 (June 2026)** completed Foundation through Player phases — the app now has real data flow from NestJS backend to Next.js frontend for enrollment, progress, lessons, notes, bookmarks, and XP. Remaining: payments, quiz engine, certificates, admin dashboards, and polish.
 
 ---
 
@@ -414,17 +416,37 @@ Week 18-20: Hardening + Launch
 
 ---
 
-## First Sprint Backlog (Start Here)
+## Sprint Log
 
-When implementation begins, execute in this exact order:
+### Sprint 1 — Backend Integration (June 2026)
 
-1. `npx create-next-app@latest` with App Router + TS + Tailwind
-2. Copy `DESIGN.md` tokens into `tailwind.config.ts`
-3. `prisma init` + paste schema from architecture doc
-4. `docker compose up` for Postgres
-5. Build `TopAppBar` + `Footer` matching HTML
-6. Port landing page section-by-section (hero first)
-7. Seed one course with full module tree
-8. Dynamic course detail page reading from Prisma
-9. NextAuth with one seeded student account
-10. Protected `/dashboard` stub proving RBAC works
+**Lead**: Ansh Dhanani (full-stack developer & project driver)
+
+**Role**: Ansh directed the architecture decisions, set constraints (preserve route structure, local-first state pattern, scope cut for quiz/cert/auth mock data), tested functionality in real time, and flagged UX gaps as they appeared. The AI agent executed the implementation.
+
+**Completed work:**
+
+| Area | What Was Done |
+|------|---------------|
+| **API types & services** | Created `program.types.ts` (full API response types), `programs-api.service.ts` (HTTP layer for `/api/programs`), `programs-api.service.ts` (enrollments, lessons, notes, bookmarks, XP) |
+| **Course service** | Rewrote `course.service.ts` (async, cache, slug resolution), `useCourses`, `useEnrollment`, `useProgress` hooks — all async, API-backed, with loading/error states |
+| **Enrollment store** | Rewrote `enrollment.store.ts` with fresh persist key `dezai-enrollments-v3`, `fetchXp()`, async enroll returning boolean, XP sync from completeLesson response |
+| **Learning services** | Rewrote `learning.service.ts` (builds CourseProgress from real enrollments), `lesson.service.ts` (fetches `GET /api/learning/lessons/:id`, markComplete syncs XP) |
+| **Pages** | Rewrote `CatalogPage.tsx` (loading skeleton), `CourseDetailPage.tsx` (async getBySlug, tracks-based syllabus), `CoursePlayerPage.tsx` (fetches course + lesson from API, local state navigation, `window.history.replaceState` for URL, no full reloads) |
+| **Components** | Rewrote `course-card`, `course-hero`, `enrollment-cta`, `checkout-modal`, `syllabus-accordion`, `related-courses`, `course-filters`, `course-module-sidebar`, `mark-complete-button` — all use `ApiProgram` types, no mock imports |
+| **Backend XP endpoint** | Created `GET /api/users/me/xp` endpoint |
+| **Curriculum seed** | Created `seed-full-curriculum.ts`: 12 programs each with 5 ROOTS + 5 EDGE modules (10 modules, ~28 lessons per program), real Google sample video URLs, markdown content |
+| **Thumbnails** | Added picsum.photos thumbnails to course cards and hero, with CSS gradient fallback |
+| **UX fixes** | Empty curriculum shows "Curriculum coming soon"; enrollment CTA disables when no lessons; course card shows "Coming soon" badge; progress synced from backend on page load; footer hidden on program pages; header visible on catalog |
+
+**Files changed:**
+- `frontend/`: `program.types.ts`, `programs-api.service.ts`, `course.service.ts`, `enrollment.store.ts`, `learning-api.service.ts`, `learning.service.ts`, `lesson.service.ts`, `slug.ts`, `thumbnail.ts`, 4 page components, 9 UI components, student layout
+- `backend/`: `users.controller.ts`, `programs.service.ts`, `seed-full-curriculum.ts`, `cleanup-modules.ts`
+
+**TypeScript:** Clean compile (`tsc --noEmit` passes).
+
+**Next sprint recommendations:**
+- Assessment module (quiz engine has empty backend)
+- Certificate issuance flow
+- Notifications system
+- Profile settings pages

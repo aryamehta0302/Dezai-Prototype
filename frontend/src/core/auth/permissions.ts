@@ -49,9 +49,9 @@ export const RoleGroups = {
 /** Default dashboard path for each role after login */
 export const DEFAULT_DASHBOARD: Record<UserRole, string> = {
   [UserRole.STUDENT]: "/dashboard",
-  [UserRole.FACULTY]: "/faculty/dashboard",
-  [UserRole.UNIVERSITY_ADMIN]: "/university/dashboard",
-  [UserRole.DEZAI_ADMIN]: "/admin/dashboard",
+  [UserRole.FACULTY]: "/dashboard",
+  [UserRole.UNIVERSITY_ADMIN]: "/dashboard",
+  [UserRole.DEZAI_ADMIN]: "/dashboard",
 };
 
 /** Get the appropriate dashboard redirect for a user role */
