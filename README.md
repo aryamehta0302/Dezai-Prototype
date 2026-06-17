@@ -1,121 +1,141 @@
-# 🌟 Dezai AI — Micro-Credentials & Proctored EdTech SaaS
+# Dezai AI — Micro-Credentials & Proctored EdTech SaaS
 
-Dezai AI is a modern, university-grade EdTech SaaS platform designed for accredited digital micro-credentials, live-proctored online assessments, and multi-tier certification verification. 
-
-This repository bridges the design prototype specifications with a fully responsive React and Next.js implementation.
+Dezai AI is a university-grade EdTech platform with a **Next.js 16 frontend** and a **NestJS API backend**.
 
 ---
 
-## 📂 Repository Structure
+## Architecture
 
-The project is split into different folders reflecting various phases of development:
-
-```text
+```
 Dezai-Prototype/
-├── frontend/                          # Next.js 16 Application (Primary runnable codebase)
-│   ├── src/
-│   │   ├── app/                       # Routing layer (thin wrapper)
-│   │   ├── features/                  # Domain-specific business logic & components
-│   │   ├── shared/                    # Reusable UI primitives, helpers & hooks
-│   │   └── lib/                       # Global store wrappers, mock data & providers
-│   ├── package.json                   # Dependency tree & NPM scripts
-│   └── tsconfig.json                  # TypeScript config
+├── frontend/                     # Next.js 16 (App Router) — port 3000
+│   ├── src/app/                  # Routing layer
+│   ├── src/features/             # Domain modules (catalog, learning, auth, etc.)
+│   ├── src/shared/               # Reusable UI, hooks, utils
+│   └── src/lib/                  # Stores, providers
 │
-├── backend/                           # API & Microservices Scaffold (Future extension)
-│   └── src/
-│       ├── modules/                   # Module routing, services, controllers
-│       └── shared/                    # Shared database models, middleware, config
+├── backend/                      # NestJS API — port 3001
+│   ├── src/modules/              # Feature modules (auth, programs, learning, etc.)
+│   ├── src/common/               # Guards, decorators, filters
+│   └── prisma/                   # Schema, migrations, seeders
 │
-├── project-docs/                      # Comprehensive analyses and planning docs
-│   ├── 00_PROJECT_OVERVIEW.md         # Product vision & repository audit
-│   ├── 01_EXISTING_ASSETS.md          # Design system, variables, logo specs
-│   ├── 02_ROUTE_MANIFEST.md           # Page routing manifest
-│   ├── 03_COMPONENT_MANIFEST.md       # Component checklist & UX specifications
-│   ├── 04_GAP_ANALYSIS.md             # Integration checklists (auth, proctoring, payment)
-│   └── 05_IMPLEMENTATION_PLAN.md      # Phased development roadmap
-│
-└── stitch_dezai_ai_edtech_platform/   # Original Google Stitch static HTML exports
+├── project-docs/                 # Planning docs, route/component manifests
+└── ARCHITECTURE.md               # Import rules & folder conventions
 ```
 
 ---
 
-## 🛠️ Technology Stack (Frontend)
+## Prerequisites
 
-The runnable client app is located in the `/frontend` directory and utilizes:
-
-| Layer | Technology Used | Description |
-|---|---|---|
-| **Framework** | **Next.js 16 (App Router)** | Serving layout optimizations and routing. |
-| **Language** | **TypeScript** | For strict typing, readability, and safe refactoring. |
-| **Styling** | **Tailwind CSS v4 + Shadcn UI** | High-fidelity UI styling with harmonious HSL dark/light modes. |
-| **State Management** | **Zustand** | Multi-store architecture for client states (Auth, Quiz, Enrollment, etc.). |
-| **Data Validation** | **Zod + React Hook Form** | Rigid validation schemas for auth and quiz submissions. |
-| **Utilities** | **Recharts, jsPDF, qrcode.react** | Dashboard data-visualizations, certificate downloads, and QR codes. |
+- **Node.js** v18+
+- A **Neon PostgreSQL** database (or any Postgres)
 
 ---
 
-## 🧑‍💻 Personas & Role-Based Access Control (RBAC)
+## Setup
 
-Dezai AI targets three separate user roles with specialized dashboards:
+### 1. Environment files
 
-1. **Student Dashboard**: Discover courses in the catalog, enroll, access the lesson player, write notes, undergo webcam-proctored quizzes, check notifications, and download/share certificates.
-2. **University Admin**: Manage courses, edit syllabus content, monitor instructor registries, audit certification tiers, and view institutional analytics.
-3. **Dezai Global Admin**: Track system-wide revenue, manage partner universities, audit transactions, and adjust system configs.
+Both `frontend/` and `backend/` need a `.env` file. Copy the examples:
 
----
+```bash
+cp frontend/.env.example frontend/.env
+cp backend/.env.example backend/.env
+```
 
-## 🚀 Getting Started
-
-### 📋 Prerequisites
-
-Make sure you have the following installed on your machine:
-* **Node.js** (v18.x or v20.x or higher)
-* **npm** or **yarn** / **pnpm** / **bun**
-
-### 🔧 Installation
-
-1. Navigate to the `frontend` folder:
-   ```bash
-   cd frontend
-   ```
-
-2. Install all dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Run the local development server:
-   ```bash
-   npm run dev
-   ```
-
-4. Open [http://localhost:3000](http://localhost:3000) on your browser to view the application.
+Fill in the values. At minimum:
+- `DATABASE_URL` — your PostgreSQL connection string
+- `AUTH_SECRET` — any random string (use `openssl rand -base64 32`)
 
 ---
 
-## 📦 Build & Deployment
+### 2. Backend
 
-To build the project for a production environment:
-
-1. Build the production application bundle:
-   ```bash
-   npm run build
-   ```
-
-2. Start the optimized Next.js server:
-   ```bash
-   npm run start
-   ```
-
-3. (Optional) Run the ESLint linter to verify code boundaries and rules:
-   ```bash
-   npm run lint
-   ```
+```bash
+cd backend
+npm install
+npx prisma generate
+npx prisma migrate dev
+npm run prisma:seed        # seed institutions, users, 12 programs with full curriculum
+npm run dev                # starts API on http://127.0.0.1:3001
+```
 
 ---
 
-## 📐 Architecture Guidelines
+### 3. Frontend
 
-Dezai AI follows a strict **Feature-Based Architecture**. All custom components, hooks, services, schemas, and types must be placed inside their respective domain directory within `frontend/src/features/`.
+```bash
+cd frontend
+npm install
+npm run dev                # starts app on http://127.0.0.1:3000
+```
 
-Refer to the [ARCHITECTURE.md](./ARCHITECTURE.md) file at the root of the project to understand the import boundaries and folder standards before adding new features.
+---
+
+## Test Accounts
+
+| Role    | Email              | Password      |
+|---------|--------------------|---------------|
+| Student | student@dezai.edu  | password123   |
+| Faculty | faculty@dezai.edu  | password123   |
+| Admin   | admin@dezai.edu    | password123   |
+
+---
+
+## Useful Commands
+
+| Command | Location | Description |
+|---------|----------|-------------|
+| `npm run dev` | `frontend/` | Start Next.js dev server |
+| `npm run dev` | `backend/` | Start NestJS dev server (watch mode) |
+| `npm run build` | `frontend/` | Build frontend for production |
+| `npm run build` | `backend/` | Build backend for production |
+| `npm run lint` | `frontend/` | ESLint frontend |
+| `npm run lint` | `backend/` | ESLint backend |
+| `npx prisma migrate dev` | `backend/` | Apply pending Prisma migrations |
+| `npx prisma generate` | `backend/` | Regenerate Prisma client |
+| `npm run prisma:seed` | `backend/` | Seed DB (idempotent — safe to re-run) |
+| `npm run seed:status` | `backend/` | Audit: verify all programs have full curriculum |
+
+---
+
+## Seed Details
+
+The combined seed (`npm run prisma:seed`) creates everything in one pass:
+
+- **7 institutions** (Dezai, KPGU, Parul, CHARUSAT, Navrachana, MSU Baroda, Stanford)
+- **Users**: admin, student, 10 faculty members
+- **12 programs** with IDs `course-1` through `course-12`
+- **Full curriculum** — each program has:
+  - 2 tracks: ROOTS (Foundation) and EDGE (Advanced)
+  - 5 modules per track (10 total, ~28 lessons)
+  - Real Google sample video URLs + markdown lesson content
+  - Custom AI curriculum for course-1 ("Generative AI for Leaders")
+
+Idempotent: re-running the seed only fills in missing data — it won't duplicate existing modules or lessons.
+
+---
+
+## Tech Stack
+
+### Frontend
+Next.js 16, TypeScript, Tailwind CSS v4, Shadcn UI, Zustand, Zod, React Hook Form, NextAuth v5
+
+### Backend
+NestJS 11, Prisma 6, PostgreSQL (Neon), JWT (jose)
+
+---
+
+## Roles
+
+- **Student**: Browse catalog, enroll, watch lessons, take notes, bookmarks, XP
+- **Faculty**: Course management (future)
+- **Admin**: Platform administration (future)
+
+---
+
+## Architecture Rules
+
+The project follows **Feature-Based Architecture**. See `ARCHITECTURE.md` for import boundaries:
+- `app/` → `features/` → `shared/` (no reverse imports)
+- Each feature has its own components, hooks, services, types, store

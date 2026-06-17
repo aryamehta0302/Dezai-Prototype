@@ -1,53 +1,55 @@
 import { useEnrollmentStore } from "@/lib/stores/enrollment.store";
-import { getCourseById } from "@/lib/mock-data/courses";
+import { learningApi } from "./learning-api.service";
+import { courseService } from "@/features/programs/services/course.service";
 
 export const lessonService = {
-  /**
-   * Mark a lesson as complete.
-   */
-  markComplete: (courseId: string, lessonId: string): boolean => {
-    const course = getCourseById(courseId);
-    if (!course) return false;
-    const totalLessons = course.modules.reduce(
-      (sum, m) => sum + m.lessons.length,
-      0
-    );
-    useEnrollmentStore.getState().markLessonComplete(courseId, lessonId, totalLessons);
-    return true;
+  markComplete: async (courseId: string, lessonId: string): Promise<boolean> => {
+    try {
+      const res = await learningApi.completeLesson(lessonId);
+      if (res.success) {
+        await useEnrollmentStore.getState().fetchEnrollments();
+        if (res.xpResult) {
+          useEnrollmentStore.getState().setXp(res.xpResult.currentXp);
+        }
+        return true;
+      }
+    } catch { /* ignore */ }
+    return false;
   },
 
-  /**
-   * Get lesson content (returns the mock content or a default).
-   */
-  getLessonContent: (courseId: string, lessonId: string): string | null => {
-    const course = getCourseById(courseId);
-    if (!course) return null;
-
-    for (const mod of course.modules) {
-      const lesson = mod.lessons.find((l) => l.id === lessonId);
-      if (lesson) {
-        return (
-          lesson.content ||
-          `# ${lesson.title}\n\nThis is the lesson content for "${lesson.title}". In a production environment, this would contain rich multimedia content including videos, interactive exercises, and detailed explanations.\n\n## Key Concepts\n\n- Understanding the fundamentals of this topic\n- Practical applications in real-world scenarios\n- Best practices and common pitfalls to avoid\n\n## Summary\n\nThis lesson covers the essential aspects of ${lesson.title.toLowerCase()}. Review the material carefully and take notes for the assessment.`
-        );
+  getLessonContent: async (_courseId: string, lessonId: string): Promise<string | null> => {
+    try {
+      const res = await learningApi.getLesson(lessonId);
+      if (res.success && res.lesson) {
+        return res.lesson.content;
       }
-    }
+    } catch { /* ignore */ }
     return null;
   },
 
-  /**
-   * Find the lesson details within a course.
-   */
-  getLesson: (courseId: string, lessonId: string) => {
-    const course = getCourseById(courseId);
-    if (!course) return null;
+  getLesson: async (courseId: string, lessonId: string) => {
+    try {
+      const programs = await courseService.loadPrograms();
+      const program = programs.find(p => p.id === courseId);
+      if (!program) return null;
 
-    for (const mod of course.modules) {
-      const lesson = mod.lessons.find((l) => l.id === lessonId);
-      if (lesson) {
-        return { lesson, module: mod };
+      for (const track of program.tracks) {
+        for (const mod of track.modules) {
+          const lesson = mod.lessons.find(l => l.id === lessonId);
+          if (lesson) {
+            return { lesson: { ...lesson, type: "video" as const, duration: 15, content: "" }, module: mod };
+          }
+        }
       }
-    }
+
+      const lessonRes = await learningApi.getLesson(lessonId);
+      if (lessonRes.success && lessonRes.lesson) {
+        return {
+          lesson: { ...lessonRes.lesson, type: "article" as const, duration: 15 },
+          module: { id: lessonRes.lesson.moduleId, title: lessonRes.lesson.module.title, lessons: [] },
+        };
+      }
+    } catch { /* ignore */ }
     return null;
   },
 };

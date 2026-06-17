@@ -3,11 +3,14 @@ import { AssessmentController } from './controllers/assessment.controller';
 import { AssessmentService } from './services/assessment.service';
 import { QuestionSelectionService } from './services/question-selection.service';
 import { AuditModule } from '../audit/audit.module';
+import { DatabaseModule } from '../../database/database.module';
+import { AssessmentsController } from './controllers/assessments.controller';
+import { AssessmentsService } from './services/assessments.service';
 
 @Module({
-  imports: [AuditModule],
-  controllers: [AssessmentController],
-  providers: [AssessmentService, QuestionSelectionService],
-  exports: [AssessmentService, QuestionSelectionService],
+  imports: [AuditModule, DatabaseModule],
+  controllers: [AssessmentController, AssessmentsController],
+  providers: [AssessmentService, AssessmentsService, QuestionSelectionService],
+  exports: [AssessmentService, AssessmentsService, QuestionSelectionService],
 })
 export class AssessmentsModule {}

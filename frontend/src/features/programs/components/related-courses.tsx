@@ -1,14 +1,22 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { CourseCard } from "./course-card";
 import { courseService } from "../services/course.service";
+import type { ApiProgram } from "../types/program.types";
 
 interface RelatedCoursesProps {
   courseId: string;
 }
 
 export function RelatedCourses({ courseId }: RelatedCoursesProps) {
-  const courses = courseService.getRelatedCourses(courseId, 4);
+  const [courses, setCourses] = useState<ApiProgram[]>([]);
+
+  useEffect(() => {
+    courseService.loadPrograms().then((all) => {
+      setCourses(all.filter((c) => c.id !== courseId).slice(0, 4));
+    });
+  }, [courseId]);
 
   if (courses.length === 0) return null;
 

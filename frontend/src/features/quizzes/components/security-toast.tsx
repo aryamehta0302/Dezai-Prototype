@@ -1,45 +1,96 @@
 "use client";
 
 import { useEffect } from "react";
-import { toast } from "sonner";
-import { QUIZ_CONSTANTS } from "../constants/quiz.constants";
-import { AlertTriangle } from "lucide-react";
 
 interface SecurityToastProps {
-  onTabSwitch: () => void;
-  tabSwitchCount: number;
+  onViolation: (type: "TAB_SWITCH" | "FOCUS_LOSS" | "COPY_PASTE") => void;
   isActive: boolean;
 }
 
-export function SecurityToast({ onTabSwitch, tabSwitchCount, isActive }: SecurityToastProps) {
+export function SecurityToast({ onViolation, isActive }: SecurityToastProps) {
   useEffect(() => {
     if (!isActive) return;
 
+    // 1. Tab Switch / Page Visibility Detection
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        onTabSwitch();
-        const remaining = QUIZ_CONSTANTS.MAX_TAB_SWITCHES - tabSwitchCount - 1;
+        onViolation("TAB_SWITCH");
+      }
+    };
 
-        if (remaining <= 0) {
-          toast.error("Maximum tab switches exceeded. Quiz will be submitted.", {
-            icon: <AlertTriangle className="h-4 w-4" />,
-            duration: 5000,
-          });
-        } else {
-          toast.warning(
-            `Tab switch detected! ${remaining} warning${remaining !== 1 ? "s" : ""} remaining before auto-submit.`,
-            {
-              icon: <AlertTriangle className="h-4 w-4" />,
-              duration: 4000,
-            }
-          );
-        }
+    // 2. Window Blur (Focus Loss) Detection
+    const handleBlur = () => {
+      onViolation("FOCUS_LOSS");
+    };
+
+    // 3. Clipboard Prevention & Detection
+    const handleClipboard = (e: ClipboardEvent) => {
+      e.preventDefault();
+      onViolation("COPY_PASTE");
+    };
+
+    // 4. Disable DevTools & Right-Click Context Menu
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent F12
+      if (e.key === "F12") {
+        e.preventDefault();
+        onViolation("COPY_PASTE");
+      }
+      // Prevent Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
+      if (e.ctrlKey && e.shiftKey && ["I", "J", "C", "i", "j", "c"].includes(e.key)) {
+        e.preventDefault();
+        onViolation("COPY_PASTE");
+      }
+      // Prevent Cmd+Alt+I, Cmd+Alt+J, Cmd+Alt+C (Mac equivalents)
+      if (e.metaKey && e.altKey && ["I", "J", "C", "i", "j", "c"].includes(e.key)) {
+        e.preventDefault();
+        onViolation("COPY_PASTE");
+      }
+      // Prevent Ctrl+Tab and Ctrl+Shift+Tab
+      if (e.ctrlKey && e.key === "Tab") {
+        e.preventDefault();
+        onViolation("TAB_SWITCH");
+      }
+      // Prevent Ctrl+T (New Tab), Ctrl+N (New Window)
+      if (e.ctrlKey && ["T", "t", "N", "n"].includes(e.key)) {
+        e.preventDefault();
+        onViolation("TAB_SWITCH");
+      }
+      // Prevent Ctrl+Shift+N (New Incognito), Ctrl+Shift+P (New Private Window)
+      if (e.ctrlKey && e.shiftKey && ["N", "n", "P", "p"].includes(e.key)) {
+        e.preventDefault();
+        onViolation("TAB_SWITCH");
+      }
+      // Prevent Ctrl+S (Save page), Ctrl+U (View source)
+      if (e.ctrlKey && ["S", "U", "s", "u"].includes(e.key)) {
+        e.preventDefault();
+        onViolation("COPY_PASTE");
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [isActive, onTabSwitch, tabSwitchCount]);
+    window.addEventListener("blur", handleBlur);
+    document.addEventListener("copy", handleClipboard);
+    document.addEventListener("cut", handleClipboard);
+    document.addEventListener("paste", handleClipboard);
+    document.addEventListener("contextmenu", handleContextMenu);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleBlur);
+      document.removeEventListener("copy", handleClipboard);
+      document.removeEventListener("cut", handleClipboard);
+      document.removeEventListener("paste", handleClipboard);
+      document.removeEventListener("contextmenu", handleContextMenu);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isActive, onViolation]);
 
   return null;
 }
+
