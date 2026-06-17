@@ -5,7 +5,7 @@ import { Textarea } from "@/shared/ui/textarea";
 import { Button } from "@/shared/ui/button";
 import { Save, StickyNote } from "lucide-react";
 import { toast } from "sonner";
-import { useNotes } from "../hooks/useNotes";
+import { useEnrollmentStore } from "@/lib/stores/enrollment.store";
 
 interface PersonalNotesPanelProps {
   courseId: string;
@@ -13,15 +13,30 @@ interface PersonalNotesPanelProps {
 }
 
 export function PersonalNotesPanel({ courseId, lessonId }: PersonalNotesPanelProps) {
-  const { getNote, saveNote } = useNotes(courseId);
-  const [text, setText] = useState(getNote(lessonId));
+  const { getNote, saveNote, fetchNote } = useEnrollmentStore();
+  const [text, setText] = useState(getNote(courseId, lessonId));
   const [isSaved, setIsSaved] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  const handleSave = () => {
-    saveNote(lessonId, text);
+  // Fetch note from backend on mount
+  useState(() => {
+    const sync = async () => {
+      setIsSyncing(true);
+      const content = await fetchNote(courseId, lessonId);
+      if (content) setText(content);
+      setIsSyncing(false);
+    };
+    sync();
+  });
+
+  const handleSave = async () => {
+    setIsSyncing(true);
+    await saveNote(courseId, lessonId, text);
     setIsSaved(true);
-    toast.success("Notes saved");
+    setIsSyncing(false);
+    toast.success("Notes saved to your profile");
   };
+
 
   return (
     <div className="space-y-3">

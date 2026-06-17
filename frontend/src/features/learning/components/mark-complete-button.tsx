@@ -1,9 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/shared/ui/button";
 import { useEnrollmentStore } from "@/lib/stores/enrollment.store";
-import { lessonService } from "../services/lesson.service";
-import { CheckCircle, Sparkles } from "lucide-react";
+import { CheckCircle, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface MarkCompleteButtonProps {
@@ -13,16 +13,21 @@ interface MarkCompleteButtonProps {
 }
 
 export function MarkCompleteButton({ courseId, lessonId, onComplete }: MarkCompleteButtonProps) {
-  const { isLessonCompleted } = useEnrollmentStore();
-  const completed = isLessonCompleted(courseId, lessonId);
+  const { markLessonComplete, isLoading } = useEnrollmentStore();
+  const [completing, setCompleting] = useState(false);
+  const [completed, setCompleted] = useState(false);
 
-  const handleClick = () => {
-    if (completed) return;
-    lessonService.markComplete(courseId, lessonId);
+  const handleClick = async () => {
+    if (completed || completing) return;
+    setCompleting(true);
+    await markLessonComplete(courseId, lessonId);
+    setCompleting(false);
+    setCompleted(true);
+
     toast.success(
       <div className="flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-warning" />
-        <span>+25 XP earned!</span>
+        <span>Lesson completed! XP updated.</span>
       </div>
     );
     onComplete?.();
@@ -31,16 +36,20 @@ export function MarkCompleteButton({ courseId, lessonId, onComplete }: MarkCompl
   if (completed) {
     return (
       <Button variant="outline" disabled className="gap-2">
-        <CheckCircle className="h-4 w-4 text-success" />
+        <CheckCircle className="h-4 w-4 text-green-500" />
         Completed
       </Button>
     );
   }
 
   return (
-    <Button onClick={handleClick} className="gap-2">
-      <CheckCircle className="h-4 w-4" />
-      Mark as Complete
+    <Button onClick={handleClick} disabled={completing || isLoading} className="gap-2">
+      {completing ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <CheckCircle className="h-4 w-4" />
+      )}
+      {completing ? "Saving..." : "Mark as Complete"}
     </Button>
   );
 }
