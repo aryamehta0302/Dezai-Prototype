@@ -25,23 +25,22 @@ This project uses **FEATURE-BASED ARCHITECTURE**. Every domain concern is encaps
 ```
 frontend/src/
 │
-├── app/                          # Next.js 15 App Router (THIN LAYER)
-│   ├── (admin)/                  # Admin-only routes
+├── app/                          # Next.js 16 App Router (THIN LAYER)
+│   ├── (admin)/                  # Admin sub-routes (users, settings)
 │   ├── (auth)/                   # Auth route group
-│   │   ├── login/
-│   │   └── signup/
 │   ├── (marketing)/              # Public marketing pages
-│   ├── (student)/                # Student-protected routes
-│   │   ├── dashboard/
+│   ├── (student)/                # Shared Authenticated Area
+│   │   ├── dashboard/            # UNIFIED DASHBOARD (Role-Aware Switcher)
 │   │   ├── courses/[slug]/
 │   │   │   ├── learn/[lessonId]/
 │   │   │   └── quiz/[quizId]/
 │   │   ├── profile/
 │   │   └── settings/
-│   ├── (university)/             # University admin routes
+│   ├── (university)/             # University/Faculty sub-routes
 │   ├── verify/[id]/              # Public certificate verification
 │   ├── catalog/                  # Public course catalog
-│   ├── guards/                   # Route protection / RBAC guards
+│   ├── proxy.ts                  # Edge Proxy (Auth & RBAC Routing)
+│   ├── guards/                   # Route protection helpers
 │   ├── layouts/                  # Shared layout shells
 │   ├── providers/                # React Context Providers
 │   └── globals.css               # Global CSS & Tailwind configuration

@@ -24,18 +24,14 @@ import {
 
 export function StudentDashboardPage() {
   const { user } = useAuthStore();
-  const { enroll } = useEnrollmentStore();
+  const { fetchEnrollments, isLoading: isEnrollmentLoading } = useEnrollmentStore();
   const { enrolledCourses, inProgressCourses, stats } = useProgress();
 
-  // Seed initial enrollments from mock user data on first load
+  // Load enrollments from backend on mount
   useEffect(() => {
-    const enrolledCourseIds = (user as any)?.enrolledCourseIds;
-    if (enrolledCourseIds) {
-      enrolledCourseIds.forEach((courseId: string) => {
-        enroll(courseId);
-      });
-    }
-  }, [user, enroll]);
+    fetchEnrollments();
+  }, [fetchEnrollments]);
+
 
   const greeting = () => {
     const hour = new Date().getHours();

@@ -1,4 +1,4 @@
-export { auth as middleware } from "@/core/auth";
+export { auth as proxy } from "@/core/auth";
 
 export const config = {
   matcher: [

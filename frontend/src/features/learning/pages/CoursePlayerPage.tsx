@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { getCourseBySlug, type MockCourse } from "@/lib/mock-data/courses";
+import { courseService } from "@/features/programs/services/course.service";
+import { learningApi } from "../services/learning-api.service";
 import { useEnrollmentStore } from "@/lib/stores/enrollment.store";
-import { lessonService } from "../services/lesson.service";
 import { VideoPlayer } from "../components/video-player";
 import { CourseModuleSidebar } from "../components/course-module-sidebar";
 import { LessonContent } from "../components/lesson-content";
 import { PersonalNotesPanel } from "../components/personal-notes-panel";
 import { MarkCompleteButton } from "../components/mark-complete-button";
 import { EmptyState } from "@/shared/components/empty-state";
+import { LoadingSkeleton } from "@/shared/components/loading-skeleton";
 import { Button } from "@/shared/ui/button";
 import { Progress } from "@/shared/ui/progress";
 import {
@@ -22,6 +22,8 @@ import {
   Menu,
   X,
 } from "lucide-react";
+import { slugify } from "@/shared/utils/slug";
+import type { ApiProgram, ApiLessonDetail, ApiModule } from "@/features/programs/types/program.types";
 
 interface CoursePlayerPageProps {
   slug: string;
@@ -29,18 +31,58 @@ interface CoursePlayerPageProps {
 }
 
 export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
-  const router = useRouter();
-  const course = getCourseBySlug(slug);
   const { isEnrolled, getEnrollment, setLastAccessedLesson } = useEnrollmentStore();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentLessonId, setCurrentLessonId] = useState(lessonId);
+  const [course, setCourse] = useState<ApiProgram | null>(null);
+  const [lessonDetail, setLessonDetail] = useState<ApiLessonDetail | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Set last accessed lesson
+  // Load course on mount only (not on every lessonId change)
+  useEffect(() => {
+    async function load() {
+      const program = await courseService.getBySlug(slug);
+      setCourse(program);
+      setLoading(false);
+    }
+    load();
+  }, [slug]);
+
+  // Fetch lesson content when currentLessonId changes
+  const fetchLesson = useCallback(async (id: string) => {
+    setLessonDetail(null);
+    try {
+      const res = await learningApi.getLesson(id);
+      if (res.success) setLessonDetail(res.lesson);
+    } catch { /* ignore */ }
+  }, []);
+
+  // Initial lesson fetch
+  useEffect(() => {
+    if (lessonId) fetchLesson(lessonId);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Update URL silently + fetch lesson content on navigation
+  const goToLesson = useCallback((id: string) => {
+    setCurrentLessonId(id);
+    window.history.replaceState(null, "", `/programs/${slug}/learn/${id}`);
+    fetchLesson(id);
+  }, [slug, fetchLesson]);
+
+  // Persist last-accessed lesson
   useEffect(() => {
     if (course) {
       setLastAccessedLesson(course.id, currentLessonId);
     }
   }, [course, currentLessonId, setLastAccessedLesson]);
+
+  if (loading) {
+    return (
+      <div className="flex h-[calc(100vh-64px)] items-center justify-center">
+        <LoadingSkeleton />
+      </div>
+    );
+  }
 
   if (!course) {
     return (
@@ -51,6 +93,7 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
   }
 
   if (!isEnrolled(course.id)) {
+    const courseSlug = slugify(course.title);
     return (
       <div className="py-16">
         <EmptyState
@@ -58,7 +101,7 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
           title="Not enrolled"
           description="You need to enroll in this program to access lessons."
           action={
-            <Link href={`/programs/${slug}`}>
+            <Link href={`/programs/${courseSlug}`}>
               <Button>View Program</Button>
             </Link>
           }
@@ -67,18 +110,11 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
     );
   }
 
-  const lessonData = lessonService.getLesson(course.id, currentLessonId);
-  const content = lessonService.getLessonContent(course.id, currentLessonId);
-  const enrollment = getEnrollment(course.id);
-
-  // Flat list of all lesson IDs for prev/next navigation
-  const allLessons = course.modules.flatMap((m) => m.lessons);
+  const allModules: ApiModule[] = course.tracks.flatMap(t => t.modules);
+  const allLessons = allModules.flatMap(m => m.lessons);
   const currentIndex = allLessons.findIndex((l) => l.id === currentLessonId);
-
-  const goToLesson = (id: string) => {
-    setCurrentLessonId(id);
-    router.replace(`/programs/${slug}/learn/${id}`, { scroll: false });
-  };
+  const currentModule = allModules.find(m => m.lessons.some(l => l.id === currentLessonId));
+  const enrollment = getEnrollment(course.id);
 
   const goPrev = () => {
     if (currentIndex > 0) goToLesson(allLessons[currentIndex - 1].id);
@@ -91,14 +127,12 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
 
   return (
     <div className="flex h-[calc(100vh-64px)]">
-      {/* Sidebar */}
       <div
-          className={`${
-            sidebarOpen ? "w-80" : "w-0"
-          } shrink-0 border-r border-border-light bg-white transition-all duration-300 overflow-hidden`}
+        className={`${
+          sidebarOpen ? "w-80" : "w-0"
+        } shrink-0 border-r border-border-light bg-white transition-all duration-300 overflow-hidden`}
       >
         <div className="w-80 h-full flex flex-col">
-          {/* Sidebar Header */}
           <div className="p-4 border-b border-border-light space-y-3">
             <div className="flex items-center justify-between">
               <Link
@@ -127,20 +161,17 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
             </div>
           </div>
 
-          {/* Module List */}
           <CourseModuleSidebar
             courseId={course.id}
-            modules={course.modules}
+            modules={allModules}
             currentLessonId={currentLessonId}
-            onLessonSelect={goToLesson}
+            onLessonSelect={(id) => goToLesson(id)}
             className="flex-1 p-2"
           />
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Toggle Sidebar (if closed) */}
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
@@ -150,38 +181,32 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
           </button>
         )}
 
-        {/* Content Area */}
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-4xl mx-auto p-6 space-y-6">
-            {/* Lesson Title */}
             <div>
               <p className="text-xs text-muted uppercase tracking-wider mb-1">
-                {lessonData?.module.title}
+                {currentModule?.title ?? "Lesson"}
               </p>
               <h1 className="text-xl font-bold text-on-surface">
-                {lessonData?.lesson.title}
+                {(currentLessonId && allLessons.find(l => l.id === currentLessonId)?.title) ?? "Loading..."}
               </h1>
             </div>
 
-            {/* Video Player (for video lessons) */}
-            {lessonData?.lesson.type === "video" && (
+            {lessonDetail?.videoUrl && (
               <VideoPlayer
-                title={lessonData.lesson.title}
-                duration={lessonData.lesson.duration}
+                title={lessonDetail.title}
+                duration={15}
               />
             )}
 
-            {/* Lesson Content */}
-            {content && <LessonContent content={content} />}
+            {lessonDetail?.content && <LessonContent content={lessonDetail.content} />}
 
-            {/* Notes */}
             <div className="border-t border-border-light pt-6">
               <PersonalNotesPanel courseId={course.id} lessonId={currentLessonId} />
             </div>
           </div>
         </div>
 
-        {/* Bottom Navigation */}
         <div className="border-t border-border-light bg-white px-6 py-3 flex items-center justify-between">
           <Button
             variant="outline"

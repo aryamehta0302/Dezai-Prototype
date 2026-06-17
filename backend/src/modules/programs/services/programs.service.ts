@@ -69,9 +69,16 @@ export class ProgramsService {
           include: { user: { select: { name: true } } },
         },
         tracks: {
+          orderBy: { createdAt: 'asc' },
           include: {
             modules: {
-              include: { lessons: { select: { id: true } } },
+              orderBy: { order: 'asc' },
+              include: {
+                lessons: {
+                  orderBy: { order: 'asc' },
+                  select: { id: true, title: true, order: true, videoUrl: true },
+                },
+              },
             },
           },
         },
