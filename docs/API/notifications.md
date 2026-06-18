@@ -17,8 +17,10 @@ This document describes the API endpoints, authorization rules, request paramete
 
 | Method | Route | Auth | Description |
 |---|---|---|---|
-| GET | `/api/notifications` | JWT | Fetch notification inbox (supports filtering) |
+| GET | `/api/notifications` | JWT | Fetch notification inbox (supports legacy and new formats, with filtering) |
 | PATCH | `/api/notifications/mark-all-read` | JWT | Mark all active notifications as read |
+| POST | `/api/notifications/read-all` | JWT | Legacy: Mark all active notifications as read |
+| POST | `/api/notifications` | JWT | Utility: Create a new notification for test/triggers |
 | PATCH | `/api/notifications/:id/read` | JWT | Mark a single notification as read |
 | PATCH | `/api/notifications/:id/unread` | JWT | Mark a single notification as unread |
 | PATCH | `/api/notifications/:id/archive` | JWT | Archive a single notification |
@@ -42,8 +44,19 @@ Retrieve notifications for the authenticated user, filtered by status.
   ```json
   {
     "success": true,
+    "notifications": [
+      {
+        "id": "a0e1c2d3-b4e5-6f7a-8b9c-0d1e2f3a4b5c",
+        "title": "New Milestone Unlocked",
+        "message": "Congratulations! You earned the 'Fast Learner' badge.",
+        "type": "CREDENTIAL",
+        "read": false,
+        "archived": false,
+        "createdAt": "2026-06-18T12:00:00.000Z"
+      }
+    ],
     "data": {
-      "total": 2,
+      "total": 1,
       "unreadCount": 1,
       "notifications": [
         {
@@ -54,15 +67,6 @@ Retrieve notifications for the authenticated user, filtered by status.
           "read": false,
           "archived": false,
           "createdAt": "2026-06-18T12:00:00.000Z"
-        },
-        {
-          "id": "e5f6a7b8-c9d0-1e2f-3a4b-5c6d7e8f9a0b",
-          "title": "Welcome to Dezai",
-          "message": "Start your learning journey by completing your profile onboarding.",
-          "type": "SYSTEM",
-          "read": true,
-          "archived": false,
-          "createdAt": "2026-06-18T10:00:00.000Z"
         }
       ]
     }
@@ -71,7 +75,7 @@ Retrieve notifications for the authenticated user, filtered by status.
 
 ---
 
-### 2. Mark All as Read
+### 2. Mark All as Read (PATCH)
 Mark all non-archived, unread notifications for the authenticated user as read.
 
 * **Method:** `PATCH`
@@ -89,7 +93,57 @@ Mark all non-archived, unread notifications for the authenticated user as read.
 
 ---
 
-### 3. Mark Single Notification as Read
+### 3. Mark All as Read (POST - Legacy)
+Legacy endpoint used by the frontend console to mark all notifications as read.
+
+* **Method:** `POST`
+* **Route:** `/api/notifications/read-all`
+* **Headers:** `Authorization: Bearer <JWT_TOKEN>`
+* **Success Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "All notifications marked as read"
+  }
+  ```
+
+---
+
+### 4. Create Notification (Utility)
+Create a new notification. Mainly used by other backend modules to trigger events, or for administrative triggers/testing.
+
+* **Method:** `POST`
+* **Route:** `/api/notifications`
+* **Headers:** `Authorization: Bearer <JWT_TOKEN>`
+* **Request Body:**
+  ```json
+  {
+    "userId": "usr-8a9b...",
+    "title": "Review Required",
+    "message": "Assessment Neural Architecture Quiz requires review.",
+    "type": "ALERT"
+  }
+  ```
+* **Success Response (201 Created):**
+  ```json
+  {
+    "success": true,
+    "notification": {
+      "id": "not-9x8y7z...",
+      "userId": "usr-8a9b...",
+      "title": "Review Required",
+      "message": "Assessment Neural Architecture Quiz requires review.",
+      "type": "ALERT",
+      "read": false,
+      "archived": false,
+      "createdAt": "2026-06-18T13:45:00.000Z"
+    }
+  }
+  ```
+
+---
+
+### 5. Mark Single Notification as Read
 Mark a single notification as read.
 
 * **Method:** `PATCH`
@@ -101,6 +155,16 @@ Mark a single notification as read.
   ```json
   {
     "success": true,
+    "notification": {
+      "id": "a0e1c2d3-b4e5-6f7a-8b9c-0d1e2f3a4b5c",
+      "userId": "usr-8a9b...",
+      "title": "New Milestone Unlocked",
+      "message": "Congratulations! You earned the 'Fast Learner' badge.",
+      "type": "CREDENTIAL",
+      "read": true,
+      "archived": false,
+      "createdAt": "2026-06-18T12:00:00.000Z"
+    },
     "data": {
       "id": "a0e1c2d3-b4e5-6f7a-8b9c-0d1e2f3a4b5c",
       "read": true,
@@ -120,7 +184,7 @@ Mark a single notification as read.
 
 ---
 
-### 4. Mark Single Notification as Unread
+### 6. Mark Single Notification as Unread
 Mark a single notification as unread.
 
 * **Method:** `PATCH`
@@ -139,12 +203,10 @@ Mark a single notification as unread.
     }
   }
   ```
-* **Error Responses:**
-  * `404 Not Found` (same ownership enforcement as read endpoint).
 
 ---
 
-### 5. Archive Single Notification
+### 7. Archive Single Notification
 Set the `archived` status of a notification to `true`. Archived notifications are hidden from the standard inbox but can be queried using `?filter=archived`.
 
 * **Method:** `PATCH`
@@ -163,5 +225,3 @@ Set the `archived` status of a notification to `true`. Archived notifications ar
     }
   }
   ```
-* **Error Responses:**
-  * `404 Not Found` (same ownership enforcement).
