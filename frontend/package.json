@@ -39,9 +39,6 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@emnapi/core": "1.10.0",
-    "@emnapi/runtime": "1.11.1",
-    "@emnapi/wasi-threads": "1.2.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -50,10 +47,5 @@
     "eslint-config-next": "16.2.7",
     "tailwindcss": "^4",
     "typescript": "^5"
-  },
-  "overrides": {
-    "@emnapi/wasi-threads": "1.2.2",
-    "@emnapi/core": "1.10.0",
-    "@emnapi/runtime": "1.11.1"
   }
 }
