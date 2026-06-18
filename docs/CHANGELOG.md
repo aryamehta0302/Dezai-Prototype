@@ -6,9 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Sprint 4] — 2026-06-18
 
-**Developer:** Manan Panchal (Assessment & Learning Experience Lead)
+### Assessment Lifecycle & Results (Manan Panchal)
 
-### Added
+#### Added
 
 - **Assessment Attempt System** — Backend service and controller to start, resume, autosave, and submit student assessment attempts. Integrates with the existing `ExamSession` proctoring logs and enforces maximum attempts limits.
   - Files: [attempt.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/attempt.service.ts), [attempt.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/attempt.controller.ts)
@@ -30,13 +30,148 @@ All notable changes to this project will be documented in this file.
   - Files: [AssessmentResult.tsx](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/pages/AssessmentResult.tsx), [AssessmentReview.tsx](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/pages/AssessmentReview.tsx)
   - Pages: `/programs/:slug/assessment/:assessmentId/results`, `/programs/:slug/assessment/:assessmentId/review`
 
-### Changed
+#### Changed
 
 - **QuestionSelectionService Seeding** — Updated `selectQuestions` to support seed strings, enabling deterministic shuffles and question subset selections. Resuming an attempt now serves the exact same question set and option ordering.
   - File: [question-selection.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/question-selection.service.ts)
 
 - **AssessmentsModule Wiring** — Imported `UsersModule` to inject `XpService` into `AttemptService` and registered all new controllers and services.
   - File: [assessments.module.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/assessments.module.ts)
+
+---
+
+### AI Mentor (AI Mentor Owner)
+
+#### Added
+
+- **AI Mentor Module: Complete Phase 1 Implementation** — Full backend API + AI provider abstraction + context injection for lesson-aware responses.
+
+- **Backend: AI Provider Abstraction Layer** — Pluggable provider architecture supporting multiple LLM backends.
+  - **AIProvider Interface**: `ai-provider.interface.ts` — Contract for all providers
+  - **MockProvider**: `mock-provider.ts` — Development/fallback provider with contextual responses
+  - **ClaudeProvider**: `claude-provider.ts` — Anthropic Claude integration (structure ready for Phase 2)
+  - **GeminiProvider**: `gemini-provider.ts` — Google Gemini integration (structure ready for Phase 2)
+  - **AIProviderService**: `ai-provider.service.ts` — Provider selection & delegation with automatic fallback
+
+- **Backend: Context Injection System** — Lesson/Module/Program context automatically injected into AI prompts.
+  - Fetches lesson content, module title, program title from database
+  - Builds enriched system prompt with curriculum context
+  - Fallback gracefully if context unavailable
+  - Enables semantic relevance without external vector DB
+
+- **Frontend: AI Mentor Workspace** — Complete chat UI with sidebar, message history, smart buttons.
+  - **Components**: ChatWindow (message display), MessageInput (send prompt), SessionSidebar (session list), SmartButtons (quick actions)
+  - **Chat Page**: `chat-page.tsx` — Main chat interface with session management
+  - **Route**: `/(student)/chat` — Accessible from student dashboard
+
+- **Frontend: State Management** — Zustand store with localStorage persistence.
+  - **useChatStore**: Manages sessions, current session ID, message history, loading states
+  - Persists currentSessionId to localStorage for resuming chats
+  - Excludes message bodies from persistence (refetch from API)
+
+- **Frontend: React Query Integration** — Server state management for API operations.
+  - **useChatSessions**: Fetch user sessions with pagination
+  - **useChatSession**: Fetch specific session with messages
+  - **useCreateSession**: Create new chat
+  - **useDeleteSession**: Delete session
+  - **useSendMessage**: Send message & get response
+  - **useUpdateContext**: Update active lesson/module/program
+
+- **Frontend: Smart Buttons** — Quick action prompts for common tasks.
+  - Explain Concept
+  - Summarize
+  - Generate Notes
+  - Real Example
+
+- **API Service Layer** — Type-safe API client for chat operations.
+  - `aiMentorApi.getSessions()`
+  - `aiMentorApi.createSession()`
+  - `aiMentorApi.getSession()`
+  - `aiMentorApi.deleteSession()`
+  - `aiMentorApi.sendMessage()`
+  - `aiMentorApi.updateContext()`
+
+- **6 API Endpoints** (all protected by `JwtAuthGuard`):
+  - `GET /api/ai-mentor/sessions` — List user sessions (paginated)
+  - `POST /api/ai-mentor/sessions` — Create new session
+  - `GET /api/ai-mentor/sessions/:id` — Get session with messages
+  - `DELETE /api/ai-mentor/sessions/:id` — Delete session
+  - `POST /api/ai-mentor/chat` — Send message & get response
+  - `POST /api/ai-mentor/sessions/:id/context` — Update active lesson/module/program
+
+- **TypeScript Types**: Full type safety across all layers.
+  - `ChatSession`, `ChatMessage`, `CreateSessionRequest`, `SendMessageRequest`, `UpdateContextRequest`
+  - Response types: `ChatSessionResponse`, `ChatSessionsResponse`, `SendMessageResponse`
+
+#### Changed
+
+- **ChatService refactored** — Now uses AIProviderService instead of inline mock responses
+- **AiModule expanded** — Registers MockProvider, ClaudeProvider, GeminiProvider, AIProviderService
+- **docs/PROJECT_STATUS.md** — Comprehensive project status updated (70% completion, team roles, 53 total endpoints)
+- **docs/API/ai-mentor.md** — Full API contract with examples
+
+#### Features
+
+✅ **User Ownership Validation** — All operations verify session ownership  
+✅ **JWT Authentication** — Secured via JwtAuthGuard  
+✅ **Context Injection** — Lesson/module/program context in AI prompts  
+✅ **Provider Abstraction** — Pluggable LLM backends (Claude, Gemini, Mock)  
+✅ **Graceful Fallback** — Falls back to Mock if primary provider fails  
+✅ **Pagination Ready** — getUserSessions and getSessionMessages support offset/limit  
+✅ **Cascading Deletes** — Deleting session auto-deletes messages  
+✅ **Input Validation** — All DTOs use class-validator  
+✅ **Message Ordering** — Messages always ordered by createdAt  
+✅ **Persistent Sessions** — localStorage remembers last session ID  
+✅ **Resume Chat** — Users can resume previous conversations  
+✅ **Auto-scroll** — Chat window auto-scrolls to latest messages  
+✅ **Loading States** — Visual feedback during API calls  
+✅ **Error Handling** — Toast notifications + error display  
+
+#### Notes
+
+- **No schema changes** — ChatSession and ChatMessage models were pre-defined
+- **Mock responses only** — Phase 1 uses mock provider; Phase 2 will add real LLM
+- **Provider configuration** — Set `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` in `.env` for real LLM
+- **Context injection** — Automatically fetches lesson content for semantic relevance
+- **Lesson path** — Full path is: Lesson → Module → ProgramTrack → Program
+- **localStorage** — Only persists session IDs, not message bodies (to save space)
+
+#### Files Created (Backend)
+
+```
+backend/src/modules/ai/
+├── services/
+│   ├── ai-provider.service.ts (NEW)
+│   ├── chat.service.ts (UPDATED)
+│   └── providers/
+│       ├── ai-provider.interface.ts (NEW)
+│       ├── mock-provider.ts (NEW)
+│       ├── claude-provider.ts (NEW - structure ready)
+│       └── gemini-provider.ts (NEW - structure ready)
+├── repositories/chat.repository.ts (EXISTING)
+├── controllers/chat.controller.ts (EXISTING)
+├── dto/chat.dto.ts (EXISTING)
+└── ai.module.ts (UPDATED)
+```
+
+#### Files Created (Frontend)
+
+```
+frontend/src/features/ai-mentor/
+├── components/
+│   ├── chat-window.tsx (NEW)
+│   ├── message-input.tsx (NEW)
+│   ├── session-sidebar.tsx (NEW)
+│   └── smart-buttons.tsx (NEW)
+├── hooks/useChat.ts (NEW)
+├── services/ai-mentor-api.service.ts (NEW)
+├── store/chat-store.ts (NEW)
+├── types/index.ts (NEW)
+├── pages/chat-page.tsx (NEW)
+└── index.ts (NEW)
+
+frontend/src/app/(student)/chat/page.tsx (NEW)
+```
 
 ---
 

@@ -214,7 +214,42 @@ Implemented the Analytics Module backend and documentation (assigned to Krish Pa
 
 ---
 
-## 9. Summary of Verified Targets
+## 9. Phase 5: Student Location Selection & Faculty Onboarding (Sprint 2)
+
+Implemented full backend support for Student Location Selection (Cascading Filters) and Faculty Onboarding, Profile, Dashboard, and Admin Verification.
+
+### Features Delivered
+
+* **Student Location Cascading Selection**: Added hierarchical location retrieval API (`GET /api/institutions/locations`) that returns unique `country` -> `state` -> `city` -> `name` (universities) groupings, allowing students to filter institutions dynamically.
+* **Google Sign-In Sync**: Created `/api/auth/session-sync` on the backend to synchronize Google profile details (id, email, name) with local user records and generate/sign backend tokens.
+* **Faculty Role Onboarding**: Implemented `POST /api/auth/onboarding` to allow newly signed-in users to choose the `FACULTY` role, link to an institution, department, and designation, setting status to `PENDING`.
+* **Faculty Profile & Dashboard**: Created `/api/users/faculty/profile` and `/api/users/faculty/dashboard` to retrieve faculty metadata and statistics (total programs, students taught, pending quiz reviews).
+* **Admin Verification Interface**: Exposed a protected `/api/institutions/faculty/:facultyMemberId/verify` endpoint (restricted to `DEZAI_ADMIN` and `UNIVERSITY_ADMIN` roles) to approve or reject faculty member verification status.
+* **Automated Audit Logging**: Integrated logs for `LOGIN`, `ROLE_CHANGED` (on onboarding), and verification state updates via `AuditService`.
+
+### Files Added / Modified
+
+| Action | File |
+|---|---|
+| MODIFIED | [backend/prisma/schema.prisma](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/prisma/schema.prisma) |
+| MODIFIED | [backend/src/main.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/main.ts) |
+| MODIFIED | [backend/src/modules/auth/auth.module.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/auth/auth.module.ts) |
+| MODIFIED | [backend/src/modules/auth/controllers/auth.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/auth/controllers/auth.controller.ts) |
+| CREATED | [backend/src/modules/auth/dto/auth.dto.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/auth/dto/auth.dto.ts) |
+| MODIFIED | [backend/src/modules/auth/services/auth.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/auth/services/auth.service.ts) |
+| MODIFIED | [backend/src/modules/institutions/institutions.module.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/institutions/institutions.module.ts) |
+| CREATED | [backend/src/modules/institutions/controllers/institutions.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/institutions/controllers/institutions.controller.ts) |
+| CREATED | [backend/src/modules/institutions/dto/institution.dto.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/institutions/dto/institution.dto.ts) |
+| CREATED | [backend/src/modules/institutions/services/institutions.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/institutions/services/institutions.service.ts) |
+| MODIFIED | [backend/src/modules/users/users.module.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/users/users.module.ts) |
+| CREATED | [backend/src/modules/users/controllers/users.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/users/controllers/users.controller.ts) |
+| CREATED | [backend/src/modules/users/services/users.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/users/services/users.service.ts) |
+| CREATED | [frontend/.env](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/.env) |
+| CREATED | [frontend/.env.example](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/.env.example) |
+
+---
+
+## 10. Summary of Verified Targets
 
 * **Frontend Build**: Passed (successful Next.js production build, all routes compiled).
 * **Backend Build**: Passed (successful NestJS production build).
