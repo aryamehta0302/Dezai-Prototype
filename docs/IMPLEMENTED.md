@@ -374,3 +374,59 @@ Implemented the complete Assessment Attempt lifecycle, proctoring integration, d
 
 
 
+## 11. Sprint 4: Leaderboards & Notifications (Leaderboards & Notifications Lead)
+
+Implemented the backend modules, database schema migrations, and documentation for Leaderboards & Notifications.(by Krish Parmar)
+
+### Features Delivered
+
+1. **Notification Center:**
+   - Active inbox retrieval (non-archived notifications).
+   - Filtered queries for `unread` and `archived` states.
+   - Dual-guard ownership verification (users can only access or manage their own notifications).
+   - Individual notifications can be marked as read, unread, or archived.
+   - Bulk "mark all read" action (exempts archived notifications).
+
+2. **Ranked Leaderboards:**
+   - **Student Leaderboard:** Scoped by range (weekly = 7 days XP, monthly = 30 days XP, all-time = running total on User).
+   - **University Leaderboard:** Aggregated total XP of unique students per institution, active students (30-day window), and fastest completion speed.
+   - **Program Leaderboard:** Scoped to individual programs showing total XP, active students, and fastest completion speed.
+   - **Standard Competition Ranking:** Enforced tie-breaking logic (e.g. 1, 2, 2, 4).
+   - **User Deduplication:** Resolved multiple program enrollment conflicts at the university level to prevent double-counting of XP and active students.
+
+3. **Dashboard Widgets:**
+   - **Student Widget:** Compact top-N widget showing leading students (all-time XP), highlighting the requesting student, and resolving their exact current rank in the database.
+   - **Faculty Widget:** Compact top-N widget scoped to the faculty's most recently created program or a pinned program. Restricted to `FACULTY`, `UNIVERSITY_ADMIN`, and `DEZAI_ADMIN` roles.
+
+### Endpoint Summary (10 Total)
+
+| # | Method | Route | Auth | Roles | Description |
+|---|---|---|---|---|---|
+| 1 | GET | `/api/notifications` | JWT | All | Get notification inbox (supports ?filter=all\|unread\|archived) |
+| 2 | PATCH | `/api/notifications/mark-all-read` | JWT | All | Mark all non-archived notifications as read |
+| 3 | PATCH | `/api/notifications/:id/read` | JWT | All | Mark single notification as read |
+| 4 | PATCH | `/api/notifications/:id/unread` | JWT | All | Mark single notification as unread |
+| 5 | PATCH | `/api/notifications/:id/archive` | JWT | All | Archive single notification |
+| 6 | GET | `/api/leaderboards/students` | JWT | All | Ranked student list (?range=weekly\|monthly\|all&limit=) |
+| 7 | GET | `/api/leaderboards/universities` | JWT | All | Ranked institution list (?limit=) |
+| 8 | GET | `/api/leaderboards/programs` | JWT | All | Ranked program list (?limit=) |
+| 9 | GET | `/api/leaderboards/widgets/student` | JWT | All | Student dashboard widget |
+| 10 | GET | `/api/leaderboards/widgets/faculty` | JWT | FACULTY, UNIV_ADMIN, DEZAI_ADMIN | Faculty dashboard widget |
+
+### Files Added / Modified
+
+| Action | File |
+|---|---|
+| MODIFIED | [backend/prisma/schema.prisma](file:///d:/Dezai-Prototype-main/backend/prisma/schema.prisma) |
+| MODIFIED | [backend/src/app.module.ts](file:///d:/Dezai-Prototype-main/backend/src/app.module.ts) |
+| MODIFIED | [backend/src/modules/notifications/notifications.module.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/notifications/notifications.module.ts) |
+| CREATED | [backend/src/modules/notifications/dto/notification.dto.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/notifications/dto/notification.dto.ts) |
+| CREATED | [backend/src/modules/notifications/services/notifications.service.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/notifications/services/notifications.service.ts) |
+| CREATED | [backend/src/modules/notifications/controllers/notifications.controller.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/notifications/controllers/notifications.controller.ts) |
+| CREATED | [backend/src/modules/leaderboards/leaderboards.module.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/leaderboards/leaderboards.module.ts) |
+| CREATED | [backend/src/modules/leaderboards/dto/leaderboard.dto.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/leaderboards/dto/leaderboard.dto.ts) |
+| CREATED | [backend/src/modules/leaderboards/services/leaderboards.service.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/leaderboards/services/leaderboards.service.ts) |
+| CREATED | [backend/src/modules/leaderboards/controllers/leaderboards.controller.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/leaderboards/controllers/leaderboards.controller.ts) |
+| CREATED | [docs/API/notifications.md](file:///d:/Dezai-Prototype-main/docs/API/notifications.md) |
+| CREATED | [docs/API/leaderboards.md](file:///d:/Dezai-Prototype-main/docs/API/leaderboards.md) |
+
