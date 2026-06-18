@@ -47,5 +47,9 @@
     "eslint-config-next": "16.2.7",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "@emnapi/wasi-threads": "1.2.2",
+    "@emnapi/core": "1.10.0"
   }
 }
