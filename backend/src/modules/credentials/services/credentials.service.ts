@@ -23,7 +23,7 @@ export class CredentialsService {
         }
 
         // Auto-triggers logic: Set tier based on template defaults if not provided
-        const finalTier = data.tier || template.defaultTier;
+        const finalTier = data.tier || (template as any).defaultTier || 'CITADEL';
 
         // Generate unique 18-character verification code 
         const uniqueCode = uuidv4().replace(/-/g, '').substring(0, 18).toUpperCase();
