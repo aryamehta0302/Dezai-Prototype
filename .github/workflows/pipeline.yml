@@ -3,24 +3,33 @@ name: CI
 on:
   push:
     branches: [main, develop]
-    paths:
-      - 'backend/**'
-      - 'frontend/**'
-      - '.github/workflows/pipeline.yml'
   pull_request:
     branches: [main]
-    paths:
-      - 'backend/**'
-      - 'frontend/**'
-      - '.github/workflows/pipeline.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
+
   backend:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && contains(join(github.event.pull_request.changed_files, ','), 'backend/'))
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -50,7 +59,8 @@ jobs:
         name: Build
 
   frontend:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && contains(join(github.event.pull_request.changed_files, ','), 'frontend/'))
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
