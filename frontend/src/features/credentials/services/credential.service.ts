@@ -1,5 +1,4 @@
 import { Credential, CreateCredentialDto, UpdateCredentialStatusDto, VerifyStatus, CredentialType, CredentialTemplate } from '../types/credential.types';
-import dummyData from '../dummy-credentials.json';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL 
     ? `${process.env.NEXT_PUBLIC_API_URL}/api/credentials` 
@@ -76,4 +75,20 @@ export const CredentialService = {
         if (!response.ok) throw new Error("Failed to fetch templates by type");
         return await response.json();
     }
+};
+
+export const credentialService = {
+    ...CredentialService,
+    getMyCredentials: async () => {
+        // Fallback to "user-1" to match PR behavior until full auth is wired
+        const credentials = await CredentialService.getStudentCredentials("user-1");
+        return { credentials };
+    },
+    verifyCredential: async (code: string) => {
+        const response = await CredentialService.verify(code);
+        if (!response.valid) {
+            throw new Error(response.message || "Credential not found");
+        }
+        return { credential: response.data || null };
+    },
 };

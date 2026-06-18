@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { CredentialService } from '../services/credential.service';
 import { Credential, VerifyStatus } from '../types/credential.types';
 import { Button } from '@/shared/ui/button';
-import { Search, Loader2, ShieldAlert, ShieldCheck, AlertOctagon, Ban, ExternalLink } from 'lucide-react';
+import { Search, Loader2, ShieldAlert, ShieldCheck, AlertOctagon, Ban, ExternalLink, Building2 } from 'lucide-react';
 import { Badge } from '@/shared/ui/badge';
 import { cn } from '@/shared/utils/cn';
 import { getCourseGradient } from '@/shared/utils/thumbnail';

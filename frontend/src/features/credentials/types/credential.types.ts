@@ -66,3 +66,18 @@ export interface CreateCredentialDto {
 export interface UpdateCredentialStatusDto {
     status: VerifyStatus;
 }
+
+export type PublicCredential = Credential;
+
+export interface TierDisplayInfo {
+    label: string;
+    borderColor: string;
+    bgColor: string;
+    color: string;
+}
+
+export const CREDENTIAL_TIER_CONFIG: Record<CredentialTier, TierDisplayInfo> = {
+    FORGE: { label: 'Forge', borderColor: 'border-slate-500/30', bgColor: 'bg-slate-500/10', color: 'text-slate-400' },
+    ARENA: { label: 'Arena', borderColor: 'border-blue-500/30', bgColor: 'bg-blue-500/10', color: 'text-blue-400' },
+    CITADEL: { label: 'Citadel', borderColor: 'border-purple-500/30', bgColor: 'bg-purple-500/10', color: 'text-purple-400' },
+};
