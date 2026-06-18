@@ -23,7 +23,7 @@ export default function MemoryLeakBlock({ content }: MemoryLeakBlockProps) {
         duration: 4,
         repeat: Infinity,
         delay: customIndex * 0.12,
-        ease: [0.25, 0.1, 0.25, 1],
+        ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number],
       },
     }),
   };
