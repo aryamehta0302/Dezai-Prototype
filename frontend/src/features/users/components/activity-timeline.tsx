@@ -17,14 +17,24 @@ const activityIcons = {
   certificate: Award,
   quiz: HelpCircle,
   achievement: Sparkles,
+  ENROLLMENT: BookOpen,
+  COMPLETION: CheckCircle,
+  XP: Sparkles,
+  ACHIEVEMENT: Sparkles,
+  PROGRESS: BookOpen,
 };
 
-const activityColors = {
+const activityColors: Record<string, string> = {
   enrollment: "text-primary bg-primary/10",
   completion: "text-success bg-success/10",
   certificate: "text-warning bg-warning/10",
   quiz: "text-info bg-info/10",
   achievement: "text-secondary bg-secondary/10",
+  ENROLLMENT: "text-primary bg-primary/10",
+  COMPLETION: "text-success bg-success/10",
+  XP: "text-warning bg-warning/10",
+  ACHIEVEMENT: "text-secondary bg-secondary/10",
+  PROGRESS: "text-info bg-info/10",
 };
 
 interface ActivityTimelineProps {

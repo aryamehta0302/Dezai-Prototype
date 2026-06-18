@@ -56,6 +56,9 @@ model Institution {
   name        String
   logoUrl     String?
   description String?
+  country     String?
+  state       String?
+  city        String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -80,15 +83,24 @@ model InstitutionAdmin {
 }
 
 model FacultyMember {
-  id            String         @id @default(uuid())
-  userId        String         @unique
-  institutionId String
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  institution   Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-  programs      Program[]
-  questionBanks QuestionBank[]
+  id                 String                    @id @default(uuid())
+  userId             String                    @unique
+  institutionId      String
+  department         String?
+  designation        String?
+  verificationStatus FacultyVerificationStatus @default(PENDING)
+  user               User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  institution        Institution               @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  programs           Program[]
+  questionBanks      QuestionBank[]
 
   @@map("faculty_members")
+}
+
+enum FacultyVerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model Program {

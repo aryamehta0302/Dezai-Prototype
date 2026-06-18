@@ -19,7 +19,7 @@ export interface ProfileStats {
 
 export interface ActivityItem {
   id: string;
-  type: "enrollment" | "completion" | "certificate" | "quiz" | "achievement";
+  type: "enrollment" | "completion" | "certificate" | "quiz" | "achievement" | "ENROLLMENT" | "COMPLETION" | "XP" | "ACHIEVEMENT" | "PROGRESS";
   title: string;
   description: string;
   timestamp: string;

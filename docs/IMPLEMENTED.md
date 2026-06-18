@@ -214,13 +214,163 @@ Implemented the Analytics Module backend and documentation (assigned to Krish Pa
 
 ---
 
-## 9. Summary of Verified Targets
+## 9. Phase 5: Student Location Selection & Faculty Onboarding (Sprint 2)
+
+Implemented full backend support for Student Location Selection (Cascading Filters) and Faculty Onboarding, Profile, Dashboard, and Admin Verification.
+
+### Features Delivered
+
+* **Student Location Cascading Selection**: Added hierarchical location retrieval API (`GET /api/institutions/locations`) that returns unique `country` -> `state` -> `city` -> `name` (universities) groupings, allowing students to filter institutions dynamically.
+* **Google Sign-In Sync**: Created `/api/auth/session-sync` on the backend to synchronize Google profile details (id, email, name) with local user records and generate/sign backend tokens.
+* **Faculty Role Onboarding**: Implemented `POST /api/auth/onboarding` to allow newly signed-in users to choose the `FACULTY` role, link to an institution, department, and designation, setting status to `PENDING`.
+* **Faculty Profile & Dashboard**: Created `/api/users/faculty/profile` and `/api/users/faculty/dashboard` to retrieve faculty metadata and statistics (total programs, students taught, pending quiz reviews).
+* **Admin Verification Interface**: Exposed a protected `/api/institutions/faculty/:facultyMemberId/verify` endpoint (restricted to `DEZAI_ADMIN` and `UNIVERSITY_ADMIN` roles) to approve or reject faculty member verification status.
+* **Automated Audit Logging**: Integrated logs for `LOGIN`, `ROLE_CHANGED` (on onboarding), and verification state updates via `AuditService`.
+
+### Files Added / Modified
+
+| Action | File |
+|---|---|
+| MODIFIED | [backend/prisma/schema.prisma](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/prisma/schema.prisma) |
+| MODIFIED | [backend/src/main.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/main.ts) |
+| MODIFIED | [backend/src/modules/auth/auth.module.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/auth/auth.module.ts) |
+| MODIFIED | [backend/src/modules/auth/controllers/auth.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/auth/controllers/auth.controller.ts) |
+| CREATED | [backend/src/modules/auth/dto/auth.dto.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/auth/dto/auth.dto.ts) |
+| MODIFIED | [backend/src/modules/auth/services/auth.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/auth/services/auth.service.ts) |
+| MODIFIED | [backend/src/modules/institutions/institutions.module.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/institutions/institutions.module.ts) |
+| CREATED | [backend/src/modules/institutions/controllers/institutions.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/institutions/controllers/institutions.controller.ts) |
+| CREATED | [backend/src/modules/institutions/dto/institution.dto.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/institutions/dto/institution.dto.ts) |
+| CREATED | [backend/src/modules/institutions/services/institutions.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/institutions/services/institutions.service.ts) |
+| MODIFIED | [backend/src/modules/users/users.module.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/users/users.module.ts) |
+| CREATED | [backend/src/modules/users/controllers/users.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/users/controllers/users.controller.ts) |
+| CREATED | [backend/src/modules/users/services/users.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/users/services/users.service.ts) |
+| CREATED | [frontend/.env](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/.env) |
+| CREATED | [frontend/.env.example](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/.env.example) |
+
+---
+
+## 10. Summary of Verified Targets
 
 * **Frontend Build**: Passed (successful Next.js production build, all routes compiled).
 * **Backend Build**: Passed (successful NestJS production build).
 * **Prisma Schema Format**: Passed.
 * **Prisma Client Generation**: Passed.
 * **Active Port**: Development server listening at [http://localhost:3000](http://localhost:3000).
+
+
+---
+
+## 9. Sprint 3: Assessment Engine (Manan Panchal)
+
+Implemented the complete Assessment Engine module as the backbone of Dezai's evaluation system. This covers Question Bank management, Question CRUD, Assessment Builder with the 100:15 dynamic selection architecture, and Faculty Analytics.
+
+### Module Ownership
+* **Scope:** `modules/assessments/*` — Question Banks, Questions, Assessments, Dynamic Selection, Analytics.
+* **Schema:** All Prisma models (`QuestionBank`, `QuestionBankQuestion`, `QuestionOption`, `Assessment`, `AssessmentAttempt`, `AttemptAnswer`, `ViolationLog`) were pre-defined in the locked schema. No migrations required.
+
+### Implemented Components
+
+1. **DTOs** ([assessment.dto.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/dto/assessment.dto.ts)):
+   * 7 DTO classes: `CreateQuestionBankDto`, `UpdateQuestionBankDto`, `CreateQuestionOptionDto`, `CreateQuestionDto`, `UpdateQuestionDto`, `CreateAssessmentDto`, `UpdateAssessmentDto`.
+   * All follow `Action + Entity + Dto` naming convention with `class-validator` decorators.
+
+2. **AssessmentService** ([assessment.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/assessment.service.ts)):
+   * Question Bank CRUD with institution-scoped ownership validation (mirrors `validateProgramOwnership` pattern).
+   * Question CRUD with deep-copy duplication (appends "(Copy)" suffix).
+   * Assessment CRUD with **100-question gate** — `BadRequestException` thrown if the referenced `QuestionBank` has fewer than 100 questions.
+   * Faculty Analytics aggregation computing `total`, `passRate`, `averageScore`, `highestScore`, `lowestScore` from completed `AssessmentAttempt` rows.
+   * All write operations log via `AuditService.logAction()` using `ASSESSMENT_PUBLISHED` action.
+
+3. **QuestionSelectionService** ([question-selection.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/question-selection.service.ts)):
+   * Dedicated injectable service implementing the **100:15 Architecture** from the blueprint.
+   * Fisher-Yates (Knuth) shuffle on the full question pool → slices `sampleSize` questions → independently shuffles options per question.
+   * Each call produces a unique permutation — no two students see the same order.
+   * `isCorrect` field intentionally stripped from response to prevent answer leakage.
+
+4. **AssessmentController** ([assessment.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/assessment.controller.ts)):
+   * 16 route handlers under `@Controller('assessments')`.
+   * Protected by `JwtAuthGuard` + `RolesGuard` with `@Roles()` decorator.
+   * All responses follow `{ success: true, data }` shape.
+
+5. **Module Wiring** ([assessments.module.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/assessments.module.ts)):
+   * Imports `AuditModule`, registers `AssessmentController`, provides and exports `AssessmentService` and `QuestionSelectionService`.
+   * `AssessmentsModule` was already registered in `AppModule` — no changes to `app.module.ts` required.
+
+6. **API Documentation** ([assessments.md](file:///d:/git/dezai/Dezai-Prototype/docs/API/assessments.md)):
+   * Full API contract for all 16 endpoints: method, route, request body, response shape, auth requirements, and error cases.
+
+### Endpoint Summary (16 Total)
+
+| # | Method | Route | Auth |
+|---|---|---|---|
+| 1 | GET | `/api/assessments/question-banks` | JWT |
+| 2 | GET | `/api/assessments/question-banks/:id` | JWT |
+| 3 | POST | `/api/assessments/question-banks` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
+| 4 | PUT | `/api/assessments/question-banks/:id` | JWT + ownership |
+| 5 | DELETE | `/api/assessments/question-banks/:id` | JWT + ownership |
+| 6 | POST | `/api/assessments/question-banks/:bankId/questions` | JWT + ownership |
+| 7 | PUT | `/api/assessments/questions/:questionId` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
+| 8 | DELETE | `/api/assessments/questions/:questionId` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
+| 9 | POST | `/api/assessments/questions/:questionId/duplicate` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
+| 10 | GET | `/api/assessments/modules/:moduleId` | JWT |
+| 11 | GET | `/api/assessments/:id` | JWT |
+| 12 | POST | `/api/assessments` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
+| 13 | PUT | `/api/assessments/:id` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
+| 14 | DELETE | `/api/assessments/:id` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
+| 15 | GET | `/api/assessments/:id/questions/select` | JWT |
+| 16 | GET | `/api/assessments/:id/analytics` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
+
+---
+
+## 10. Sprint 4: Assessment Lifecycle & Results (Manan Panchal)
+
+Implemented the complete Assessment Attempt lifecycle, proctoring integration, detailed student results & reviews, and the recommendation engine.
+
+### Implemented Components
+
+1. **DTOs** ([attempt.dto.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/dto/attempt.dto.ts)):
+   * `StartAttemptDto` for initiating student attempts.
+   * `AutoSaveAnswersDto` for autosaving answers dynamically.
+
+2. **AttemptService** ([attempt.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/attempt.service.ts)):
+   * `startAttempt` — Initiates a proctoring session, checks attempt limits, creates/restores a `AssessmentAttempt` row, shuffles questions.
+   * `resumeAttempt` — Restores questions deterministically, computes remaining time, returns existing answers.
+   * `autoSaveAnswers` — Programmatically upserts answers to avoid duplicate rows without unique database constraints.
+   * `submitAttempt` — Grades answers, applies proctoring score deductions, updates exam session to `SUBMITTED`, logs audits, and awards XP on first pass.
+   * `getAttemptResult` — Returns score and breakdown of questions showing student selected answers, correct answers, and category-derived explanations.
+   * `getAttemptHistory` — Returns history of all completed attempts for a specific assessment.
+
+3. **RecommendationService** ([recommendation.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/recommendation.service.ts)):
+   * `getNextModule` — Returns the next uncompleted module in order and its first incomplete lesson.
+   * `getContinueLearning` — Returns the most recently active module/program continue learning card payload.
+   * `getRecommendedAssessments` — Recommends ready-to-take assessments for completed modules.
+
+4. **AttemptController** ([attempt.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/attempt.controller.ts)):
+   * Exposes REST endpoints for the attempt lifecycle. Protected by `JwtAuthGuard` + `RolesGuard` with `@Roles(STUDENT)`.
+   * Enforces top-to-bottom static route priority (`attempts/history/:assessmentId` registered before `:id` parameters) to prevent resolution conflicts.
+
+5. **Frontend UI Integration** (under [src/features/assessments/](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/)):
+   * [AssessmentPlayer.tsx](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/pages/AssessmentPlayer.tsx) — Instructions, navigator, countdown timer, auto-save status, and warning/lockout blocking dialogs.
+   * [AssessmentResult.tsx](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/pages/AssessmentResult.tsx) — Displays passed/failed banners, scores, and integrated next-step recommendations.
+   * [AssessmentReview.tsx](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/pages/AssessmentReview.tsx) — Correct/incorrect reviews with explanation texts.
+   * [useAttempt.ts](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/hooks/useAttempt.ts) — State and logic hook.
+   * [assessment-attempt.service.ts](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/services/assessment-attempt.service.ts) — Fetch API wrapper.
+   * Route configurations wired in `src/app/(student)/programs/[slug]/assessment/`.
+
+### Endpoint Summary
+
+| # | Method | Route | Auth | Description |
+|---|---|---|---|---|
+| 1 | POST | `/api/assessments/attempts/start` | JWT + STUDENT | Start new attempt |
+| 2 | GET | `/api/assessments/attempts/history/:assessmentId` | JWT + STUDENT | Fetch student's prior attempts |
+| 3 | GET | `/api/assessments/attempts/:id/resume` | JWT + STUDENT | Resume unfinished attempt |
+| 4 | POST | `/api/assessments/attempts/:id/auto-save` | JWT + STUDENT | Autosave in-progress answers |
+| 5 | POST | `/api/assessments/attempts/:id/submit` | JWT + STUDENT | Grade and finalize attempt |
+| 6 | GET | `/api/assessments/attempts/:id/result` | JWT + STUDENT | Get graded breakdown |
+| 7 | GET | `/api/assessments/:id/results` | JWT + FACULTY/ADMIN | List student scores (Faculty) |
+| 8 | GET | `/api/assessments/recommendations/next-module/:programId` | JWT + STUDENT | Get recommended next module |
+| 9 | GET | `/api/assessments/recommendations/continue-learning` | JWT + STUDENT | Get continue learning widget |
+| 10 | GET | `/api/assessments/recommendations/ready-assessments` | JWT + STUDENT | Get ready assessments list |
 
 
 
