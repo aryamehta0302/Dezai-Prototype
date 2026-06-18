@@ -19,6 +19,8 @@ export interface AuthUser {
   image?: string;
   avatar?: string;
   onboarded: boolean;
+  xp?: number;
+  streakCount?: number;
 }
 
 export interface AuthState {
