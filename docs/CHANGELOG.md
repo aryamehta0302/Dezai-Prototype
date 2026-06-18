@@ -246,3 +246,41 @@ frontend/src/app/(student)/chat/page.tsx (NEW)
 - Authentication & RBAC System
 - Curriculum & Program Management (Manan Panchal)
 - See [IMPLEMENTED.md](file:///d:/git/dezai/Dezai-Prototype/docs/IMPLEMENTED.md) Sections 5–7.
+
+
+---
+
+
+## [Sprint 4] — 2026-06-18
+
+**Developer:** Leaderboards & Notifications Lead
+
+### Added
+
+- **Notification Center** — Endpoints to fetch active, unread, or archived notifications. Includes bulk and single-operation status management (read, unread, archive).
+  - Files: [notification.dto.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/notifications/dto/notification.dto.ts), [notifications.service.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/notifications/services/notifications.service.ts), [notifications.controller.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/notifications/controllers/notifications.controller.ts)
+  - Endpoints: `GET /api/notifications`, `PATCH /api/notifications/mark-all-read`, `PATCH /api/notifications/:id/read`, `PATCH /api/notifications/:id/unread`, `PATCH /api/notifications/:id/archive`
+
+- **Ranked Leaderboards** — Weekly, monthly, and all-time student rankings. Also includes university and program rankings based on total student XP, active students (30-day window), and completion speeds.
+  - Files: [leaderboard.dto.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/leaderboards/dto/leaderboard.dto.ts), [leaderboards.service.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/leaderboards/services/leaderboards.service.ts), [leaderboards.controller.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/leaderboards/controllers/leaderboards.controller.ts)
+  - Endpoints: `GET /api/leaderboards/students`, `GET /api/leaderboards/universities`, `GET /api/leaderboards/programs`
+
+- **Dashboard Widgets** — Compact student and faculty dashboard widgets.
+  - Endpoints: `GET /api/leaderboards/widgets/student`, `GET /api/leaderboards/widgets/faculty`
+
+- **API Documentation** — Detailed API documents for both modules.
+  - Files: [notifications.md](file:///d:/Dezai-Prototype-main/docs/API/notifications.md), [leaderboards.md](file:///d:/Dezai-Prototype-main/docs/API/leaderboards.md)
+
+### Changed
+
+- **Notifications Schema** — Added `archived Boolean @default(false)` to support soft-archiving of notifications.
+  - File: [schema.prisma](file:///d:/Dezai-Prototype-main/backend/prisma/schema.prisma)
+
+- **AppModule and NotificationsModule** — Registered the new controllers, services, and wired the modules.
+  - Files: [app.module.ts](file:///d:/Dezai-Prototype-main/backend/src/app.module.ts), [notifications.module.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/notifications/notifications.module.ts)
+
+- **IMPLEMENTED.md updated** — Appended Section 10 for Sprint 4.
+  - File: [docs/IMPLEMENTED.md](file:///d:/Dezai-Prototype-main/docs/IMPLEMENTED.md)
+
+---
+
