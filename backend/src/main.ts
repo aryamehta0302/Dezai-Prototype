@@ -6,16 +6,7 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
-  // Enable global DTO validation using class-validator decorators
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,       // strip unknown properties from request bodies
-      forbidNonWhitelisted: false, // don't throw on extra props (keeps it flexible for now)
-      transform: true,       // auto-transform payloads to DTO class instances
-    }),
-  );
-
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.enableCors({
     origin: 'http://localhost:3000',
     credentials: true,

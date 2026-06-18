@@ -258,4 +258,66 @@ Implemented full backend support for Student Location Selection (Cascading Filte
 * **Active Port**: Development server listening at [http://localhost:3000](http://localhost:3000).
 
 
+---
+
+## 9. Sprint 3: Assessment Engine (Manan Panchal)
+
+Implemented the complete Assessment Engine module as the backbone of Dezai's evaluation system. This covers Question Bank management, Question CRUD, Assessment Builder with the 100:15 dynamic selection architecture, and Faculty Analytics.
+
+### Module Ownership
+* **Scope:** `modules/assessments/*` — Question Banks, Questions, Assessments, Dynamic Selection, Analytics.
+* **Schema:** All Prisma models (`QuestionBank`, `QuestionBankQuestion`, `QuestionOption`, `Assessment`, `AssessmentAttempt`, `AttemptAnswer`, `ViolationLog`) were pre-defined in the locked schema. No migrations required.
+
+### Implemented Components
+
+1. **DTOs** ([assessment.dto.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/dto/assessment.dto.ts)):
+   * 7 DTO classes: `CreateQuestionBankDto`, `UpdateQuestionBankDto`, `CreateQuestionOptionDto`, `CreateQuestionDto`, `UpdateQuestionDto`, `CreateAssessmentDto`, `UpdateAssessmentDto`.
+   * All follow `Action + Entity + Dto` naming convention with `class-validator` decorators.
+
+2. **AssessmentService** ([assessment.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/assessment.service.ts)):
+   * Question Bank CRUD with institution-scoped ownership validation (mirrors `validateProgramOwnership` pattern).
+   * Question CRUD with deep-copy duplication (appends "(Copy)" suffix).
+   * Assessment CRUD with **100-question gate** — `BadRequestException` thrown if the referenced `QuestionBank` has fewer than 100 questions.
+   * Faculty Analytics aggregation computing `total`, `passRate`, `averageScore`, `highestScore`, `lowestScore` from completed `AssessmentAttempt` rows.
+   * All write operations log via `AuditService.logAction()` using `ASSESSMENT_PUBLISHED` action.
+
+3. **QuestionSelectionService** ([question-selection.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/question-selection.service.ts)):
+   * Dedicated injectable service implementing the **100:15 Architecture** from the blueprint.
+   * Fisher-Yates (Knuth) shuffle on the full question pool → slices `sampleSize` questions → independently shuffles options per question.
+   * Each call produces a unique permutation — no two students see the same order.
+   * `isCorrect` field intentionally stripped from response to prevent answer leakage.
+
+4. **AssessmentController** ([assessment.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/assessment.controller.ts)):
+   * 16 route handlers under `@Controller('assessments')`.
+   * Protected by `JwtAuthGuard` + `RolesGuard` with `@Roles()` decorator.
+   * All responses follow `{ success: true, data }` shape.
+
+5. **Module Wiring** ([assessments.module.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/assessments.module.ts)):
+   * Imports `AuditModule`, registers `AssessmentController`, provides and exports `AssessmentService` and `QuestionSelectionService`.
+   * `AssessmentsModule` was already registered in `AppModule` — no changes to `app.module.ts` required.
+
+6. **API Documentation** ([assessments.md](file:///d:/git/dezai/Dezai-Prototype/docs/API/assessments.md)):
+   * Full API contract for all 16 endpoints: method, route, request body, response shape, auth requirements, and error cases.
+
+### Endpoint Summary (16 Total)
+
+| # | Method | Route | Auth |
+|---|---|---|---|
+| 1 | GET | `/api/assessments/question-banks` | JWT |
+| 2 | GET | `/api/assessments/question-banks/:id` | JWT |
+| 3 | POST | `/api/assessments/question-banks` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
+| 4 | PUT | `/api/assessments/question-banks/:id` | JWT + ownership |
+| 5 | DELETE | `/api/assessments/question-banks/:id` | JWT + ownership |
+| 6 | POST | `/api/assessments/question-banks/:bankId/questions` | JWT + ownership |
+| 7 | PUT | `/api/assessments/questions/:questionId` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
+| 8 | DELETE | `/api/assessments/questions/:questionId` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
+| 9 | POST | `/api/assessments/questions/:questionId/duplicate` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
+| 10 | GET | `/api/assessments/modules/:moduleId` | JWT |
+| 11 | GET | `/api/assessments/:id` | JWT |
+| 12 | POST | `/api/assessments` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
+| 13 | PUT | `/api/assessments/:id` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
+| 14 | DELETE | `/api/assessments/:id` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
+| 15 | GET | `/api/assessments/:id/questions/select` | JWT |
+| 16 | GET | `/api/assessments/:id/analytics` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
+
 
