@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Sprint 4] — 2026-06-18
+
+**Developer:** Faculty Experience & Dashboard Lead
+
+### Added
+
+- **Faculty Dashboard 2.0 Interface** — Created an interactive, tabbed dashboard console for faculty users supporting Overview, Cohort Analytics, and Instructor Profile settings, with modals for program/assessment publication triggers.
+  - File: [FacultyDashboard.tsx](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/components/FacultyDashboard.tsx)
+- **Extended Faculty Analytics** — Implemented metrics calculations for top 5 students leaderboard (by XP), low-progress weak students focus alerts, and diagnostic module warnings (low assessment pass rates).
+  - Files: [analytics.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/services/analytics.service.ts), [analytics.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/controllers/analytics.controller.ts)
+  - Endpoints: `GET /api/analytics/faculty/extended`
+- **Chronological Activity Feed** — Aggregated recent student enrollments, micro-credential completions, and assessment attempt events into a unified chronological activity feed.
+  - Files: [analytics.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/services/analytics.service.ts), [analytics.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/controllers/analytics.controller.ts)
+  - Endpoints: `GET /api/analytics/faculty/activity`
+- **Notifications Module & Slide-Over Drawer** — Implemented backend notifications module for generating and tracking read status of system alerts, paired with an interactive slide-over drawer on the frontend.
+  - Files: [notifications.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/notifications/services/notifications.service.ts), [notifications.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/notifications/controllers/notifications.controller.ts), [notifications.module.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/notifications/notifications.module.ts)
+  - Endpoints: `GET /api/notifications`, `PATCH /api/notifications/:id/read`, `POST /api/notifications/read-all`, `POST /api/notifications`
+- **Faculty Profile Update API** — Added an endpoint to update faculty member name, department, and designation in a single atomic database transaction.
+  - Files: [users.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/users/services/users.service.ts), [users.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/users/controllers/users.controller.ts), [users.dto.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/users/dto/users.dto.ts)
+  - Endpoints: `PATCH /api/users/faculty/profile`
+
+### Changed
+
+- **IMPLEMENTED.md updated** — Added Section 11 documenting Sprint 4 features and endpoints.
+  - File: [IMPLEMENTED.md](file:///d:/Project/Dezai-ai/Dezai-Prototype/docs/IMPLEMENTED.md)
+
+---
+
 ## [Sprint 3] — 2026-06-17
 
 **Developer:** Manan Panchal (Assessment Engine Owner)

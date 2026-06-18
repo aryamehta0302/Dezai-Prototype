@@ -320,4 +320,45 @@ Implemented the complete Assessment Engine module as the backbone of Dezai's eva
 | 15 | GET | `/api/assessments/:id/questions/select` | JWT |
 | 16 | GET | `/api/assessments/:id/analytics` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
 
+---
+
+## 11. Sprint 4: Faculty Experience & Dashboard 2.0 (Nil)
+
+Implemented the complete Faculty Experience, Dashboard 2.0, Notification Center, Profile Settings, and Diagnostic Analytics.
+
+### Key Deliverables
+
+1. **Faculty Dashboard 2.0 Interface** (`FacultyDashboard.tsx`):
+   - Interactive multi-tab layout (Console Overview, Cohort Analytics, Instructor Profile).
+   - High-fidelity metrics cards showing Programs count, Enrolled Students, Pending Reviews, and Completion Rate.
+   - Quick Action triggers to Publish Programs and Assessments in modals.
+   - Recent Student Activity Feed tracking enrollments, completions, and attempts chronologically.
+
+2. **Faculty Analytics Widgets** (leaderboard & diagnostic cards):
+   - **Top Students Leaderboard**: Lists the top 5 students in programs taught by the faculty based on XP.
+   - **Weak Students Focus List**: Identifies students with progress below 20% who need attention.
+   - **Difficult Modules Widget**: Flags modules where assessment pass rates are low and lists average scores and attempt volumes.
+
+3. **Notification Center**:
+   - Backend module `notifications` fully wired with `NotificationsService` and `NotificationsController` exposing endpoints to fetch user alerts, mark as read, and mark all as read.
+   - Slide-over notification drawer on the frontend displaying unread alerts and triggering marking actions.
+
+4. **Faculty Profile System**:
+   - Exposed `PATCH /api/users/faculty/profile` endpoint on the NestJS backend to update faculty member fields atomically.
+   - Interactive settings form on the frontend to update instructor name, department, designation, and view affiliated institution details.
+
+### Files Added / Modified
+
+| Action | File |
+|---|---|
+| MODIFIED | [backend/src/modules/users/controllers/users.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/users/controllers/users.controller.ts) |
+| MODIFIED | [backend/src/modules/users/services/users.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/users/services/users.service.ts) |
+| CREATED | [backend/src/modules/users/dto/users.dto.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/users/dto/users.dto.ts) |
+| MODIFIED | [backend/src/modules/analytics/controllers/analytics.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/controllers/analytics.controller.ts) |
+| MODIFIED | [backend/src/modules/analytics/services/analytics.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/services/analytics.service.ts) |
+| MODIFIED | [backend/src/modules/notifications/notifications.module.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/notifications/notifications.module.ts) |
+| CREATED | [backend/src/modules/notifications/controllers/notifications.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/notifications/controllers/notifications.controller.ts) |
+| CREATED | [backend/src/modules/notifications/services/notifications.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/notifications/services/notifications.service.ts) |
+| MODIFIED | [frontend/src/features/dashboard/components/FacultyDashboard.tsx](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/components/FacultyDashboard.tsx) |
+
 

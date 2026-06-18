@@ -120,6 +120,305 @@ export class AnalyticsService {
     return result;
   }
 
+  /**
+   * getFacultyExtendedAnalytics
+   * Calculates total programs, total/active students, completion rate,
+   * top/weak students, and difficult modules for a faculty member.
+   */
+  async getFacultyExtendedAnalytics(userId: string) {
+    // 1. Resolve FacultyMember
+    const facultyMember = await this.prisma.facultyMember.findUnique({
+      where: { userId },
+    });
+    if (!facultyMember) {
+      throw new NotFoundException('Faculty profile not found for this user');
+    }
+
+    // 2. Fetch all programs owned by this faculty
+    const programs = await this.prisma.program.findMany({
+      where: { facultyId: facultyMember.id },
+      select: { id: true, title: true, institution: { select: { name: true } } },
+    });
+    const programIds = programs.map((p) => p.id);
+
+    if (programIds.length === 0) {
+      return {
+        totalPrograms: 0,
+        totalStudents: 0,
+        activeStudents: 0,
+        completionRate: 0,
+        topStudents: [],
+        weakStudents: [],
+        difficultModules: [],
+      };
+    }
+
+    // 3. Overview metrics
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const totalStudents = await this.prisma.enrollment.count({
+      where: { programId: { in: programIds } },
+    });
+    const activeStudents = await this.prisma.enrollment.count({
+      where: {
+        programId: { in: programIds },
+        user: { lastActiveAt: { gte: thirtyDaysAgo } },
+      },
+    });
+    const completedCount = await this.prisma.enrollment.count({
+      where: {
+        programId: { in: programIds },
+        completedAt: { not: null },
+      },
+    });
+    const completionRate = totalStudents > 0 ? Math.round((completedCount / totalStudents) * 100) : 0;
+
+    // 4. Top Students (highest XP, then highest progress in these programs)
+    const topEnrollments = await this.prisma.enrollment.findMany({
+      where: { programId: { in: programIds } },
+      select: {
+        progress: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            xp: true,
+          },
+        },
+        program: { select: { title: true } },
+      },
+      orderBy: [
+        { user: { xp: 'desc' } },
+        { progress: 'desc' }
+      ],
+      take: 5,
+    });
+    const topStudents = topEnrollments.map((e) => ({
+      userId: e.user.id,
+      name: e.user.name || 'Unknown Student',
+      email: e.user.email,
+      xp: e.user.xp,
+      progress: e.progress,
+      programTitle: e.program.title,
+    }));
+
+    // 5. Weak Students (lowest progress)
+    const weakEnrollments = await this.prisma.enrollment.findMany({
+      where: { programId: { in: programIds } },
+      select: {
+        progress: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            xp: true,
+          },
+        },
+        program: { select: { title: true } },
+      },
+      orderBy: { progress: 'asc' },
+      take: 5,
+    });
+    const weakStudents = weakEnrollments.map((e) => ({
+      userId: e.user.id,
+      name: e.user.name || 'Unknown Student',
+      email: e.user.email,
+      xp: e.user.xp,
+      progress: e.progress,
+      programTitle: e.program.title,
+    }));
+
+    // 6. Difficult Modules
+    // Find all modules in tracks under these programs
+    const modules = await this.prisma.module.findMany({
+      where: { track: { programId: { in: programIds } } },
+      select: {
+        id: true,
+        title: true,
+        track: { select: { program: { select: { title: true } } } },
+        assessments: {
+          select: {
+            id: true,
+            title: true,
+            attempts: {
+              select: {
+                passed: true,
+                score: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const difficultModulesList = [];
+    for (const mod of modules) {
+      let totalAttempts = 0;
+      let passedAttempts = 0;
+      let totalScore = 0;
+
+      for (const ass of mod.assessments) {
+        totalAttempts += ass.attempts.length;
+        passedAttempts += ass.attempts.filter((att) => att.passed).length;
+        totalScore += ass.attempts.reduce((sum, att) => sum + att.score, 0);
+      }
+
+      if (totalAttempts > 0) {
+        const passRate = Math.round((passedAttempts / totalAttempts) * 100);
+        const averageScore = Math.round(totalScore / totalAttempts);
+        difficultModulesList.push({
+          moduleId: mod.id,
+          moduleTitle: mod.title,
+          programTitle: mod.track.program.title,
+          passRate,
+          averageScore,
+          totalAttempts,
+        });
+      }
+    }
+
+    // Sort by passRate ascending (lowest pass rate is most difficult)
+    const difficultModules = difficultModulesList
+      .sort((a, b) => a.passRate - b.passRate)
+      .slice(0, 5);
+
+    return {
+      totalPrograms: programIds.length,
+      totalStudents,
+      activeStudents,
+      completionRate,
+      topStudents,
+      weakStudents,
+      difficultModules,
+    };
+  }
+
+  /**
+   * getFacultyActivityFeed
+   * Gathers recent student enrollments, completions, and attempts, sorting chronologically.
+   */
+  async getFacultyActivityFeed(userId: string) {
+    // 1. Resolve FacultyMember
+    const facultyMember = await this.prisma.facultyMember.findUnique({
+      where: { userId },
+    });
+    if (!facultyMember) {
+      throw new NotFoundException('Faculty profile not found for this user');
+    }
+
+    // 2. Fetch program IDs
+    const programs = await this.prisma.program.findMany({
+      where: { facultyId: facultyMember.id },
+      select: { id: true },
+    });
+    const programIds = programs.map((p) => p.id);
+
+    if (programIds.length === 0) {
+      return [];
+    }
+
+    // 3. Fetch recent enrollments
+    const recentEnrollments = await this.prisma.enrollment.findMany({
+      where: { programId: { in: programIds } },
+      select: {
+        id: true,
+        createdAt: true,
+        user: { select: { name: true } },
+        program: { select: { title: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 15,
+    });
+
+    // 4. Fetch recent completions
+    const recentCompletions = await this.prisma.enrollment.findMany({
+      where: {
+        programId: { in: programIds },
+        completedAt: { not: null },
+      },
+      select: {
+        id: true,
+        completedAt: true,
+        user: { select: { name: true } },
+        program: { select: { title: true } },
+      },
+      orderBy: { completedAt: 'desc' },
+      take: 15,
+    });
+
+    // 5. Fetch recent assessment attempts
+    const recentAttempts = await this.prisma.assessmentAttempt.findMany({
+      where: {
+        assessment: {
+          module: {
+            track: {
+              programId: { in: programIds },
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+        startedAt: true,
+        completedAt: true,
+        score: true,
+        passed: true,
+        user: { select: { name: true } },
+        assessment: { select: { title: true } },
+      },
+      orderBy: { startedAt: 'desc' },
+      take: 15,
+    });
+
+    // 6. Map to a unified feed schema
+    const feed = [];
+
+    for (const e of recentEnrollments) {
+      feed.push({
+        id: `enrollment-${e.id}`,
+        type: 'ENROLLMENT',
+        timestamp: e.createdAt,
+        studentName: e.user.name || 'Unknown Student',
+        programTitle: e.program.title,
+        detail: `Enrolled in "${e.program.title}"`,
+      });
+    }
+
+    for (const e of recentCompletions) {
+      if (e.completedAt) {
+        feed.push({
+          id: `completion-${e.id}`,
+          type: 'COMPLETION',
+          timestamp: e.completedAt,
+          studentName: e.user.name || 'Unknown Student',
+          programTitle: e.program.title,
+          detail: `Completed "${e.program.title}" micro-credential`,
+        });
+      }
+    }
+
+    for (const a of recentAttempts) {
+      feed.push({
+        id: `attempt-${a.id}`,
+        type: 'SUBMISSION',
+        timestamp: a.completedAt || a.startedAt,
+        studentName: a.user.name || 'Unknown Student',
+        programTitle: a.assessment.title,
+        detail: a.completedAt
+          ? `Submitted assessment "${a.assessment.title}" — Score: ${a.score}% (${a.passed ? 'PASSED' : 'FAILED'})`
+          : `Started assessment "${a.assessment.title}"`,
+      });
+    }
+
+    // 7. Sort combined feed chronologically descending, limit to 15 items
+    return feed
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 15);
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // 2. PROGRAM ANALYTICS
   //    Aggregates for a single Program by its ID.

@@ -196,6 +196,104 @@ Authorization: Bearer <your_jwt_token>
 
 ---
 
+### 4. `GET /api/analytics/faculty/extended`
+
+**Description**: Returns extended metrics and cohort diagnostics for the currently logged-in faculty member: total programs count, total students count, active students count, average program completion rate, top 5 performing students (leaderboard), low-progress/weak students list (focus alerts), and modules with low assessment pass rates (difficult modules).
+
+**Auth Required**: Yes
+**Roles**: `FACULTY`, `UNIVERSITY_ADMIN`, `DEZAI_ADMIN`
+
+**Example Request**:
+```http
+GET /api/analytics/faculty/extended
+Authorization: Bearer <your_jwt_token>
+```
+
+**Success Response** `200 OK`:
+```json
+{
+  "success": true,
+  "data": {
+    "totalPrograms": 4,
+    "totalStudents": 25,
+    "activeStudents": 18,
+    "completionRate": 36,
+    "topStudents": [
+      {
+        "userId": "usr-8a9b...",
+        "name": "Jane Doe",
+        "email": "jane@university.edu",
+        "xp": 1250,
+        "progress": 85,
+        "programTitle": "Advanced Deep Learning"
+      }
+    ],
+    "weakStudents": [
+      {
+        "userId": "usr-3c4d...",
+        "name": "John Smith",
+        "email": "john@university.edu",
+        "xp": 50,
+        "progress": 12,
+        "programTitle": "Generative AI for Leaders"
+      }
+    ],
+    "difficultModules": [
+      {
+        "moduleId": "mod-9e8f...",
+        "moduleTitle": "Neural Architecture",
+        "programTitle": "Advanced Deep Learning",
+        "passRate": 45,
+        "averageScore": 62,
+        "totalAttempts": 15
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 5. `GET /api/analytics/faculty/activity`
+
+**Description**: Returns a unified, chronological activity feed of student events within programs taught by the faculty. Includes recent enrollments, program/micro-credential completions, and assessment attempt completions/submissions (limited to top 15 items).
+
+**Auth Required**: Yes
+**Roles**: `FACULTY`, `UNIVERSITY_ADMIN`, `DEZAI_ADMIN`
+
+**Example Request**:
+```http
+GET /api/analytics/faculty/activity
+Authorization: Bearer <your_jwt_token>
+```
+
+**Success Response** `200 OK`:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "attempt-att-5f6g...",
+      "type": "SUBMISSION",
+      "timestamp": "2026-06-18T12:30:00.000Z",
+      "studentName": "Jane Doe",
+      "programTitle": "Neural Architecture Quiz",
+      "detail": "Submitted assessment \"Neural Architecture Quiz\" — Score: 87% (PASSED)"
+    },
+    {
+      "id": "enrollment-enr-2a3b...",
+      "type": "ENROLLMENT",
+      "timestamp": "2026-06-18T10:15:00.000Z",
+      "studentName": "John Smith",
+      "programTitle": "Generative AI for Leaders",
+      "detail": "Enrolled in \"Generative AI for Leaders\""
+    }
+  ]
+}
+```
+
+---
+
 ## Data Sources
 
 | Metric | Source Table | Key Fields |
