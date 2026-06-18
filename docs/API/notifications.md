@@ -1,157 +1,227 @@
-# Notifications API — Dezai Backend
+# Notifications API Documentation
 
-> **Base URL**: `/api/notifications`
-> **Auth**: All endpoints require a valid `Bearer <JWT>` token in the `Authorization` header.
-
----
-
-## Endpoints
+This document describes the API endpoints, authorization rules, request parameters, and response structures for the Dezai Notifications module.
 
 ---
 
-### 1. `GET /api/notifications`
+## Architecture and General Rules
 
-**Description**: Retrieves all notifications/alerts for the currently logged-in user.
+* **Security & Ownership:** A user can only access or modify their own notifications. All read/write operations filter by both `userId` and `notificationId`. Trying to read or write a notification belonging to another user will result in a `404 Not Found` response.
+* **Archiving Policy:** In line with Dezai terminology, notifications are **archived** (not deleted, not hidden). Archived notifications are excluded from the default inbox and are not affected by the "mark all read" action.
+* **Ordering:** All notification lists are sorted by `createdAt` in descending order (newest first).
+* **Unread Badge Count:** Every list retrieval returns the current count of unread, non-archived notifications (`unreadCount`), ensuring the UI badge is always synchronized.
 
-**Auth Required**: Yes
-**Roles**: Any authenticated user (`STUDENT`, `FACULTY`, `UNIVERSITY_ADMIN`, `DEZAI_ADMIN`)
+---
 
-**Example Request**:
-```http
-GET /api/notifications
-Authorization: Bearer <your_jwt_token>
-```
+## Endpoint Directory
 
-**Success Response** `200 OK`:
-```json
-{
-  "success": true,
-  "notifications": [
-    {
-      "id": "not-1a2b3c4d...",
-      "userId": "usr-8a9b...",
-      "title": "New Enrollment",
-      "message": "Aanya Sharma has enrolled in Generative AI for Leaders.",
-      "type": "SYSTEM",
-      "read": false,
-      "createdAt": "2026-06-18T10:15:00.000Z"
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| GET | `/api/notifications` | JWT | Fetch notification inbox (supports legacy and new formats, with filtering) |
+| PATCH | `/api/notifications/mark-all-read` | JWT | Mark all active notifications as read |
+| POST | `/api/notifications/read-all` | JWT | Legacy: Mark all active notifications as read |
+| POST | `/api/notifications` | JWT | Utility: Create a new notification for test/triggers |
+| PATCH | `/api/notifications/:id/read` | JWT | Mark a single notification as read |
+| PATCH | `/api/notifications/:id/unread` | JWT | Mark a single notification as unread |
+| PATCH | `/api/notifications/:id/archive` | JWT | Archive a single notification |
+
+---
+
+## Endpoints Detailed Specification
+
+### 1. Get Notifications Inbox
+Retrieve notifications for the authenticated user, filtered by status.
+
+* **Method:** `GET`
+* **Route:** `/api/notifications`
+* **Query Parameters:**
+  * `filter` (string, optional):
+    * `all` (default) — Returns all active (non-archived) notifications.
+    * `unread` — Returns active, unread (`read: false`, `archived: false`) notifications only.
+    * `archived` — Returns archived (`archived: true`) notifications only.
+* **Headers:** `Authorization: Bearer <JWT_TOKEN>`
+* **Success Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "notifications": [
+      {
+        "id": "a0e1c2d3-b4e5-6f7a-8b9c-0d1e2f3a4b5c",
+        "title": "New Milestone Unlocked",
+        "message": "Congratulations! You earned the 'Fast Learner' badge.",
+        "type": "CREDENTIAL",
+        "read": false,
+        "archived": false,
+        "createdAt": "2026-06-18T12:00:00.000Z"
+      }
+    ],
+    "data": {
+      "total": 1,
+      "unreadCount": 1,
+      "notifications": [
+        {
+          "id": "a0e1c2d3-b4e5-6f7a-8b9c-0d1e2f3a4b5c",
+          "title": "New Milestone Unlocked",
+          "message": "Congratulations! You earned the 'Fast Learner' badge.",
+          "type": "CREDENTIAL",
+          "read": false,
+          "archived": false,
+          "createdAt": "2026-06-18T12:00:00.000Z"
+        }
+      ]
     }
-  ]
-}
-```
-
----
-
-### 2. `PATCH /api/notifications/:id/read`
-
-**Description**: Marks a specific notification as read.
-
-**Auth Required**: Yes
-**Roles**: Any authenticated user (must own the notification)
-
-**URL Params**:
-| Param | Type | Description |
-|---|---|---|
-| `id` | `string (UUID)` | The notification's unique identifier |
-
-**Example Request**:
-```http
-PATCH /api/notifications/not-1a2b3c4d.../read
-Authorization: Bearer <your_jwt_token>
-```
-
-**Success Response** `200 OK`:
-```json
-{
-  "success": true,
-  "notification": {
-    "id": "not-1a2b3c4d...",
-    "userId": "usr-8a9b...",
-    "title": "New Enrollment",
-    "message": "Aanya Sharma has enrolled in Generative AI for Leaders.",
-    "type": "SYSTEM",
-    "read": true,
-    "createdAt": "2026-06-18T10:15:00.000Z"
   }
-}
-```
+  ```
 
 ---
 
-### 3. `POST /api/notifications/read-all`
+### 2. Mark All as Read (PATCH)
+Mark all non-archived, unread notifications for the authenticated user as read.
 
-**Description**: Marks all unread notifications for the currently logged-in user as read.
-
-**Auth Required**: Yes
-**Roles**: Any authenticated user
-
-**Example Request**:
-```http
-POST /api/notifications/read-all
-Authorization: Bearer <your_jwt_token>
-```
-
-**Success Response** `200 OK`:
-```json
-{
-  "success": true,
-  "message": "All notifications marked as read"
-}
-```
+* **Method:** `PATCH`
+* **Route:** `/api/notifications/mark-all-read`
+* **Headers:** `Authorization: Bearer <JWT_TOKEN>`
+* **Success Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "updatedCount": 5
+    }
+  }
+  ```
 
 ---
 
-### 4. `POST /api/notifications`
+### 3. Mark All as Read (POST - Legacy)
+Legacy endpoint used by the frontend console to mark all notifications as read.
 
-**Description**: Create a new notification. This is a utility endpoint mainly used by other backend modules to trigger events, or for administrative triggers/testing.
+* **Method:** `POST`
+* **Route:** `/api/notifications/read-all`
+* **Headers:** `Authorization: Bearer <JWT_TOKEN>`
+* **Success Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "message": "All notifications marked as read"
+  }
+  ```
 
-**Auth Required**: Yes
-**Roles**: `FACULTY`, `UNIVERSITY_ADMIN`, `DEZAI_ADMIN`
+---
 
-**Request Body**:
-```json
-{
-  "userId": "usr-8a9b...",
-  "title": "Review Required",
-  "message": "Assessment Neural Architecture Quiz requires review.",
-  "type": "ALERT"
-}
-```
+### 4. Create Notification (Utility)
+Create a new notification. Mainly used by other backend modules to trigger events, or for administrative triggers/testing.
 
-**Success Response** `201 Created`:
-```json
-{
-  "success": true,
-  "notification": {
-    "id": "not-9x8y7z...",
+* **Method:** `POST`
+* **Route:** `/api/notifications`
+* **Headers:** `Authorization: Bearer <JWT_TOKEN>`
+* **Request Body:**
+  ```json
+  {
     "userId": "usr-8a9b...",
     "title": "Review Required",
     "message": "Assessment Neural Architecture Quiz requires review.",
-    "type": "ALERT",
-    "read": false,
-    "createdAt": "2026-06-18T13:45:00.000Z"
+    "type": "ALERT"
   }
-}
-```
+  ```
+* **Success Response (201 Created):**
+  ```json
+  {
+    "success": true,
+    "notification": {
+      "id": "not-9x8y7z...",
+      "userId": "usr-8a9b...",
+      "title": "Review Required",
+      "message": "Assessment Neural Architecture Quiz requires review.",
+      "type": "ALERT",
+      "read": false,
+      "archived": false,
+      "createdAt": "2026-06-18T13:45:00.000Z"
+    }
+  }
+  ```
 
 ---
 
-## Data Sources
+### 5. Mark Single Notification as Read
+Mark a single notification as read.
 
-| Field | Source Table | Description |
-|---|---|---|
-| `userId` | `users` | The recipient user |
-| `title` | `notifications` | Subject/header of the alert |
-| `message` | `notifications` | Markdown or text detail |
-| `type` | `notifications` | Notification type: `SYSTEM`, `ALERT`, `PROGRAM_UPDATE`, `XP_EARNED` |
-| `read` | `notifications` | Boolean flag indicating if user viewed the alert |
+* **Method:** `PATCH`
+* **Route:** `/api/notifications/:id/read`
+* **Headers:** `Authorization: Bearer <JWT_TOKEN>`
+* **Path Parameters:**
+  * `id` (string, required) — The unique UUID of the notification.
+* **Success Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "notification": {
+      "id": "a0e1c2d3-b4e5-6f7a-8b9c-0d1e2f3a4b5c",
+      "userId": "usr-8a9b...",
+      "title": "New Milestone Unlocked",
+      "message": "Congratulations! You earned the 'Fast Learner' badge.",
+      "type": "CREDENTIAL",
+      "read": true,
+      "archived": false,
+      "createdAt": "2026-06-18T12:00:00.000Z"
+    },
+    "data": {
+      "id": "a0e1c2d3-b4e5-6f7a-8b9c-0d1e2f3a4b5c",
+      "read": true,
+      "archived": false
+    }
+  }
+  ```
+* **Error Responses:**
+  * `404 Not Found` (when the notification does not exist or does not belong to the user):
+    ```json
+    {
+      "statusCode": 404,
+      "message": "Notification with ID \"a0e1c2d3-b4e5-6f7a-8b9c-0d1e2f3a4b5c\" not found",
+      "error": "Not Found"
+    }
+    ```
 
 ---
 
-## Backend Files
+### 6. Mark Single Notification as Unread
+Mark a single notification as unread.
 
-| Type | File Path |
-|---|---|
-| Service | `backend/src/modules/notifications/services/notifications.service.ts` |
-| Controller | `backend/src/modules/notifications/controllers/notifications.controller.ts` |
-| Module | `backend/src/modules/notifications/notifications.module.ts` |
+* **Method:** `PATCH`
+* **Route:** `/api/notifications/:id/unread`
+* **Headers:** `Authorization: Bearer <JWT_TOKEN>`
+* **Path Parameters:**
+  * `id` (string, required) — The unique UUID of the notification.
+* **Success Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "a0e1c2d3-b4e5-6f7a-8b9c-0d1e2f3a4b5c",
+      "read": false,
+      "archived": false
+    }
+  }
+  ```
+
+---
+
+### 7. Archive Single Notification
+Set the `archived` status of a notification to `true`. Archived notifications are hidden from the standard inbox but can be queried using `?filter=archived`.
+
+* **Method:** `PATCH`
+* **Route:** `/api/notifications/:id/archive`
+* **Headers:** `Authorization: Bearer <JWT_TOKEN>`
+* **Path Parameters:**
+  * `id` (string, required) — The unique UUID of the notification.
+* **Success Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "a0e1c2d3-b4e5-6f7a-8b9c-0d1e2f3a4b5c",
+      "read": false,
+      "archived": true
+    }
+  }
+  ```
