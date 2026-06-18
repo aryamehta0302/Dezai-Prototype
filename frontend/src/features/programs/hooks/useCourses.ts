@@ -1,51 +1,46 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { courseService } from "../services/course.service";
+import { useProgramsStore } from "@/lib/stores/programs.store";
 import { DEFAULT_FILTERS, type CourseFilter } from "../types/course.types";
-import type { ApiProgram } from "../types/program.types";
+import { CourseCategory } from "@/shared/types/common.types";
 
 export function useCourses(initialFilters?: Partial<CourseFilter>) {
-  const [courses, setCourses] = useState<ApiProgram[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { programs, isLoading, fetchPrograms } = useProgramsStore();
+
   const [filters, setFilters] = useState<CourseFilter>({
     ...DEFAULT_FILTERS,
     ...initialFilters,
   });
 
   useEffect(() => {
-    let cancelled = false;
-    setIsLoading(true);
-    courseService.getCourses(filters).then((result) => {
-      if (!cancelled) {
-        setCourses(result);
-        setIsLoading(false);
-      }
-    }).catch((err) => {
-      if (!cancelled) {
-        setError(err.message);
-        setIsLoading(false);
-      }
-    });
-    return () => { cancelled = true; };
-  }, [filters]);
+    fetchPrograms();
+  }, [fetchPrograms]);
 
-  const categories = useMemo(() => [
-    { value: "ALL", label: "All Categories", count: courses.length },
-    { value: "AI", label: "Artificial Intelligence", count: courses.length },
-    { value: "COMMERCE", label: "Commerce & Business", count: 0 },
-    { value: "DESIGN", label: "Design", count: 0 },
-  ], [courses.length]);
+  const courses = useMemo(() => {
+    let result = [...programs];
 
-  const tiers = useMemo(() => courseService.getTiers(), []);
+    // Search
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      result = result.filter(
+        (c) =>
+          c.title.toLowerCase().includes(q) ||
+          c.description.toLowerCase().includes(q) ||
+          c.faculty?.user?.name.toLowerCase().includes(q) ||
+          c.institution?.name.toLowerCase().includes(q)
+      );
+    }
 
-  const updateFilter = useCallback(<K extends keyof CourseFilter>(
-    key: K,
-    value: CourseFilter[K]
-  ) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-  }, []);
+    return result;
+  }, [programs, filters]);
+
+  const updateFilter = useCallback(
+    <K extends keyof CourseFilter>(key: K, value: CourseFilter[K]) => {
+      setFilters((prev) => ({ ...prev, [key]: value }));
+    },
+    []
+  );
 
   const resetFilters = useCallback(() => setFilters(DEFAULT_FILTERS), []);
 
@@ -54,6 +49,18 @@ export function useCourses(initialFilters?: Partial<CourseFilter>) {
     filters.tier !== "ALL" ||
     filters.university !== "ALL" ||
     filters.search !== "";
+
+  const categories = [
+    { value: "ALL", label: "All Categories", count: programs.length },
+    { value: CourseCategory.AI, label: "Artificial Intelligence", count: programs.length },
+  ];
+
+  const tiers = [
+    { value: "ALL", label: "All Tiers", description: "" },
+    { value: "TIER_1", label: "Tier 1 — Foundational", description: "Dezai Core certification" },
+    { value: "TIER_2", label: "Tier 2 — Academic", description: "University accredited" },
+    { value: "TIER_3", label: "Tier 3 — Professional", description: "Industry verified" },
+  ];
 
   return {
     courses,
@@ -65,6 +72,5 @@ export function useCourses(initialFilters?: Partial<CourseFilter>) {
     hasActiveFilters,
     totalResults: courses.length,
     isLoading,
-    error,
   };
 }

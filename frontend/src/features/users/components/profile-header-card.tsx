@@ -6,13 +6,16 @@ import { Mail, Calendar, GraduationCap } from "lucide-react";
 import { formatDate } from "@/shared/utils/format";
 import type { AuthUser } from "@/lib/stores/auth.store";
 
+import { useEnrollmentStore } from "@/lib/stores/enrollment.store";
+
 interface ProfileHeaderCardProps {
   user: AuthUser;
 }
 
 export function ProfileHeaderCard({ user }: ProfileHeaderCardProps) {
+  const { enrollments } = useEnrollmentStore();
   const joinedAt = (user as any).joinedAt || new Date().toISOString();
-  const enrolledCourseIds = (user as any).enrolledCourseIds || [];
+  const enrollmentCount = Object.keys(enrollments).length;
   return (
     <div className="card-elevation p-6">
       <div className="flex flex-col sm:flex-row items-start gap-6">
@@ -47,7 +50,7 @@ export function ProfileHeaderCard({ user }: ProfileHeaderCardProps) {
             </span>
             <span className="flex items-center gap-1.5">
               <GraduationCap className="h-4 w-4" />
-              {enrolledCourseIds.length} courses enrolled
+              {enrollmentCount} courses enrolled
             </span>
           </div>
         </div>
