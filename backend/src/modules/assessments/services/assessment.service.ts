@@ -416,6 +416,51 @@ export class AssessmentService {
     );
   }
 
+  async getAssessmentResults(assessmentId: string) {
+    const assessment = await this.prisma.assessment.findUnique({
+      where: { id: assessmentId },
+    });
+    if (!assessment) {
+      throw new NotFoundException(
+        `Assessment with ID ${assessmentId} not found`
+      );
+    }
+
+    const attempts = await this.prisma.assessmentAttempt.findMany({
+      where: {
+        assessmentId,
+        completedAt: { not: null },
+      },
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+        _count: {
+          select: {
+            violations: true,
+          },
+        },
+      },
+      orderBy: {
+        completedAt: "desc",
+      },
+    });
+
+    return attempts.map((attempt) => ({
+      id: attempt.id,
+      studentName: attempt.user.name || attempt.user.email,
+      studentEmail: attempt.user.email,
+      score: attempt.score,
+      passed: attempt.passed,
+      startedAt: attempt.startedAt,
+      completedAt: attempt.completedAt,
+      violationCount: attempt._count.violations,
+    }));
+  }
+
   // ─────────────────── FACULTY ANALYTICS ───────────────────
 
   /**

@@ -14,6 +14,7 @@ import {
 } from "@nestjs/common";
 import { AssessmentService } from "../services/assessment.service";
 import { QuestionSelectionService } from "../services/question-selection.service";
+import { RecommendationService } from "../services/recommendation.service";
 import { JwtAuthGuard } from "../../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../../common/guards/roles.guard";
 import { Roles } from "../../../common/decorators/roles.decorator";
@@ -31,7 +32,8 @@ import {
 export class AssessmentController {
   constructor(
     private readonly assessmentService: AssessmentService,
-    private readonly questionSelectionService: QuestionSelectionService
+    private readonly questionSelectionService: QuestionSelectionService,
+    private readonly recommendationService: RecommendationService
   ) {}
 
   // ─────────────────── QUESTION BANKS ───────────────────
@@ -240,6 +242,14 @@ export class AssessmentController {
     return { success: true, analytics };
   }
 
+  @Get(":id/results")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
+  async getAssessmentResults(@Param("id") id: string) {
+    const results = await this.assessmentService.getAssessmentResults(id);
+    return { success: true, results };
+  }
+
   // ─────────────────── EXAM SESSIONS & PROCTORING ───────────────────
 
   @Get("sessions/active")
@@ -283,5 +293,32 @@ export class AssessmentController {
   ) {
     const result = await this.assessmentService.submitSession(req.user.id, id, body.answers);
     return { success: true, ...result };
+  }
+
+  // ─────────────────── RECOMMENDATIONS ───────────────────
+
+  @Get("recommendations/next-module/:programId")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STUDENT)
+  async getNextModule(@Req() req, @Param("programId") programId: string) {
+    const result = await this.recommendationService.getNextModule(
+      req.user.id,
+      programId
+    );
+    return { success: true, nextModule: result };
+  }
+
+  @Get("recommendations/continue-learning")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STUDENT)
+  async getContinueLearning(@Req() req) {
+    return this.recommendationService.getContinueLearning(req.user.id);
+  }
+
+  @Get("recommendations/ready-assessments")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STUDENT)
+  async getRecommendedAssessments(@Req() req) {
+    return this.recommendationService.getRecommendedAssessments(req.user.id);
   }
 }

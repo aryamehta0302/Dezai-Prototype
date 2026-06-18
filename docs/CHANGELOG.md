@@ -6,9 +6,43 @@ All notable changes to this project will be documented in this file.
 
 ## [Sprint 4] — 2026-06-18
 
-**Developer:** You (AI Mentor Owner)
+### Assessment Lifecycle & Results (Manan Panchal)
 
-### Added
+#### Added
+
+- **Assessment Attempt System** — Backend service and controller to start, resume, autosave, and submit student assessment attempts. Integrates with the existing `ExamSession` proctoring logs and enforces maximum attempts limits.
+  - Files: [attempt.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/attempt.service.ts), [attempt.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/attempt.controller.ts)
+  - Endpoints: `POST /api/assessments/attempts/start`, `GET /api/assessments/attempts/history/:assessmentId`, `GET /api/assessments/attempts/:id/resume`, `POST /api/assessments/attempts/:id/auto-save`, `POST /api/assessments/attempts/:id/submit`, `GET /api/assessments/attempts/:id/result`
+
+- **Faculty Assessment Results Review** — Faculty-facing endpoint to retrieve detailed student score breakdowns and proctoring violation counts for class tracking.
+  - Files: [assessment.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/assessment.service.ts), [assessment.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/assessment.controller.ts)
+  - Endpoints: `GET /api/assessments/:id/results`
+
+- **Recommendation Engine** — Implements a learning path recommendation system to suggest: the next module and lesson based on progress, a continue learning payload based on recent activity, and a list of completed-lesson modules with ready-to-take assessments.
+  - Files: [recommendation.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/recommendation.service.ts), [assessment.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/assessment.controller.ts)
+  - Endpoints: `GET /api/assessments/recommendations/next-module/:programId`, `GET /api/assessments/recommendations/continue-learning`, `GET /api/assessments/recommendations/ready-assessments`
+
+- **Assessment Player UI** — Student-facing React component, types, and hooks implementing a secure taking layout. Integrates countdown timer, navigation sidebar, auto-save status indicators, and proctoring violation alerts/blocking overlays.
+  - Files: [AssessmentPlayer.tsx](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/pages/AssessmentPlayer.tsx), [useAttempt.ts](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/hooks/useAttempt.ts), [assessment.types.ts](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/types/assessment.types.ts), [assessment-attempt.service.ts](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/services/assessment-attempt.service.ts)
+  - Pages: `/programs/:slug/assessment/:assessmentId`
+
+- **Assessment Results & Review UI** — Custom, styled screens displaying passing/failing banners, attempt score breakdowns, question-by-question reviews highlighting selected options and explanations, and previous attempt history tables.
+  - Files: [AssessmentResult.tsx](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/pages/AssessmentResult.tsx), [AssessmentReview.tsx](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/pages/AssessmentReview.tsx)
+  - Pages: `/programs/:slug/assessment/:assessmentId/results`, `/programs/:slug/assessment/:assessmentId/review`
+
+#### Changed
+
+- **QuestionSelectionService Seeding** — Updated `selectQuestions` to support seed strings, enabling deterministic shuffles and question subset selections. Resuming an attempt now serves the exact same question set and option ordering.
+  - File: [question-selection.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/question-selection.service.ts)
+
+- **AssessmentsModule Wiring** — Imported `UsersModule` to inject `XpService` into `AttemptService` and registered all new controllers and services.
+  - File: [assessments.module.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/assessments.module.ts)
+
+---
+
+### AI Mentor (AI Mentor Owner)
+
+#### Added
 
 - **AI Mentor Module: Complete Phase 1 Implementation** — Full backend API + AI provider abstraction + context injection for lesson-aware responses.
 
@@ -69,14 +103,14 @@ All notable changes to this project will be documented in this file.
   - `ChatSession`, `ChatMessage`, `CreateSessionRequest`, `SendMessageRequest`, `UpdateContextRequest`
   - Response types: `ChatSessionResponse`, `ChatSessionsResponse`, `SendMessageResponse`
 
-### Changed
+#### Changed
 
 - **ChatService refactored** — Now uses AIProviderService instead of inline mock responses
 - **AiModule expanded** — Registers MockProvider, ClaudeProvider, GeminiProvider, AIProviderService
 - **docs/PROJECT_STATUS.md** — Comprehensive project status updated (70% completion, team roles, 53 total endpoints)
 - **docs/API/ai-mentor.md** — Full API contract with examples
 
-### Features
+#### Features
 
 ✅ **User Ownership Validation** — All operations verify session ownership  
 ✅ **JWT Authentication** — Secured via JwtAuthGuard  
@@ -93,7 +127,7 @@ All notable changes to this project will be documented in this file.
 ✅ **Loading States** — Visual feedback during API calls  
 ✅ **Error Handling** — Toast notifications + error display  
 
-### Notes
+#### Notes
 
 - **No schema changes** — ChatSession and ChatMessage models were pre-defined
 - **Mock responses only** — Phase 1 uses mock provider; Phase 2 will add real LLM
@@ -102,7 +136,7 @@ All notable changes to this project will be documented in this file.
 - **Lesson path** — Full path is: Lesson → Module → ProgramTrack → Program
 - **localStorage** — Only persists session IDs, not message bodies (to save space)
 
-### Files Created (Backend)
+#### Files Created (Backend)
 
 ```
 backend/src/modules/ai/
@@ -120,7 +154,7 @@ backend/src/modules/ai/
 └── ai.module.ts (UPDATED)
 ```
 
-### Files Created (Frontend)
+#### Files Created (Frontend)
 
 ```
 frontend/src/features/ai-mentor/

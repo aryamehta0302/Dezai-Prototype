@@ -20,9 +20,9 @@ export class QuestionSelectionService {
 
   /**
    * Select a randomized set of questions for an assessment attempt.
-   * Each call produces a unique permutation.
+   * If a seed is provided, the selection and shuffle will be deterministic.
    */
-  async selectQuestions(assessmentId: string) {
+  async selectQuestions(assessmentId: string, seed?: string) {
     const assessment = await this.prisma.assessment.findUnique({
       where: { id: assessmentId },
       include: {
@@ -45,7 +45,14 @@ export class QuestionSelectionService {
     const allQuestions = assessment.questionBank.questions;
 
     if (allQuestions.length === 0) {
-      return [];
+      return {
+        assessmentId: assessment.id,
+        assessmentTitle: assessment.title,
+        passingScore: assessment.passingScore,
+        sampleSize: 0,
+        totalAvailable: 0,
+        questions: [],
+      };
     }
 
     // Step 1: Clone the questions array to avoid mutating the original
@@ -57,26 +64,35 @@ export class QuestionSelectionService {
       options: q.options.map((o) => ({
         id: o.id,
         text: o.text,
-        // Note: isCorrect is intentionally excluded from the response
-        // to prevent leaking answers to the client
       })),
     }));
 
-    // Step 2: Fisher-Yates shuffle the question pool
-    this.fisherYatesShuffle(pool);
+    // Step 2: Set up the random function based on seed if provided
+    let randomFn = Math.random;
+    if (seed) {
+      let seedNum = 0;
+      for (let i = 0; i < seed.length; i++) {
+        seedNum = Math.imul(31, seedNum) + seed.charCodeAt(i) | 0;
+      }
+      randomFn = this.mulberry32(seedNum);
+    }
 
-    // Step 3: Slice the first sampleSize questions
+    // Step 3: Fisher-Yates shuffle the question pool
+    this.fisherYatesShuffle(pool, randomFn);
+
+    // Step 4: Slice the first sampleSize questions
     const sampleSize = Math.min(assessment.sampleSize, pool.length);
     const selected = pool.slice(0, sampleSize);
 
-    // Step 4: Shuffle options within each selected question independently
+    // Step 5: Shuffle options within each selected question independently
     for (const question of selected) {
-      this.fisherYatesShuffle(question.options);
+      this.fisherYatesShuffle(question.options, randomFn);
     }
 
     return {
       assessmentId: assessment.id,
       assessmentTitle: assessment.title,
+      passingScore: assessment.passingScore,
       sampleSize,
       totalAvailable: allQuestions.length,
       questions: selected,
@@ -84,13 +100,25 @@ export class QuestionSelectionService {
   }
 
   /**
-   * Fisher-Yates (Knuth) shuffle algorithm.
-   * Shuffles the array in-place with O(n) time complexity.
+   * Mulberry32 pseudo-random number generator.
    */
-  private fisherYatesShuffle<T>(array: T[]): void {
+  private mulberry32(a: number) {
+    return function() {
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  /**
+   * Fisher-Yates (Knuth) shuffle algorithm.
+   */
+  private fisherYatesShuffle<T>(array: T[], randomFn: () => number): void {
     for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = Math.floor(randomFn() * (i + 1));
       [array[i], array[j]] = [array[j], array[i]];
     }
   }
 }
+

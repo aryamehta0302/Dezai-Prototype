@@ -320,4 +320,57 @@ Implemented the complete Assessment Engine module as the backbone of Dezai's eva
 | 15 | GET | `/api/assessments/:id/questions/select` | JWT |
 | 16 | GET | `/api/assessments/:id/analytics` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
 
+---
+
+## 10. Sprint 4: Assessment Lifecycle & Results (Manan Panchal)
+
+Implemented the complete Assessment Attempt lifecycle, proctoring integration, detailed student results & reviews, and the recommendation engine.
+
+### Implemented Components
+
+1. **DTOs** ([attempt.dto.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/dto/attempt.dto.ts)):
+   * `StartAttemptDto` for initiating student attempts.
+   * `AutoSaveAnswersDto` for autosaving answers dynamically.
+
+2. **AttemptService** ([attempt.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/attempt.service.ts)):
+   * `startAttempt` — Initiates a proctoring session, checks attempt limits, creates/restores a `AssessmentAttempt` row, shuffles questions.
+   * `resumeAttempt` — Restores questions deterministically, computes remaining time, returns existing answers.
+   * `autoSaveAnswers` — Programmatically upserts answers to avoid duplicate rows without unique database constraints.
+   * `submitAttempt` — Grades answers, applies proctoring score deductions, updates exam session to `SUBMITTED`, logs audits, and awards XP on first pass.
+   * `getAttemptResult` — Returns score and breakdown of questions showing student selected answers, correct answers, and category-derived explanations.
+   * `getAttemptHistory` — Returns history of all completed attempts for a specific assessment.
+
+3. **RecommendationService** ([recommendation.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/recommendation.service.ts)):
+   * `getNextModule` — Returns the next uncompleted module in order and its first incomplete lesson.
+   * `getContinueLearning` — Returns the most recently active module/program continue learning card payload.
+   * `getRecommendedAssessments` — Recommends ready-to-take assessments for completed modules.
+
+4. **AttemptController** ([attempt.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/attempt.controller.ts)):
+   * Exposes REST endpoints for the attempt lifecycle. Protected by `JwtAuthGuard` + `RolesGuard` with `@Roles(STUDENT)`.
+   * Enforces top-to-bottom static route priority (`attempts/history/:assessmentId` registered before `:id` parameters) to prevent resolution conflicts.
+
+5. **Frontend UI Integration** (under [src/features/assessments/](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/)):
+   * [AssessmentPlayer.tsx](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/pages/AssessmentPlayer.tsx) — Instructions, navigator, countdown timer, auto-save status, and warning/lockout blocking dialogs.
+   * [AssessmentResult.tsx](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/pages/AssessmentResult.tsx) — Displays passed/failed banners, scores, and integrated next-step recommendations.
+   * [AssessmentReview.tsx](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/pages/AssessmentReview.tsx) — Correct/incorrect reviews with explanation texts.
+   * [useAttempt.ts](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/hooks/useAttempt.ts) — State and logic hook.
+   * [assessment-attempt.service.ts](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/services/assessment-attempt.service.ts) — Fetch API wrapper.
+   * Route configurations wired in `src/app/(student)/programs/[slug]/assessment/`.
+
+### Endpoint Summary
+
+| # | Method | Route | Auth | Description |
+|---|---|---|---|---|
+| 1 | POST | `/api/assessments/attempts/start` | JWT + STUDENT | Start new attempt |
+| 2 | GET | `/api/assessments/attempts/history/:assessmentId` | JWT + STUDENT | Fetch student's prior attempts |
+| 3 | GET | `/api/assessments/attempts/:id/resume` | JWT + STUDENT | Resume unfinished attempt |
+| 4 | POST | `/api/assessments/attempts/:id/auto-save` | JWT + STUDENT | Autosave in-progress answers |
+| 5 | POST | `/api/assessments/attempts/:id/submit` | JWT + STUDENT | Grade and finalize attempt |
+| 6 | GET | `/api/assessments/attempts/:id/result` | JWT + STUDENT | Get graded breakdown |
+| 7 | GET | `/api/assessments/:id/results` | JWT + FACULTY/ADMIN | List student scores (Faculty) |
+| 8 | GET | `/api/assessments/recommendations/next-module/:programId` | JWT + STUDENT | Get recommended next module |
+| 9 | GET | `/api/assessments/recommendations/continue-learning` | JWT + STUDENT | Get continue learning widget |
+| 10 | GET | `/api/assessments/recommendations/ready-assessments` | JWT + STUDENT | Get ready assessments list |
+
+
 
