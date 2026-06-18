@@ -1,49 +1,7 @@
 import { apiClient } from "@/core/api/client";
+import type { ApiProgram, ApiTrack, ApiModule, ApiLesson } from "@/features/programs/types/program.types";
 
-// ─── Shared Response Wrapper ──────────────────────────────────────────────────
-
-export interface ApiResponse<T> {
-  success: boolean;
-  message?: string;
-  [key: string]: any; // To allow for the named property like 'programs', 'enrollment', etc.
-}
-
-// ─── Program / Course Types ─────────────────────────────────────────────────
-
-export interface ApiLesson {
-  id: string;
-  title: string;
-  order: number;
-  videoUrl?: string | null;
-  content?: string | null;
-}
-
-export interface ApiModule {
-  id: string;
-  title: string;
-  order: number;
-  lessons: ApiLesson[];
-}
-
-export interface ApiTrack {
-  id: string;
-  title: string;
-  type: "ROOTS" | "EDGE";
-  modules: ApiModule[];
-}
-
-export interface ApiProgram {
-  id: string;
-  title: string;
-  description: string;
-  institution: { name: string; logoUrl?: string | null };
-  faculty?: { user: { name: string; email: string } } | null;
-  tracks: ApiTrack[];
-  institutionId: string;
-  facultyId: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+export type { ApiProgram, ApiTrack, ApiModule, ApiLesson };
 
 // ─── API Services ────────────────────────────────────────────────────────────
 
