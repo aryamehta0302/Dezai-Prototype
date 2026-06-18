@@ -1,7 +1,7 @@
 import { apiClient } from "@/core/api/client";
-import type { ApiProgram, ApiTrack, ApiModule, ApiLesson } from "@/features/programs/types/program.types";
+import type { ApiProgram, ApiTrack, ApiModule, ApiLesson, ApiResource } from "@/features/programs/types/program.types";
 
-export type { ApiProgram, ApiTrack, ApiModule, ApiLesson };
+export type { ApiProgram, ApiTrack, ApiModule, ApiLesson, ApiResource };
 
 // ─── API Services ────────────────────────────────────────────────────────────
 
@@ -46,6 +46,12 @@ export const learningApi = {
    */
   getLesson: (lessonId: string) =>
     apiClient.get<{ success: boolean; lesson: any }>(`/learning/lessons/${lessonId}`),
+
+  /**
+   * Get resources for a lesson
+   */
+  getResources: (lessonId: string) =>
+    apiClient.get<{ success: boolean; resources: ApiResource[] }>(`/learning/lessons/${lessonId}/resources`),
 
   /**
    * Mark lesson as complete

@@ -4,9 +4,9 @@
 
 Dezai AI is a university-grade EdTech platform currently in **active development** with core infrastructure complete and progressive feature implementation. The project includes a fully functional Next.js frontend, NestJS backend, PostgreSQL database, and RBAC-secured API layer.
 
-**Current Status**: **~70%** completion toward production MVP  
-**Latest Sprint**: Sprint 4 (AI Mentor Phase 1 Complete + Frontend UI)  
-**Active Owner**: You (AI Mentor) + Manan Panchal (Assessment Engine) + Ansh Dhanani (Enrollment/Progress)
+**Current Status**: **75%** completion toward production MVP  
+**Latest Sprint**: Sprint 4 (AI Mentor Phase 1 + Hybrid Content Delivery Engine)  
+**Active Owner**: You (Learning Experience) + Manan Panchal (Assessment Engine) + Ansh Dhanani (Enrollment/Progress)
 
 ---
 
@@ -19,12 +19,13 @@ Dezai AI is a university-grade EdTech platform currently in **active development
 | **Authentication** | 4 endpoints | Login, register, onboarding, JWT refresh |
 | **User Management** | 8 endpoints | Profile, XP, settings, role-based redirects |
 | **Programs & Catalog** | 6 endpoints | Browse, search, enroll, curriculum display |
-| **Learning & Progress** | 7 endpoints | Lesson content, completion tracking, XP awards |
+| **Learning & Progress** | 8 endpoints | Lesson content, completion tracking, XP awards, resources listing |
 | **Notes & Bookmarks** | 4 endpoints | Per-lesson persistence, CRUD operations |
 | **Assessment Engine** | 16 endpoints | Question banks, dynamic selection (100:15), scoring |
 | **AI Mentor Chat** | 6 endpoints | Sessions, messaging, context injection, providers |
+| **Hybrid Content Delivery** | 1 endpoint | Custom Markdown rendering, HTML5 Video, block registry |
 
-**Subtotal: 51 endpoints, 7 major features**
+**Subtotal: 54 endpoints, 8 major features**
 
 ### 🚀 In Progress (Actively Being Built)
 

@@ -173,20 +173,22 @@ model Module {
 }
 
 model Lesson {
-  id        String   @id @default(uuid())
-  moduleId  String
-  title     String
-  content   String // Markdown or Rich Text structure
-  videoUrl  String?
-  order     Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String        @id @default(uuid())
+  moduleId      String
+  title         String
+  content       String // Markdown or Rich Text structure
+  contentFormat ContentFormat @default(MARKDOWN)
+  videoUrl      String?
+  order         Int
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   module       Module        @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   progresses   Progress[]
   bookmarks    Bookmark[]
   notes        Note[]
   chatSessions ChatSession[]
+  resources    Resource[]
 
   @@map("lessons")
 }
@@ -517,3 +519,24 @@ enum ExamStatus {
   SUBMITTED
   TERMINATED
 }
+
+enum ContentFormat {
+  MARKDOWN
+  HTML
+}
+
+model Resource {
+  id        String   @id @default(uuid())
+  lessonId  String
+  title     String
+  type      String
+  url       String
+  order     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@map("resources")
+}
+

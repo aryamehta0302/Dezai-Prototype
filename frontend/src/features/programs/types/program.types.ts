@@ -28,6 +28,17 @@ export interface ApiModule {
   lessons: ApiLesson[];
 }
 
+export interface ApiResource {
+  id: string;
+  lessonId: string;
+  title: string;
+  type: string;
+  url: string;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ApiLesson {
   id: string;
   title: string;
@@ -38,9 +49,11 @@ export interface ApiLesson {
 export interface ApiLessonDetail extends ApiLesson {
   moduleId: string;
   content: string;
+  contentFormat: 'MARKDOWN' | 'HTML';
   createdAt: string;
   updatedAt: string;
   module: { title: string; track: { programId: string } };
+  resources?: ApiResource[];
 }
 
 export interface ApiEnrollment {
