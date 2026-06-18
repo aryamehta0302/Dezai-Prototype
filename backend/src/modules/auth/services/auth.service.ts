@@ -14,8 +14,18 @@ export class AuthService {
   /**
    * Complete onboarding for an authenticated user by saving/updating
    * their profile and selected role in the database.
+   *
+   * For FACULTY role: institutionId, department, and designation are required.
    */
-  async onboardUser(userPayload: { id: string; email: string; name: string }, role: UserRole) {
+  async onboardUser(
+    userPayload: { id: string; email: string; name: string },
+    role: UserRole,
+    options?: {
+      institutionId?: string;
+      department?: string;
+      designation?: string;
+    },
+  ) {
     const { id: userId, email, name } = userPayload;
 
     // 1. Check if user already exists
@@ -45,17 +55,35 @@ export class AuthService {
       });
     }
 
-    // 4. Create role-specific tables/relations if needed
+    // 4. Create role-specific relations
     if (role === UserRole.FACULTY) {
       const existingFaculty = await this.prisma.facultyMember.findUnique({
         where: { userId: user.id },
       });
       if (!existingFaculty) {
-        const institution = await this.getOrCreateDefaultInstitution();
+        // If no institutionId provided, fall back to the first institution (dev/demo safety)
+        let institutionId = options?.institutionId;
+        if (!institutionId) {
+          const defaultInst = await this.getOrCreateDefaultInstitution();
+          institutionId = defaultInst.id;
+        }
         await this.prisma.facultyMember.create({
           data: {
             userId: user.id,
-            institutionId: institution.id,
+            institutionId,
+            department: options?.department ?? null,
+            designation: options?.designation ?? null,
+            // verificationStatus defaults to PENDING via schema
+          },
+        });
+      } else {
+        // Update existing faculty record with latest details
+        await this.prisma.facultyMember.update({
+          where: { userId: user.id },
+          data: {
+            institutionId: options?.institutionId ?? existingFaculty.institutionId,
+            department: options?.department ?? existingFaculty.department,
+            designation: options?.designation ?? existingFaculty.designation,
           },
         });
       }
@@ -64,11 +92,16 @@ export class AuthService {
         where: { userId: user.id },
       });
       if (!existingAdmin) {
-        const institution = await this.getOrCreateDefaultInstitution();
+        const institutionId = options?.institutionId;
+        let resolvedInstitutionId = institutionId;
+        if (!resolvedInstitutionId) {
+          const defaultInst = await this.getOrCreateDefaultInstitution();
+          resolvedInstitutionId = defaultInst.id;
+        }
         await this.prisma.institutionAdmin.create({
           data: {
             userId: user.id,
-            institutionId: institution.id,
+            institutionId: resolvedInstitutionId,
           },
         });
       }
@@ -78,7 +111,7 @@ export class AuthService {
     await this.auditService.logAction(
       user.id,
       AuditAction.ROLE_CHANGED,
-      `User ${user.email} onboarded with role ${role}`
+      `User ${user.email} onboarded with role ${role}`,
     );
 
     return {
