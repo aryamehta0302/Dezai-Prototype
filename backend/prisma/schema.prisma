@@ -454,6 +454,7 @@ model Notification {
   message   String
   type      NotificationType
   read      Boolean          @default(false)
+  archived  Boolean          @default(false)
   createdAt DateTime         @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
