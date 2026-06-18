@@ -17,7 +17,7 @@ import { QuestionSelectionService } from "../services/question-selection.service
 import { JwtAuthGuard } from "../../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../../common/guards/roles.guard";
 import { Roles } from "../../../common/decorators/roles.decorator";
-import { UserRole } from "@prisma/client";
+import { UserRole, ViolationType } from "@prisma/client";
 import {
   CreateQuestionBankDto,
   UpdateQuestionBankDto,
@@ -238,5 +238,50 @@ export class AssessmentController {
     const analytics =
       await this.assessmentService.getAssessmentAnalytics(id);
     return { success: true, analytics };
+  }
+
+  // ─────────────────── EXAM SESSIONS & PROCTORING ───────────────────
+
+  @Get("sessions/active")
+  @UseGuards(JwtAuthGuard)
+  async getActiveSession(@Req() req, @Query("assessmentId") assessmentId?: string) {
+    const session = await this.assessmentService.getActiveSession(req.user.id, assessmentId);
+    return { success: true, session };
+  }
+
+  @Post("sessions")
+  @UseGuards(JwtAuthGuard)
+  async createSession(@Req() req, @Body() body: { assessmentId: string }) {
+    const session = await this.assessmentService.createSession(req.user.id, body.assessmentId);
+    return { success: true, session };
+  }
+
+  @Get("sessions/:id")
+  @UseGuards(JwtAuthGuard)
+  async getSessionById(@Req() req, @Param("id") id: string) {
+    const session = await this.assessmentService.getSession(req.user.id, id);
+    return { success: true, session };
+  }
+
+  @Post("sessions/:id/violations")
+  @UseGuards(JwtAuthGuard)
+  async logViolation(
+    @Req() req,
+    @Param("id") id: string,
+    @Body() body: { type: ViolationType }
+  ) {
+    const session = await this.assessmentService.logViolation(req.user.id, id, body.type);
+    return { success: true, session };
+  }
+
+  @Post("sessions/:id/submit")
+  @UseGuards(JwtAuthGuard)
+  async submitSession(
+    @Req() req,
+    @Param("id") id: string,
+    @Body() body: { answers: Record<string, string> }
+  ) {
+    const result = await this.assessmentService.submitSession(req.user.id, id, body.answers);
+    return { success: true, ...result };
   }
 }
