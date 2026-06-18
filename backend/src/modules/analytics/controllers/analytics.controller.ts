@@ -56,6 +56,30 @@ export class AnalyticsController {
   }
 
   /**
+   * GET /api/analytics/faculty/extended
+   * Returns extended metrics: completion rate, top/weak students, and difficult modules.
+   */
+  @Get('faculty/extended')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
+  async getFacultyExtendedAnalytics(@Req() req) {
+    const data = await this.analyticsService.getFacultyExtendedAnalytics(req.user.id);
+    return { success: true, data };
+  }
+
+  /**
+   * GET /api/analytics/faculty/activity
+   * Returns chronological activity feed.
+   */
+  @Get('faculty/activity')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
+  async getFacultyActivityFeed(@Req() req) {
+    const data = await this.analyticsService.getFacultyActivityFeed(req.user.id);
+    return { success: true, data };
+  }
+
+  /**
    * GET /api/analytics/programs/:id
    *
    * Returns aggregate metrics for a specific Program.

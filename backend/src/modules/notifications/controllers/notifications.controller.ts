@@ -1,42 +1,37 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Param,
+  Body,
   Query,
   UseGuards,
   Req,
 } from '@nestjs/common';
 import { NotificationsService } from '../services/notifications.service';
+import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
+import { NotificationType } from '@prisma/client';
 import {
   NotificationListResponseDto,
   NotificationActionResponseDto,
   MarkAllReadResponseDto,
 } from '../dto/notification.dto';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 
 /**
  * NotificationsController
  *
- * Exposes five notification endpoints under /api/notifications/
+ * Exposes notification endpoints under /api/notifications/
  * All routes are protected by JWT authentication.
- * No RolesGuard needed — all authenticated roles can manage their own notifications.
  *
  * ⚠️  ROUTE ORDER IS CRITICAL:
- *   Route 5 (PATCH /mark-all-read) is declared BEFORE Route 2 (PATCH /:id/read).
+ *   Route 5 (PATCH /mark-all-read) and Route 6 (POST /read-all) are declared BEFORE Route 2 (PATCH /:id/read).
  *   NestJS matches routes top-to-bottom. If /:id/read appeared first,
- *   NestJS would attempt to match "mark-all-read" as a notification ID and return 404.
+ *   NestJS would attempt to match "mark-all-read" or "read-all" as a notification ID and return 404.
  *
  * Dezai Terminology:
  *   - Notification (not Alert, not Message)
  *   - archived     (not deleted, not hidden)
- *
- * Routes:
- *   GET   /api/notifications                   — fetch inbox (supports ?filter=)
- *   PATCH /api/notifications/mark-all-read     — mark all non-archived as read
- *   PATCH /api/notifications/:id/read          — mark one as read
- *   PATCH /api/notifications/:id/unread        — mark one as unread
- *   PATCH /api/notifications/:id/archive       — archive one notification
  */
 @Controller('notifications')
 @UseGuards(JwtAuthGuard)
@@ -47,33 +42,33 @@ export class NotificationsController {
    * GET /api/notifications
    *
    * Returns the notification inbox for the logged-in user.
+   * Supports both legacy `{ success: true, notifications }` and new `{ success: true, data }` shapes.
    *
    * Query Parameters:
    *   ?filter=all      — (default) non-archived notifications
    *   ?filter=unread   — unread AND non-archived only
    *   ?filter=archived — archived notifications only
-   *
-   * Response: { success: true, data: NotificationListResponseDto }
    */
   @Get()
   async getNotifications(
     @Req() req,
     @Query('filter') filter: string = 'all',
-  ): Promise<{ success: boolean; data: NotificationListResponseDto }> {
+  ): Promise<{ success: boolean; notifications: any[]; data: NotificationListResponseDto }> {
     const data = await this.notificationsService.getNotifications(
       req.user.id,
       filter,
     );
-    return { success: true, data };
+    return {
+      success: true,
+      notifications: data.notifications,
+      data,
+    };
   }
 
   /**
    * PATCH /api/notifications/mark-all-read
    *
-   * ⚠️  Must be declared BEFORE /:id/read to avoid route collision.
-   *
    * Marks ALL non-archived, unread notifications as read for the logged-in user.
-   * Silent success if all notifications are already read (count will be 0).
    *
    * Response: { success: true, data: MarkAllReadResponseDto }
    */
@@ -86,32 +81,63 @@ export class NotificationsController {
   }
 
   /**
+   * POST /api/notifications/read-all
+   *
+   * Legacy endpoint to mark all notifications as read.
+   */
+  @Post('read-all')
+  async legacyMarkAllAsRead(@Req() req) {
+    await this.notificationsService.markAllAsRead(req.user.id);
+    return { success: true, message: 'All notifications marked as read' };
+  }
+
+  /**
+   * POST /api/notifications
+   *
+   * Create a notification (utility for testing or inter-service triggers).
+   */
+  @Post()
+  async createNotification(
+    @Body() body: { userId: string; title: string; message: string; type: NotificationType },
+  ) {
+    const notification = await this.notificationsService.createNotification(
+      body.userId,
+      body.title,
+      body.message,
+      body.type,
+    );
+    return { success: true, notification };
+  }
+
+  /**
    * PATCH /api/notifications/:id/read
    *
    * Marks a single notification as read (read=true).
-   * Returns 404 if the notification does not exist or does not belong to this user.
-   *
-   * Response: { success: true, data: NotificationActionResponseDto }
    */
   @Patch(':id/read')
   async markAsRead(
     @Req() req,
     @Param('id') notificationId: string,
-  ): Promise<{ success: boolean; data: NotificationActionResponseDto }> {
-    const data = await this.notificationsService.markAsRead(
+  ): Promise<{ success: boolean; notification: any; data: NotificationActionResponseDto }> {
+    const res = await this.notificationsService.markAsRead(
       req.user.id,
       notificationId,
     );
-    return { success: true, data };
+    return {
+      success: true,
+      notification: res.notification,
+      data: {
+        id: res.id,
+        read: res.read,
+        archived: res.archived,
+      },
+    };
   }
 
   /**
    * PATCH /api/notifications/:id/unread
    *
    * Marks a single notification as unread (read=false).
-   * Returns 404 if the notification does not exist or does not belong to this user.
-   *
-   * Response: { success: true, data: NotificationActionResponseDto }
    */
   @Patch(':id/unread')
   async markAsUnread(
@@ -129,11 +155,6 @@ export class NotificationsController {
    * PATCH /api/notifications/:id/archive
    *
    * Archives a single notification (archived=true).
-   * Archived notifications no longer appear in the default inbox.
-   * They can be viewed with GET /api/notifications?filter=archived.
-   * Returns 404 if the notification does not exist or does not belong to this user.
-   *
-   * Response: { success: true, data: NotificationActionResponseDto }
    */
   @Patch(':id/archive')
   async archiveNotification(

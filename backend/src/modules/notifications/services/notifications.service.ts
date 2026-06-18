@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
+import { NotificationType } from '@prisma/client';
 import {
   NotificationDto,
   NotificationListResponseDto,
@@ -16,6 +17,7 @@ import {
  *   3. markAsUnread       — set read=false on one notification
  *   4. archiveNotification — set archived=true on one notification
  *   5. markAllAsRead      — set read=true on all active (non-archived) notifications
+ *   6. createNotification  — utility to programmatically create notifications
  *
  * Security Rules:
  *   - Every write operation filters by BOTH userId AND notificationId.
@@ -105,7 +107,7 @@ export class NotificationsService {
   async markAsRead(
     userId: string,
     notificationId: string,
-  ): Promise<NotificationActionResponseDto> {
+  ): Promise<NotificationActionResponseDto & { notification: any }> {
     // Step 1: Verify ownership — find notification by id AND userId together
     const existing = await this.prisma.notification.findFirst({
       where: { id: notificationId, userId },
@@ -121,13 +123,13 @@ export class NotificationsService {
     const updated = await this.prisma.notification.update({
       where: { id: notificationId },
       data: { read: true },
-      select: { id: true, read: true, archived: true },
     });
 
     return {
       id: updated.id,
       read: updated.read,
       archived: updated.archived,
+      notification: updated, // Also include the raw notification object for backwards compatibility
     };
   }
 
@@ -218,5 +220,27 @@ export class NotificationsService {
     return {
       updatedCount: result.count,
     };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 6. CREATE NOTIFICATION
+  //    Create a new notification for a user (utility for other modules or tests).
+  // ─────────────────────────────────────────────────────────────────────────
+  async createNotification(
+    userId: string,
+    title: string,
+    message: string,
+    type: NotificationType,
+  ) {
+    return this.prisma.notification.create({
+      data: {
+        userId,
+        title,
+        message,
+        type,
+        read: false,
+        archived: false,
+      },
+    });
   }
 }
