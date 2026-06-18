@@ -10,7 +10,7 @@ export class LearningService {
     private prisma: PrismaService,
     private enrollmentService: EnrollmentService,
     private xpService: XpService
-  ) {}
+  ) { }
 
   /**
    * Fetch lesson content details.
@@ -202,5 +202,33 @@ export class LearningService {
         userId_lessonId: { userId, lessonId },
       },
     });
+  }
+
+  /**
+   * Aggregate student stats for the dashboard.
+   */
+  async getStudentStats(userId: string) {
+    const xpDetails = await this.xpService.getUserXpDetails(userId);
+    const enrollmentCount = await this.prisma.enrollment.count({
+      where: { userId },
+    });
+    const completedCount = await this.prisma.enrollment.count({
+      where: { userId, progress: 100 },
+    });
+
+    const globalRank = await this.prisma.user.count({
+      where: {
+        xp: { gt: xpDetails.xp },
+        role: 'STUDENT',
+      },
+    });
+
+    return {
+      xp: xpDetails.xp,
+      streakCount: xpDetails.streakCount,
+      enrolledCourses: enrollmentCount,
+      completedCourses: completedCount,
+      globalRank: globalRank + 1,
+    };
   }
 }

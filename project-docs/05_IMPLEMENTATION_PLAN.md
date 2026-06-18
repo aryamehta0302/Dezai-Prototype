@@ -420,9 +420,7 @@ Week 18-20: Hardening + Launch
 
 ### Sprint 1 — Backend Integration (June 2026)
 
-**Lead**: Ansh Dhanani (full-stack developer & project driver)
-
-**Role**: Ansh directed the architecture decisions, set constraints (preserve route structure, local-first state pattern, scope cut for quiz/cert/auth mock data), tested functionality in real time, and flagged UX gaps as they appeared. The AI agent executed the implementation.
+**Role**: Architecture decisions involved setting constraints (preserve route structure, local-first state pattern, scope cut for quiz/cert/auth mock data), testing functionality in real time, and flagging UX gaps. The AI agent executed the implementation.
 
 **Completed work:**
 
@@ -445,8 +443,21 @@ Week 18-20: Hardening + Launch
 
 **TypeScript:** Clean compile (`tsc --noEmit` passes).
 
+### Sprint 4 — Student Experience Stabilization (June 2026)
+
+**Completed work:**
+
+| Area | What Was Done |
+| :--- | :--- |
+| **Backend Sync** | Developed `sync-progress.ts` script to fix stale DB percentages; updated per-program completion filtering. |
+| **Global Leaderboard** | Implemented real XP-based global ranking logic replacing "#12" mock placeholders. |
+| **Dashboard UI** | Built full-page skeleton system + premium course thumbnails (Picsum integration). |
+| **Smart Navigation** | Optimized `CoursePlayerPage` to skip completed lessons and fixed title-based slug routing. |
+| **Data Sync** | Unified XP, Streaks, and Hours metrics across Dashboard, Profile, and Activity Feed. |
+| **Activity Feed** | Resolved live program titles instead of raw IDs for a professional event log. |
+
 **Next sprint recommendations:**
-- Assessment module (quiz engine has empty backend)
-- Certificate issuance flow
-- Notifications system
-- Profile settings pages
+- **Quiz Engine**: Implement assessment routes and timed grading.
+- **Certificate Issuance**: Connect successful course completion to PDF generation.
+- **University Admin**: Port institutional analytics dashboards to real data.
+- **Notifications**: Add real-time event triggers for achievements and course updates.

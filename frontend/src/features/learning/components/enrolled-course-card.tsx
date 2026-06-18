@@ -23,10 +23,20 @@ export function EnrolledCourseCard({ course, className }: EnrolledCourseCardProp
       )}
     >
       {/* Thumbnail */}
-      <div className="relative h-36 bg-gradient-to-br from-primary/10 via-secondary-container/50 to-primary/5 flex items-center justify-center">
-        <BookOpen className="h-8 w-8 text-primary/40" />
+      <div className="relative h-36 bg-surface-low flex items-center justify-center overflow-hidden">
+        {course.thumbnailUrl ? (
+          <img
+            src={course.thumbnailUrl}
+            alt={course.courseTitle}
+            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <div className="h-full w-full bg-gradient-to-br from-primary/10 via-secondary-container/50 to-primary/5 flex items-center justify-center">
+            <BookOpen className="h-8 w-8 text-primary/40" />
+          </div>
+        )}
         {isCompleted && (
-          <div className="absolute top-3 right-3 rounded-full bg-success px-2.5 py-0.5 text-xs font-semibold text-white">
+          <div className="absolute top-3 right-3 rounded-full bg-success px-2.5 py-0.5 text-xs font-semibold text-white shadow-level-1">
             Completed
           </div>
         )}
