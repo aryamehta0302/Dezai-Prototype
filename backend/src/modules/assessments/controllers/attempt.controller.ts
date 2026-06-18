@@ -12,7 +12,7 @@ import { JwtAuthGuard } from "../../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../../common/guards/roles.guard";
 import { Roles } from "../../../common/decorators/roles.decorator";
 import { UserRole } from "@prisma/client";
-import { StartAttemptDto, AutoSaveAnswersDto } from "../dto/attempt.dto";
+import { StartAttemptDto, AutoSaveAnswersDto, SubmitAttemptDto } from "../dto/attempt.dto";
 
 @Controller("assessments/attempts")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -52,7 +52,11 @@ export class AttemptController {
   }
 
   @Post(":id/submit")
-  async submitAttempt(@Req() req, @Param("id") id: string) {
+  async submitAttempt(
+    @Req() req,
+    @Param("id") id: string,
+    @Body() body: SubmitAttemptDto
+  ) {
     return this.attemptService.submitAttempt(req.user.id, id);
   }
 

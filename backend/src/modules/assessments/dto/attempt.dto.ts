@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsObject } from "class-validator";
+import { IsString, IsNotEmpty, IsObject, IsOptional } from "class-validator";
 
 export class StartAttemptDto {
   @IsString()
@@ -6,8 +6,16 @@ export class StartAttemptDto {
   assessmentId: string;
 }
 
-export class AutoSaveAnswersDto {
+export class SubmitAnswerDto {
   @IsObject()
   @IsNotEmpty()
   answers: Record<string, string>;
+}
+
+export class AutoSaveAnswersDto extends SubmitAnswerDto {}
+
+export class SubmitAttemptDto {
+  @IsString()
+  @IsOptional()
+  notes?: string;
 }
