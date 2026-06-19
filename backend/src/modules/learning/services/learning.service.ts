@@ -22,6 +22,9 @@ export class LearningService {
         module: {
           select: { title: true, track: { select: { programId: true } } },
         },
+        resources: {
+          orderBy: { order: 'asc' },
+        },
       },
     });
 
@@ -30,6 +33,24 @@ export class LearningService {
     }
 
     return lesson;
+  }
+
+  /**
+   * Fetch resources for a lesson.
+   */
+  async getLessonResources(lessonId: string) {
+    const lesson = await this.prisma.lesson.findUnique({
+      where: { id: lessonId },
+    });
+
+    if (!lesson) {
+      throw new NotFoundException(`Lesson with ID ${lessonId} not found`);
+    }
+
+    return this.prisma.resource.findMany({
+      where: { lessonId },
+      orderBy: { order: 'asc' },
+    });
   }
 
   /**

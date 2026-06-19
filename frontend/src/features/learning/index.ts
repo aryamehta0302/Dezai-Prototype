@@ -6,9 +6,10 @@
 export { ContinueLearningCard } from "./components/continue-learning-card";
 export { EnrolledCourseCard } from "./components/enrolled-course-card";
 export { CourseProgressPill } from "./components/course-progress-pill";
-export { VideoPlayer } from "./components/video-player";
+export { LessonVideoPlayer } from "./components/lesson-video-player";
 export { CourseModuleSidebar } from "./components/course-module-sidebar";
-export { LessonContent } from "./components/lesson-content";
+export { LessonMarkdownRenderer } from "./components/lesson-markdown-renderer";
+export { LessonResourceList } from "./components/lesson-resource-list";
 export { PersonalNotesPanel } from "./components/personal-notes-panel";
 export { MarkCompleteButton } from "./components/mark-complete-button";
 

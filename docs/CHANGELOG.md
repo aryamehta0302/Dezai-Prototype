@@ -6,7 +6,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Sprint 4] — 2026-06-18
 
-**Developers:** Faculty Experience & Dashboard Lead, Manan Panchal (Assessment & Learning Exp. Lead), AI Mentor Owner (AI Mentor)
+**Developers:** Faculty Experience & Dashboard Lead, Manan Panchal (Assessment & Learning Exp. Lead), AI Mentor Owner (AI Mentor), You (Learning Experience)
+
+### Hybrid Content Delivery Engine (Learning Experience Lead)
+
+#### Added
+
+- **Additive Schema & DB Migration** — Added `Resource` model and `ContentFormat` enum to `schema.prisma` mapping lesson attachments and format.
+  - Endpoints: `GET /api/learning/lessons/:id/resources`
+  - Files: [schema.prisma](file:///d:/DEZAI/Dezai-Prototype/backend/prisma/schema.prisma)
+
+- **Markdown & Video Renderers** — Replaced regex-based renderer and mocked video player with safe ReactMarkdown and custom HTML5 video controls.
+  - Files: [lesson-markdown-renderer.tsx](file:///d:/DEZAI/Dezai-Prototype/frontend/src/features/learning/components/lesson-markdown-renderer.tsx), [lesson-video-player.tsx](file:///d:/DEZAI/Dezai-Prototype/frontend/src/features/learning/components/lesson-video-player.tsx)
+
+- **Interactive Blocks & Registry** — Framer Motion block components (`MemoryLeakBlock`, `OverfitSqueezeBlock`), scroll-observer typography anchors (`interactive-cognitive-anchor.tsx`), and visual callouts (`concept-highlight.tsx`) connected dynamically via a unified `block-registry.ts`.
+  - Files: [block-registry.ts](file:///d:/DEZAI/Dezai-Prototype/frontend/src/features/learning/components/blocks/block-registry.ts), [MemoryLeakBlock.tsx](file:///d:/DEZAI/Dezai-Prototype/frontend/src/features/learning/components/blocks/MemoryLeakBlock.tsx), [OverfitSqueezeBlock.tsx](file:///d:/DEZAI/Dezai-Prototype/frontend/src/features/learning/components/blocks/OverfitSqueezeBlock.tsx), [interactive-cognitive-anchor.tsx](file:///d:/DEZAI/Dezai-Prototype/frontend/src/features/learning/components/blocks/interactive-cognitive-anchor.tsx), [concept-highlight.tsx](file:///d:/DEZAI/Dezai-Prototype/frontend/src/features/learning/components/blocks/concept-highlight.tsx)
+
+---
 
 ### Faculty Experience & Dashboard 2.0 (Faculty Experience Lead)
 

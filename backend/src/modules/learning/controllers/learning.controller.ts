@@ -54,6 +54,17 @@ export class LearningController {
   }
 
   /**
+   * GET /api/learning/lessons/:id/resources
+   * Get resources for a single lesson.
+   */
+  @Get('lessons/:id/resources')
+  @UseGuards(JwtAuthGuard)
+  async getLessonResources(@Param('id') id: string) {
+    const resources = await this.learningService.getLessonResources(id);
+    return { success: true, resources };
+  }
+
+  /**
    * POST /api/learning/modules/:moduleId/lessons
    * Create a new lesson. Restricted to owner Faculty/Admin.
    */

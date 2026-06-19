@@ -9,13 +9,15 @@ This document tracks the current implementation progress, feature status, databa
 Dezai AI is a university-grade EdTech platform built with a secure Next.js frontend, modular NestJS backend, and a PostgreSQL database mapped via Prisma.
 
 * **Current Status**: **~85%** completion toward production MVP
-* **Latest Sprint**: Sprint 4 (Polished Experience Sprint)
+* **Latest Sprint**: Sprint 4 (Polished Experience Sprint + Hybrid Content Delivery Engine)
 * **Latest Milestones**: 
+  * **Hybrid Content Delivery Engine**: Custom Markdown rendering, HTML5 video controls, interactive blocks (MemoryLeak, OverfitSqueeze).
   * **AI Mentor (Phase 1)**: Context-aware chatbot backend chat session context injection, LLM provider layers, and frontend workspace.
   * **Faculty Experience & Dashboard 2.0**: Live interactive console, Diagnostics widgets, Chronological activity feed, and Profile settings updates.
   * **Notifications Center**: Notifications module and slide-over alert drawer.
   * **Assessment Attempt Lifecycle & Results**: Start/resume attempts, autosave, grading with proctoring violation deductions, and recommendation engine.
 * **Development Team & Owners**:
+  * **You (Learning Experience Lead)**: Hybrid Content Delivery, Markdown/Video renderers (✅ Sprint 4 Complete)
   * **Faculty Experience Lead**: Faculty Console, Cohort diagnostics, Notifications drawer, profile updates (✅ Sprint 4 Complete)
   * **AI Mentor Owner**: AI Chat session context injection and LLM provider layers (✅ Sprint 4 Complete)
   * **Manan Panchal**: Assessment Engine, attempt lifecycles, and recommendations (✅ Sprints 3 & 4 Complete)
@@ -30,7 +32,7 @@ Dezai AI is a university-grade EdTech platform built with a secure Next.js front
 | **Sprint 1** | Auth, RBAC & Curriculum | Phase 1 & 2 Auth, RBAC, Onboarding, Program/Module/Lesson CRUD | ✅ Completed | 2026-06-16 |
 | **Sprint 2** | Location & Student Progress | Cascading Location Filters, Google Sign-in Sync, User Profile, XP/Streaks | ✅ Completed | 2026-06-16 |
 | **Sprint 3** | Assessment Engine | Question Bank CRUD, Fisher-Yates 100:15 Dynamic Selection, basic analytics | ✅ Completed | 2026-06-17 |
-| **Sprint 4** | Platform Polish & Lifecycle | AI Mentor Workspace, Faculty Dashboard 2.0, Notification Center, Attempt Lifecycle | ✅ Completed | 2026-06-18 |
+| **Sprint 4** | Platform Polish & Lifecycle | AI Mentor Workspace, Faculty Dashboard 2.0, Notification Center, Attempt Lifecycle, Hybrid Delivery | ✅ Completed | 2026-06-18 |
 
 ---
 
@@ -50,8 +52,58 @@ Dezai AI is a university-grade EdTech platform built with a secure Next.js front
 | **AI Mentor Chat** | 6 endpoints | Paginated sessions, messaging, context injection, LLM mock provider |
 | **Faculty Experience** | 2 endpoints | Extended analytics cohort metrics, recent activity feed |
 | **Notifications Center** | 4 endpoints | Notification alerts, mark-as-read, read-all utilities |
+| **Hybrid Content Delivery** | 1 endpoint | Custom Markdown rendering, HTML5 Video, block registry |
 
-**Total Endpoints: 69 API Endpoints operational**
+**Total Endpoints: 70 API Endpoints operational**
+
+---
+
+## Architecture & Infrastructure
+
+### Frontend (Next.js 16) with AI Mentor workspace
+- **LOC**: ~3,800 lines (including AI Mentor feature)
+- **Components**: 24+ reusable UI components (including ChatWindow, MessageInput, SessionSidebar, SmartButtons)
+- **Features**: 15 route groups + AI Mentor chat workspace
+- **State**: Zustand + React Query + localStorage persistence
+- **AI Features**: Session management, context injection, smart buttonsuth guards, feature-based modules
+- **State**: Zustand + React Query
+
+### Backend (NestJS 11) with AI provider abstraction
+- **LOC**: ~4,200 lines (including AI module)
+- **Modules**: 14 feature modules (13 existing + AI Mentor)
+- **Coverage**: Auth, users, programs, learning, assessments, **AI mentor**, analytics, audit
+- **AI Providers**: Mock (dev), Claude (Phase 2), Gemini (Phase 2), fallback to mock on error
+- **Guards**: JWT, RBAC
+
+### Database (PostgreSQL + Prisma 6)
+- **Status**: Live with 12 seeded programs
+- **Models**: 22 core models + ChatSession/ChatMessage
+- **Migrations**: 2 completed (init + exam sessions)
+- **Relationships**: Full relational integrity with cascading deletes
+
+### Authentication (NextAuth v5 + JWT)
+- **Status**: Fully operational
+- **Providers**: Credentials (email/password), OAuth ready
+- **Session Strategy**: JWT tokens, stateless
+- **RBAC**: 4 roles (STUDENT, FACULTY, UNIVERSITY_ADMIN, DEZAI_ADMIN)
+
+---
+
+## Database Models (22 Core + 2 Chat)
+
+### Core Models
+- **User Management**: User, FacultyMember, InstitutionAdmin
+- **Curriculum**: Institution, Program, ProgramTrack, Module, Lesson
+- **Learning**: Progress, Bookmark, Note
+- **Assessments**: QuestionBank, QuestionBankQuestion, QuestionOption, Assessment, AssessmentAttempt, AttemptAnswer
+- **Proctoring**: ViolationLog, ExamSession
+- **Credentials**: Credential
+- **Gamification**: XpTransaction
+- **Platform**: Upload, Notification, AuditLog
+
+### Chat Models (Phase 1)
+- **ChatSession**: User context + active program/module/lesson tracking
+- **ChatMessage**: Bidirectional messages with sender type (USER | MENTOR)
 
 ---
 
