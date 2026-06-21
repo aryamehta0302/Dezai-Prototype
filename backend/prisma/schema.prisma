@@ -249,13 +249,21 @@ model QuestionBank {
   @@map("question_banks")
 }
 
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
 model QuestionBankQuestion {
-  id             String   @id @default(uuid())
+  id             String             @id @default(uuid())
   questionBankId String
   text           String
   category       String?
-  timerSeconds   Int      @default(60) // countdown-per-question limit
-  createdAt      DateTime @default(now())
+  difficulty     Difficulty         @default(MEDIUM)
+  tags           String[]           @default([])
+  timerSeconds   Int                @default(60) // countdown-per-question limit
+  createdAt      DateTime           @default(now())
 
   questionBank   QuestionBank     @relation(fields: [questionBankId], references: [id], onDelete: Cascade)
   options        QuestionOption[]
@@ -283,6 +291,7 @@ model Assessment {
   title          String
   passingScore   Int      @default(80) // Passing percentage
   sampleSize     Int      @default(15) // Dynamic question pull count
+  timeLimit      Int      @default(1800) // Total exam duration in seconds (default 30 min)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -505,6 +514,7 @@ model ExamSession {
   startedAt      DateTime   @default(now())
   endedAt        DateTime?
   lockoutUntil   DateTime?
+  questionSet    Json? // locked, shuffled questions+options for this session
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
