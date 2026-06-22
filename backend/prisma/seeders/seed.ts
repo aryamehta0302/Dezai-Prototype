@@ -20,6 +20,10 @@ const VIDEOS = [
 
 function pick(i: number) { return VIDEOS[i % VIDEOS.length]; }
 function md(title: string, body: string) { return `# ${title}\n\n${body}\n\n---\n\n*Lesson content from Dezai curriculum.*`; }
+function thumbnailUrl(id: string) {
+  const hash = id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return `https://picsum.photos/seed/${hash}/400/225`;
+}
 
 interface LessonDef { title: string; content: string; videoUrl: string }
 interface ModuleDef { title: string; lessons: LessonDef[] }
@@ -327,26 +331,27 @@ async function main() {
 
   // 3. Programs (upsert — no inline tracks, curriculum is handled separately)
   console.log('\n--- Programs ---');
-  const programs = [
-    { id: 'course-1', title: 'Generative AI for Leaders: Strategic Implementation', description: 'Master the strategic implementation of generative AI technologies in enterprise settings.', institutionId: instStanford.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'elena@stanford.edu' } }))!.id } }))!.id },
-    { id: 'course-2', title: 'Machine Learning Fundamentals', description: 'Build a strong foundation in machine learning algorithms and practical applications.', institutionId: instKPGU.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'rajesh@kpgu.edu' } }))!.id } }))!.id },
-    { id: 'course-3', title: 'Deep Learning Masterclass', description: 'Advanced deep learning techniques including CNNs, RNNs, and GANs.', institutionId: instCharusat.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'kavita@charusat.edu' } }))!.id } }))!.id },
-    { id: 'course-4', title: 'AI Ethics & Governance', description: 'Navigate the ethical challenges and governance frameworks for AI systems.', institutionId: instKPGU.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'neel@kpgu.edu' } }))!.id } }))!.id },
-    { id: 'course-5', title: 'Digital Marketing Strategy', description: 'Master modern digital marketing channels and data-driven strategies.', institutionId: instMSU.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'vikram@msu.edu' } }))!.id } }))!.id },
-    { id: 'course-6', title: 'Financial Technology & Innovation', description: "Explore the intersection of finance and technology in India's digital economy.", institutionId: instParul.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'amit@parul.edu' } }))!.id } }))!.id },
-    { id: 'course-7', title: 'E-Commerce Operations & Management', description: 'Build and manage scalable e-commerce businesses for the Indian market.', institutionId: instCharusat.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'meera@charusat.edu' } }))!.id } }))!.id },
-    { id: 'course-8', title: 'Business Analytics & Decision Making', description: 'Transform data into actionable business insights.', institutionId: instParul.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'sneha@parul.edu' } }))!.id } }))!.id },
-    { id: 'course-9', title: 'UI/UX Design Principles', description: 'Master the fundamentals of user interface and user experience design.', institutionId: instNavrachana.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'ananya@navrachana.edu' } }))!.id } }))!.id },
-    { id: 'course-10', title: 'Design Thinking for Innovation', description: 'Apply design thinking methodology to solve complex business problems.', institutionId: instMSU.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'arjun@msu.edu' } }))!.id } }))!.id },
-    { id: 'course-11', title: 'Visual Communication & Storytelling', description: 'Create compelling visual narratives for digital and print media.', institutionId: instNavrachana.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'ananya@navrachana.edu' } }))!.id } }))!.id },
-    { id: 'course-12', title: 'Product Design: From Concept to Launch', description: 'End-to-end product design process for digital products.', institutionId: instMSU.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'arjun@msu.edu' } }))!.id } }))!.id },
+  interface ProgramSeed { id: string; title: string; description: string; institutionId: string; facultyId: string; thumbnail: string }
+  const programs: ProgramSeed[] = [
+    { id: 'course-1', title: 'Generative AI for Leaders: Strategic Implementation', description: 'Master the strategic implementation of generative AI technologies in enterprise settings.', institutionId: instStanford.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'elena@stanford.edu' } }))!.id } }))!.id, thumbnail: thumbnailUrl('course-1') },
+    { id: 'course-2', title: 'Machine Learning Fundamentals', description: 'Build a strong foundation in machine learning algorithms and practical applications.', institutionId: instKPGU.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'rajesh@kpgu.edu' } }))!.id } }))!.id, thumbnail: thumbnailUrl('course-2') },
+    { id: 'course-3', title: 'Deep Learning Masterclass', description: 'Advanced deep learning techniques including CNNs, RNNs, and GANs.', institutionId: instCharusat.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'kavita@charusat.edu' } }))!.id } }))!.id, thumbnail: thumbnailUrl('course-3') },
+    { id: 'course-4', title: 'AI Ethics & Governance', description: 'Navigate the ethical challenges and governance frameworks for AI systems.', institutionId: instKPGU.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'neel@kpgu.edu' } }))!.id } }))!.id, thumbnail: thumbnailUrl('course-4') },
+    { id: 'course-5', title: 'Digital Marketing Strategy', description: 'Master modern digital marketing channels and data-driven strategies.', institutionId: instMSU.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'vikram@msu.edu' } }))!.id } }))!.id, thumbnail: thumbnailUrl('course-5') },
+    { id: 'course-6', title: 'Financial Technology & Innovation', description: "Explore the intersection of finance and technology in India's digital economy.", institutionId: instParul.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'amit@parul.edu' } }))!.id } }))!.id, thumbnail: thumbnailUrl('course-6') },
+    { id: 'course-7', title: 'E-Commerce Operations & Management', description: 'Build and manage scalable e-commerce businesses for the Indian market.', institutionId: instCharusat.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'meera@charusat.edu' } }))!.id } }))!.id, thumbnail: thumbnailUrl('course-7') },
+    { id: 'course-8', title: 'Business Analytics & Decision Making', description: 'Transform data into actionable business insights.', institutionId: instParul.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'sneha@parul.edu' } }))!.id } }))!.id, thumbnail: thumbnailUrl('course-8') },
+    { id: 'course-9', title: 'UI/UX Design Principles', description: 'Master the fundamentals of user interface and user experience design.', institutionId: instNavrachana.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'ananya@navrachana.edu' } }))!.id } }))!.id, thumbnail: thumbnailUrl('course-9') },
+    { id: 'course-10', title: 'Design Thinking for Innovation', description: 'Apply design thinking methodology to solve complex business problems.', institutionId: instMSU.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'arjun@msu.edu' } }))!.id } }))!.id, thumbnail: thumbnailUrl('course-10') },
+    { id: 'course-11', title: 'Visual Communication & Storytelling', description: 'Create compelling visual narratives for digital and print media.', institutionId: instNavrachana.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'ananya@navrachana.edu' } }))!.id } }))!.id, thumbnail: thumbnailUrl('course-11') },
+    { id: 'course-12', title: 'Product Design: From Concept to Launch', description: 'End-to-end product design process for digital products.', institutionId: instMSU.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'arjun@msu.edu' } }))!.id } }))!.id, thumbnail: thumbnailUrl('course-12') },
   ];
 
   for (const p of programs) {
     await prisma.program.upsert({
       where: { id: p.id },
-      update: { title: p.title, description: p.description, institutionId: p.institutionId, facultyId: p.facultyId },
-      create: { id: p.id, title: p.title, description: p.description, institutionId: p.institutionId, facultyId: p.facultyId },
+      update: { title: p.title, description: p.description, thumbnail: p.thumbnail, institutionId: p.institutionId, facultyId: p.facultyId },
+      create: { id: p.id, title: p.title, description: p.description, thumbnail: p.thumbnail, institutionId: p.institutionId, facultyId: p.facultyId },
     });
     console.log(`  ✓ Program: ${p.id} - ${p.title}`);
   }
