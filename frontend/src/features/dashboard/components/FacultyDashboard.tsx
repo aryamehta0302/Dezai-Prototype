@@ -299,17 +299,13 @@ export function FacultyDashboard() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList variant="line" className="mb-6 gap-6 bg-transparent border-0 p-0 h-auto">
+        <TabsList className="mb-6">
           {[
             { value: "overview", icon: LayoutDashboard, label: "Overview" },
             { value: "analytics", icon: BarChart3, label: "Analytics" },
             { value: "profile", icon: Settings, label: "Profile" },
           ].map(({ value, icon: Icon, label }) => (
-            <TabsTrigger
-              key={value}
-              value={value}
-              className="gap-2 bg-transparent border-0 shadow-none p-0 h-auto data-active:bg-transparent data-active:text-foreground data-active:shadow-none after:hidden"
-            >
+            <TabsTrigger key={value} value={value} className="gap-2">
               <Icon className="h-4 w-4" /> {label}
             </TabsTrigger>
           ))}
