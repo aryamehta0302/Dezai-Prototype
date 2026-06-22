@@ -373,4 +373,64 @@ Implemented the complete Assessment Attempt lifecycle, proctoring integration, d
 | 10 | GET | `/api/assessments/recommendations/ready-assessments` | JWT + STUDENT | Get ready assessments list |
 
 
+---
+
+## 11. Sprint 5: Assessment Module Completion (Manan Panchal)
+
+Implemented the assessment module completion covering rich result retrieval, attempt tracking with limits, centralised pass/fail evaluation, faculty analytics, and credential eligibility signalling.
+
+### Module Ownership
+* **Scope:** `modules/assessments/*` — Results, History, Attempt Status, Analytics, Credential Eligibility.
+* **Schema:** No changes — all Prisma models were pre-defined in the locked schema.
+
+### Implemented Components
+
+1. **PassFailEvaluationService** ([pass-fail-evaluation.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/pass-fail-evaluation.service.ts)):
+   * Pure computation service with zero database dependencies.
+   * `evaluate()` — Full scoring: score, percentage, passed, status, missedQuestions.
+   * `getStatus()` — Derives `NOT_STARTED | IN_PROGRESS | PASSED | FAILED`.
+   * `calculatePercentage()` — Rounded to 2 decimal places.
+   * `getMissedQuestions()` — Extracts incorrect answers sorted by category.
+
+2. **Response DTOs** ([result.dto.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/dto/result.dto.ts)):
+   * `GetAttemptResultResponseDto`, `AttemptHistoryResponseDto`, `MyHistoryResponseDto`, `AttemptStatusResponseDto`, `ResultAnalyticsResponseDto`, `MissedQuestionsAnalyticsResponseDto`.
+
+3. **Enhanced AttemptService** ([attempt.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/attempt.service.ts)):
+   * `startAttempt()` — Enforces `MAX_ATTEMPTS_DEFAULT = 3` and active attempt detection.
+   * `submitAttempt()` — Delegates scoring to PassFailEvaluationService, fires audit log, checks credential eligibility.
+   * `getAttemptResult()` — Rich result with percentage, timeTaken, faculty access.
+   * `getAttemptHistory()` — Dual-role: students see own, faculty see all.
+   * `getMyHistory()` — Cross-assessment history for student.
+   * `getAttemptStatus()` — Remaining attempts, best score, active attempt.
+   * `checkCredentialEligibility()` — Traverses Module → Track → Program, creates notification.
+
+4. **Enhanced AssessmentService** ([assessment.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/assessment.service.ts)):
+   * `validateAssessmentFacultyOwnership()` — Traverses Assessment → Module → Track → Program → Faculty.
+   * `getResultAnalytics()` — Pass rate, score distribution, unique students.
+   * `getMissedQuestionsAnalytics()` — Per-question wrong rates sorted DESC.
+
+5. **ResultsController** ([results.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/results.controller.ts)):
+   * 4 route handlers for attempt-status, attempt history, result analytics, missed questions.
+   * Multi-segment paths avoid collision with existing `:id` routes.
+
+6. **Updated AttemptController** ([attempt.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/attempt.controller.ts)):
+   * Added `my-history` route before parameterised routes.
+   * Enhanced `getAttemptResult` with dual-role support.
+
+7. **Module Wiring** ([assessments.module.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/assessments.module.ts)):
+   * Registered `ResultsController` and `PassFailEvaluationService`.
+
+8. **API Documentation** ([assessment-results.md](file:///d:/git/dezai/Dezai-Prototype/docs/API/assessment-results.md)):
+   * Full contract for all 6 new endpoints.
+
+### Endpoint Summary (6 New)
+
+| # | Method | Route | Auth | Description |
+|---|---|---|---|---|
+| 1 | GET | `/api/assessments/attempts/:attemptId/result` | JWT + STUDENT/FACULTY | Full attempt result with question breakdown |
+| 2 | GET | `/api/assessments/:assessmentId/attempts/history` | JWT + STUDENT/FACULTY | Assessment-scoped attempt history |
+| 3 | GET | `/api/assessments/attempts/my-history` | JWT + STUDENT | Cross-assessment student history |
+| 4 | GET | `/api/assessments/:assessmentId/attempt-status` | JWT + STUDENT | Remaining attempts & status |
+| 5 | GET | `/api/assessments/:assessmentId/result-analytics` | JWT + FACULTY | Pass rate, score distribution |
+| 6 | GET | `/api/assessments/:assessmentId/missed-questions-analytics` | JWT + FACULTY | Per-question wrong rates |
 
