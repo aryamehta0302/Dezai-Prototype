@@ -10,6 +10,7 @@ import type {
   WeakTopic,
   DifficultyAnalysis,
   PredictionRule,
+  DailyActivityEntry,
 } from "../types/learning-intelligence.types";
 
 export type { ApiProgram, ApiTrack, ApiModule, ApiLesson, ApiResource };
@@ -104,6 +105,14 @@ export const learningApi = {
     apiClient.get<{ success: boolean; note: any }>(`/learning/lessons/${lessonId}/notes`),
 
   // ─── LEARNING INTELLIGENCE ──────────────────────────────────
+
+  /**
+   * Get daily activity counts (for heatmap)
+   */
+  getDailyActivity: (year?: number) =>
+    apiClient.get<{ success: boolean; data: DailyActivityEntry[] }>("/learning/daily-activity", {
+      params: year ? { year } : undefined,
+    }),
 
   /**
    * Get activity timeline

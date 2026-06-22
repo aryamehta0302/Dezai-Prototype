@@ -75,3 +75,8 @@ export interface PredictionRule {
   description: string;
   confidence: number;
 }
+
+export interface DailyActivityEntry {
+  date: string;
+  count: number;
+}

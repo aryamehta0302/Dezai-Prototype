@@ -162,6 +162,19 @@ export class LearningController {
     return { success: true, ...stats };
   }
 
+  // ─── DAILY ACTIVITY (heatmap) ───────────────────────────────
+
+  @Get('daily-activity')
+  @UseGuards(JwtAuthGuard)
+  async getDailyActivity(
+    @Req() req,
+    @Query('year') year?: string,
+  ) {
+    const targetYear = year ? parseInt(year, 10) : new Date().getFullYear();
+    const data = await this.activityService.getDailyActivity(req.user.id, targetYear);
+    return { success: true, data };
+  }
+
   // ─── ACTIVITY TIMELINE ──────────────────────────────────────
 
   @Get('activities')

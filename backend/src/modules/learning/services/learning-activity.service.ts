@@ -27,6 +27,66 @@ export interface ActivityEvent {
 export class LearningActivityService {
   constructor(private prisma: PrismaService) {}
 
+  async getDailyActivity(userId: string, year: number): Promise<{ date: string; count: number }[]> {
+    const start = new Date(year, 0, 1);
+    const end = new Date(year, 11, 31, 23, 59, 59, 999);
+
+    const [progresses, attempts, enrollments, bookmarks, xpTransactions, achievements] =
+      await Promise.all([
+        this.prisma.progress.findMany({
+          where: { userId, completedAt: { gte: start, lte: end } },
+          select: { completedAt: true },
+        }),
+        this.prisma.assessmentAttempt.findMany({
+          where: { userId, completedAt: { gte: start, lte: end } },
+          select: { completedAt: true },
+        }),
+        this.prisma.enrollment.findMany({
+          where: { userId, createdAt: { gte: start, lte: end } },
+          select: { createdAt: true, completedAt: true },
+        }),
+        this.prisma.bookmark.findMany({
+          where: { userId, createdAt: { gte: start, lte: end } },
+          select: { createdAt: true },
+        }),
+        this.prisma.xpTransaction.findMany({
+          where: { userId, createdAt: { gte: start, lte: end } },
+          select: { createdAt: true },
+        }),
+        this.prisma.userAchievement.findMany({
+          where: { userId, unlockedAt: { gte: start, lte: end } },
+          select: { unlockedAt: true },
+        }),
+      ]);
+
+    const dailyMap = new Map<string, number>();
+
+    const addDate = (d: Date) => {
+      const key = d.toISOString().slice(0, 10);
+      dailyMap.set(key, (dailyMap.get(key) || 0) + 1);
+    };
+
+    for (const p of progresses) addDate(p.completedAt);
+    for (const a of attempts) if (a.completedAt) addDate(a.completedAt);
+    for (const e of enrollments) {
+      addDate(e.createdAt);
+      if (e.completedAt) addDate(e.completedAt);
+    }
+    for (const b of bookmarks) addDate(b.createdAt);
+    for (const x of xpTransactions) addDate(x.createdAt);
+    for (const a of achievements) addDate(a.unlockedAt);
+
+    const result: { date: string; count: number }[] = [];
+    const cursor = new Date(start);
+    while (cursor <= end) {
+      const dateStr = cursor.toISOString().slice(0, 10);
+      result.push({ date: dateStr, count: dailyMap.get(dateStr) || 0 });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    return result;
+  }
+
   async getActivityTimeline(
     userId: string,
     options?: { limit?: number; offset?: number; types?: ActivityType[] },
