@@ -45,7 +45,7 @@ export class UserAchievementService {
 
   async getRecentUnlocks(userId: string, limit = 5): Promise<AchievementResponse[]> {
     const recent = await this.prisma.userAchievement.findMany({
-      where: { userId, unlockedAt: { not: null } },
+      where: { userId, NOT: { unlockedAt: null } },
       orderBy: { unlockedAt: 'desc' },
       take: limit,
       include: { achievement: true },

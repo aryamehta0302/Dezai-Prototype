@@ -26,7 +26,7 @@ import { PageContainer } from "@/shared/components/page-container";
 import { apiClient } from "@/core/api/client";
 import { useAuthStore } from "@/lib/stores/auth.store";
 import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+
 
 // --- Interfaces ---
 interface DashboardStats {
@@ -278,41 +278,24 @@ export function FacultyDashboard() {
             <span className="text-sm font-semibold text-on-surface truncate">{profile?.institution.name || "University"}</span>
           </div>
 
-          <button
-            onClick={() => setActiveTab("overview")}
-            className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-              activeTab === "overview"
-                ? "bg-primary text-white"
-                : "text-muted hover:bg-surface hover:text-on-surface"
-            }`}
-          >
-            <LayoutDashboard className="h-4 w-4" />
-            Overview
-          </button>
-
-          <button
-            onClick={() => setActiveTab("analytics")}
-            className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-              activeTab === "analytics"
-                ? "bg-primary text-white"
-                : "text-muted hover:bg-surface hover:text-on-surface"
-            }`}
-          >
-            <BarChart3 className="h-4 w-4" />
-            Analytics
-          </button>
-
-          <button
-            onClick={() => setActiveTab("profile")}
-            className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-              activeTab === "profile"
-                ? "bg-primary text-white"
-                : "text-muted hover:bg-surface hover:text-on-surface"
-            }`}
-          >
-            <Settings className="h-4 w-4" />
-            Profile
-          </button>
+          {[
+            { value: "overview", icon: LayoutDashboard, label: "Overview" },
+            { value: "analytics", icon: BarChart3, label: "Analytics" },
+            { value: "profile", icon: Settings, label: "Profile" },
+          ].map(({ value, icon: Icon, label }) => (
+            <button
+              key={value}
+              onClick={() => setActiveTab(value)}
+              className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                activeTab === value
+                  ? "bg-primary text-white"
+                  : "text-muted hover:bg-surface hover:text-on-surface"
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </button>
+          ))}
         </div>
 
         <div className="p-4 border-t border-border-light flex items-center gap-2.5">
@@ -338,114 +321,114 @@ export function FacultyDashboard() {
       </aside>
 
       {/* Main */}
-      <div className="flex-1 min-w-0 overflow-y-auto">
+      <main className="flex-1 min-w-0 overflow-y-auto">
         <div className="mx-auto w-full max-w-(--container-max) px-4 sm:px-6 lg:px-12 py-8">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-8">
 
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { label: "Programs", value: stats.totalPrograms, icon: BookOpen, color: "text-primary bg-primary/10" },
-              { label: "Students", value: stats.totalStudents, icon: Users, color: "text-success bg-success/10" },
-              { label: "Pending", value: stats.pendingAttempts, icon: Clock, color: "text-warning bg-warning/10" },
-              { label: "Completion", value: `${stats.completionRate}%`, icon: Award, color: "text-info bg-info/10" },
-            ].map(({ label, value, icon: Icon, color }) => (
-              <div key={label} className="card-elevation p-5 flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted font-medium">{label}</p>
-                  <p className="text-2xl font-bold text-on-surface mt-1">{value}</p>
-                </div>
-                <div className={`h-10 w-10 rounded-xl ${color} flex items-center justify-center`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="card-elevation p-5 space-y-4">
-              <h3 className="text-sm font-semibold text-on-surface">Quick Actions</h3>
-              <div className="space-y-2">
-                <button onClick={() => setShowProgramModal(true)} className="w-full flex items-center gap-3 p-3 rounded-xl border border-border-light hover:border-primary/30 hover:bg-surface transition-colors text-left">
-                  <PlusCircle className="h-5 w-5 text-primary shrink-0" />
+        {activeTab === "overview" && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { label: "Programs", value: stats.totalPrograms, icon: BookOpen, color: "text-primary bg-primary/10" },
+                { label: "Students", value: stats.totalStudents, icon: Users, color: "text-success bg-success/10" },
+                { label: "Pending", value: stats.pendingAttempts, icon: Clock, color: "text-warning bg-warning/10" },
+                { label: "Completion", value: `${stats.completionRate}%`, icon: Award, color: "text-info bg-info/10" },
+              ].map(({ label, value, icon: Icon, color }) => (
+                <div key={label} className="card-elevation p-5 flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-on-surface">Create Program</p>
-                    <p className="text-xs text-muted">Scaffold a new micro-credential</p>
+                    <p className="text-xs text-muted font-medium">{label}</p>
+                    <p className="text-2xl font-bold text-on-surface mt-1">{value}</p>
                   </div>
-                </button>
-                <button onClick={async () => { await fetchModalPrerequisites(); setShowAssessmentModal(true); }} className="w-full flex items-center gap-3 p-3 rounded-xl border border-border-light hover:border-primary/30 hover:bg-surface transition-colors text-left">
-                  <PlusCircle className="h-5 w-5 text-success shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-on-surface">Publish Assessment</p>
-                    <p className="text-xs text-muted">Create and link a quiz</p>
+                  <div className={`h-10 w-10 rounded-xl ${color} flex items-center justify-center`}>
+                    <Icon className="h-5 w-5" />
                   </div>
-                </button>
-                <button onClick={() => setActiveTab("analytics")} className="w-full flex items-center justify-between p-3 rounded-xl border border-border-light hover:border-primary/30 hover:bg-surface transition-colors">
-                  <div className="flex items-center gap-3">
-                    <BarChart3 className="h-5 w-5 text-info shrink-0" />
-                    <div className="text-left">
-                      <p className="text-sm font-medium text-on-surface">View Analytics</p>
-                      <p className="text-xs text-muted">Cohort performance metrics</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted shrink-0" />
-                </button>
-              </div>
+                </div>
+              ))}
             </div>
 
-            <div className="lg:col-span-2 card-elevation p-5 space-y-4">
-              <h3 className="text-sm font-semibold text-on-surface">Recent Student Activity</h3>
-              <div className="space-y-3 max-h-[320px] overflow-y-auto">
-                {activity.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-10 text-muted">
-                    <Clock className="h-8 w-8 mb-2 opacity-30" />
-                    <p className="text-sm font-medium">No recent activity</p>
-                    <p className="text-xs">Enrollments and submissions will appear here.</p>
-                  </div>
-                ) : (
-                  activity.map((event) => (
-                    <div key={event.id} className="flex items-start gap-3 p-3 rounded-xl bg-surface hover:bg-surface-high transition-colors">
-                      <div className={`p-2 rounded-lg shrink-0 ${
-                        event.type === "COMPLETION" ? "bg-success/10 text-success" :
-                        event.type === "SUBMISSION" ? "bg-warning/10 text-warning" :
-                        "bg-primary/10 text-primary"
-                      }`}>
-                        {event.type === "COMPLETION" ? <Award className="h-4 w-4" /> :
-                         event.type === "SUBMISSION" ? <FileText className="h-4 w-4" /> :
-                         <Users className="h-4 w-4" />}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="card-elevation p-5 space-y-4">
+                <h3 className="text-sm font-semibold text-on-surface">Quick Actions</h3>
+                <div className="space-y-2">
+                  <button onClick={() => setShowProgramModal(true)} className="w-full flex items-center gap-3 p-3 rounded-xl border border-border-light hover:border-primary/30 hover:bg-surface transition-colors text-left">
+                    <PlusCircle className="h-5 w-5 text-primary shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-on-surface">Create Program</p>
+                      <p className="text-xs text-muted">Scaffold a new micro-credential</p>
+                    </div>
+                  </button>
+                  <button onClick={async () => { await fetchModalPrerequisites(); setShowAssessmentModal(true); }} className="w-full flex items-center gap-3 p-3 rounded-xl border border-border-light hover:border-primary/30 hover:bg-surface transition-colors text-left">
+                    <PlusCircle className="h-5 w-5 text-success shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-on-surface">Publish Assessment</p>
+                      <p className="text-xs text-muted">Create and link a quiz</p>
+                    </div>
+                  </button>
+                  <button onClick={() => setActiveTab("analytics")} className="w-full flex items-center justify-between p-3 rounded-xl border border-border-light hover:border-primary/30 hover:bg-surface transition-colors">
+                    <div className="flex items-center gap-3">
+                      <BarChart3 className="h-5 w-5 text-info shrink-0" />
+                      <div className="text-left">
+                        <p className="text-sm font-medium text-on-surface">View Analytics</p>
+                        <p className="text-xs text-muted">Cohort performance metrics</p>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-center gap-2">
-                          <p className="text-sm font-medium text-on-surface truncate">{event.studentName}</p>
-                          <span className="text-xs text-muted shrink-0">
-                            {new Date(event.timestamp).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                          </span>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted shrink-0" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="lg:col-span-2 card-elevation p-5 space-y-4">
+                <h3 className="text-sm font-semibold text-on-surface">Recent Student Activity</h3>
+                <div className="space-y-3 max-h-[320px] overflow-y-auto">
+                  {activity.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-10 text-muted">
+                      <Clock className="h-8 w-8 mb-2 opacity-30" />
+                      <p className="text-sm font-medium">No recent activity</p>
+                      <p className="text-xs">Enrollments and submissions will appear here.</p>
+                    </div>
+                  ) : (
+                    activity.map((event) => (
+                      <div key={event.id} className="flex items-start gap-3 p-3 rounded-xl bg-surface hover:bg-surface-high transition-colors">
+                        <div className={`p-2 rounded-lg shrink-0 ${
+                          event.type === "COMPLETION" ? "bg-success/10 text-success" :
+                          event.type === "SUBMISSION" ? "bg-warning/10 text-warning" :
+                          "bg-primary/10 text-primary"
+                        }`}>
+                          {event.type === "COMPLETION" ? <Award className="h-4 w-4" /> :
+                           event.type === "SUBMISSION" ? <FileText className="h-4 w-4" /> :
+                           <Users className="h-4 w-4" />}
                         </div>
-                        <p className="text-xs text-muted truncate">{event.detail}</p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-center gap-2">
+                            <p className="text-sm font-medium text-on-surface truncate">{event.studentName}</p>
+                            <span className="text-xs text-muted shrink-0">
+                              {new Date(event.timestamp).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted truncate">{event.detail}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))
-                )}
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </TabsContent>
+        )}
 
-        {/* Analytics Tab */}
-        <TabsContent value="analytics" className="space-y-6">
-          <div className="flex items-center gap-4">
-            <div className="card-elevation px-4 py-3 text-center">
-              <p className="text-xs text-muted font-medium">Total Enrolled</p>
-              <p className="text-lg font-bold text-on-surface">{stats.totalStudents}</p>
+        {activeTab === "analytics" && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="card-elevation px-4 py-3 text-center">
+                <p className="text-xs text-muted font-medium">Total Enrolled</p>
+                <p className="text-lg font-bold text-on-surface">{stats.totalStudents}</p>
+              </div>
+              <div className="card-elevation px-4 py-3 text-center">
+                <p className="text-xs text-muted font-medium">Active Users</p>
+                <p className="text-lg font-bold text-on-surface">{analytics?.activeStudents || 0}</p>
+              </div>
             </div>
-            <div className="card-elevation px-4 py-3 text-center">
-              <p className="text-xs text-muted font-medium">Active Users</p>
-              <p className="text-lg font-bold text-on-surface">{analytics?.activeStudents || 0}</p>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="card-elevation p-5 space-y-4">
               <h4 className="text-sm font-semibold text-on-surface flex items-center gap-2">
                 <Trophy className="h-4 w-4 text-warning" /> Top Performers
@@ -534,10 +517,10 @@ export function FacultyDashboard() {
               </div>
             </div>
           </div>
-        </TabsContent>
+          </div>
+        )}
 
-        {/* Profile Tab */}
-        <TabsContent value="profile" className="space-y-6">
+        {activeTab === "profile" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 card-elevation p-6 space-y-6">
               <h3 className="text-base font-semibold text-on-surface">Profile Details</h3>
@@ -612,8 +595,7 @@ export function FacultyDashboard() {
               </div>
             </div>
           </div>
-        </TabsContent>
-      </Tabs>
+        )}
 
       {/* Notifications Drawer */}
       {showNotifications && (
@@ -765,7 +747,7 @@ export function FacultyDashboard() {
         </div>
       )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }
