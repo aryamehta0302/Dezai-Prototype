@@ -469,3 +469,70 @@ Implemented the backend modules, database schema migrations, and documentation f
 | CREATED | [docs/API/notifications.md](file:///d:/Dezai-Prototype-main/docs/API/notifications.md) |
 | CREATED | [docs/API/leaderboards.md](file:///d:/Dezai-Prototype-main/docs/API/leaderboards.md) |
 
+---
+
+## 12. Sprint 5: Leaderboard Frontend Components (Krish Parmar)
+
+**Sprint:** 5 | **Date:** 2026-06-22
+
+### Overview
+
+Sprint 5 extended the leaderboard backend (completed in Sprint 4) with two new student-facing frontend components that surface XP rankings and top performers directly on the student dashboard.
+
+All 5 backend leaderboard API endpoints were already production-complete from Sprint 4. No backend, schema, or route changes were required in Sprint 5.
+
+### Components Added
+
+1. **`StudentRankingCard`** (`frontend/src/features/leaderboards/components/student-ranking-card.tsx`)
+   - Displays the authenticated student's global rank (`#N`), total XP, and streak count.
+   - Rank badge adapts color: gold (rank 1), silver (rank 2), bronze (rank 3), Top 10, or default.
+   - Reads data from `useEnrollmentStore()` → `globalRank`, `xpEarned`, `streakCount` — all already populated by `fetchStats()` on dashboard mount via `GET /api/learning/stats`.
+   - Conditionally rendered: only shown when `globalRank > 0` and data is loaded.
+
+2. **`TopPerformerList`** (`frontend/src/features/leaderboards/components/top-performer-list.tsx`)
+   - Shows the top 10 globally ranked students with a Monthly / All-Time tab switcher.
+   - Calls the existing `GET /api/leaderboards/students?range=<monthly|all>&limit=10` endpoint.
+   - Each row: rank badge (gold/silver/bronze/default), student name, institution, XP.
+   - Highlights the current user's own row with a blue `You` badge.
+   - Includes loading skeleton, empty state, and error/retry state.
+
+### Integration
+
+Both components were integrated into the right sidebar column (`xl:col-span-1`) of the existing `StudentDashboardPage` (`frontend/src/features/learning/pages/StudentDashboardPage.tsx`):
+
+```
+Right sidebar (xl:col-span-1):
+  ↳ StudentRankingCard    ← NEW — above activity feed
+  ↳ Activity Feed         ← unchanged
+  ↳ TopPerformerList      ← NEW — below activity feed
+```
+
+### Data Sources (No New Endpoints)
+
+| Component | Data Source | Endpoint |
+|---|---|---|
+| `StudentRankingCard` | `useEnrollmentStore()` (already loaded) | `GET /api/learning/stats` (existing) |
+| `TopPerformerList` | Direct `apiClient.get()` call | `GET /api/leaderboards/students` (existing, Sprint 4) |
+
+### Files Added / Modified
+
+| Action | File |
+|---|---|
+| CREATED | [frontend/src/features/leaderboards/components/student-ranking-card.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/leaderboards/components/student-ranking-card.tsx) |
+| CREATED | [frontend/src/features/leaderboards/components/top-performer-list.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/leaderboards/components/top-performer-list.tsx) |
+| MODIFIED | [frontend/src/features/learning/pages/StudentDashboardPage.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/learning/pages/StudentDashboardPage.tsx) |
+| MODIFIED | [docs/IMPLEMENTED.md](file:///d:/Dezai-Prototype-main/docs/IMPLEMENTED.md) |
+| MODIFIED | [docs/CHANGELOG.md](file:///d:/Dezai-Prototype-main/docs/CHANGELOG.md) |
+
+### Sprint 5 Completion Status
+
+| Sprint 5 Task | Status |
+|---|---|
+| Global Leaderboards | ✅ Complete (Sprint 4 backend) |
+| Institution Leaderboards | ✅ Complete (Sprint 4 backend) |
+| Monthly Leaderboards | ✅ Complete (Sprint 4 backend — `?range=monthly`) |
+| XP Ranking Logic & APIs | ✅ Complete (Sprint 4 backend) |
+| Leaderboard Dashboard Widgets | ✅ Complete (Sprint 4 backend + Faculty UI) |
+| Student Ranking Cards | ✅ Complete (Sprint 5 — `StudentRankingCard`) |
+| Top Performer Components | ✅ Complete (Sprint 5 — `TopPerformerList`) |
+

@@ -281,6 +281,34 @@ frontend/src/app/(student)/chat/page.tsx (NEW)
 
 ---
 
+---
+
+## [Sprint 5] — 2026-06-22
+
+**Developer:** Krish Parmar (Analytics & Quality Lead)
+
+### Added
+
+- **`StudentRankingCard` Component** — Dedicated frontend card displaying the student's global XP rank, total XP earned, and streak count. Rank badge adapts for top-3 and top-10 positions. Reads from existing `useEnrollmentStore()` — no new API calls.
+  - File: [frontend/src/features/leaderboards/components/student-ranking-card.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/leaderboards/components/student-ranking-card.tsx)
+
+- **`TopPerformerList` Component** — Student-facing leaderboard list showing top 10 globally ranked students. Monthly / All-Time tab switcher. Rank badge, student name, institution, XP per row. Highlights the current user with a `You` badge. Includes loading skeleton, empty state, and error/retry.
+  - File: [frontend/src/features/leaderboards/components/top-performer-list.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/leaderboards/components/top-performer-list.tsx)
+  - Endpoint: `GET /api/leaderboards/students` (existing Sprint 4 endpoint — no backend changes)
+
+### Changed
+
+- **Student Dashboard** — Both components integrated into the right sidebar of `StudentDashboardPage`. Ranking card placed above the activity feed; performer list placed below it.
+  - File: [frontend/src/features/learning/pages/StudentDashboardPage.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/learning/pages/StudentDashboardPage.tsx)
+
+- **IMPLEMENTED.md** — Added Section 12 documenting Sprint 5 leaderboard frontend components.
+
+### Notes
+
+- No backend changes. All 5 leaderboard API endpoints were production-complete from Sprint 4.
+- No Prisma schema changes, no new routes, no new pages.
+
+---
 
 ## [Sprint 4] — 2026-06-18
 
@@ -314,4 +342,8 @@ frontend/src/app/(student)/chat/page.tsx (NEW)
   - File: [docs/IMPLEMENTED.md](file:///d:/Dezai-Prototype-main/docs/IMPLEMENTED.md)
 
 ---
+
+
+
+
 
