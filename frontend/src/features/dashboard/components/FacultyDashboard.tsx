@@ -265,51 +265,82 @@ export function FacultyDashboard() {
   }
 
   return (
-    <PageContainer className="py-8 space-y-8">
-      {/* Header Card */}
-      <div className="card-elevation p-6 flex items-center gap-4">
-        <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg shrink-0">
-          {profile?.user.name ? profile.user.name.charAt(0).toUpperCase() : "I"}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-lg font-semibold text-on-surface">{profile?.user.name || "Instructor"}</h1>
-          <div className="flex items-center gap-2 text-sm text-muted">
-            <span>{profile?.designation || "Faculty"}</span>
-            <span className="text-muted/40">&middot;</span>
-            <span className="flex items-center gap-1">
-              <Building2 className="h-3.5 w-3.5" />
-              {profile?.institution.name}
-            </span>
+    <div className="relative min-h-[calc(100vh-64px)] flex">
+      {/* Sidebar */}
+      <aside className="w-56 border-r border-border-light bg-white flex flex-col justify-between shrink-0">
+        <div className="p-4 space-y-1">
+          <div className="mb-4 flex items-center gap-2.5 px-2">
+            {profile?.institution.logoUrl ? (
+              <img src={profile.institution.logoUrl} alt="Logo" className="h-7 w-7 rounded-lg object-contain border border-border-light" />
+            ) : (
+              <Building2 className="h-6 w-6 text-primary" />
+            )}
+            <span className="text-sm font-semibold text-on-surface truncate">{profile?.institution.name || "University"}</span>
           </div>
+
+          <button
+            onClick={() => setActiveTab("overview")}
+            className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+              activeTab === "overview"
+                ? "bg-primary text-white"
+                : "text-muted hover:bg-surface hover:text-on-surface"
+            }`}
+          >
+            <LayoutDashboard className="h-4 w-4" />
+            Overview
+          </button>
+
+          <button
+            onClick={() => setActiveTab("analytics")}
+            className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+              activeTab === "analytics"
+                ? "bg-primary text-white"
+                : "text-muted hover:bg-surface hover:text-on-surface"
+            }`}
+          >
+            <BarChart3 className="h-4 w-4" />
+            Analytics
+          </button>
+
+          <button
+            onClick={() => setActiveTab("profile")}
+            className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+              activeTab === "profile"
+                ? "bg-primary text-white"
+                : "text-muted hover:bg-surface hover:text-on-surface"
+            }`}
+          >
+            <Settings className="h-4 w-4" />
+            Profile
+          </button>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="p-4 border-t border-border-light flex items-center gap-2.5">
+          <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+            {profile?.user.name ? profile.user.name.charAt(0).toUpperCase() : "I"}
+          </div>
+          <div className="truncate">
+            <p className="text-sm font-medium text-on-surface truncate">{profile?.user.name || "Instructor"}</p>
+            <p className="text-xs text-muted">{profile?.designation || "Faculty"}</p>
+          </div>
           <button
             onClick={() => setShowNotifications(true)}
-            className="relative p-2.5 rounded-xl hover:bg-surface transition-colors text-on-surface/70"
+            className="ml-auto relative p-1.5 rounded-lg hover:bg-surface transition-colors text-muted"
           >
-            <Bell className="h-5 w-5" />
+            <Bell className="h-4 w-4" />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 h-4 min-w-4 px-1 rounded-full bg-danger text-white text-3xs font-bold flex items-center justify-center border-2 border-white">
+              <span className="absolute -top-0.5 -right-0.5 h-3.5 min-w-3.5 px-0.5 rounded-full bg-danger text-white text-2xs font-bold flex items-center justify-center border border-white">
                 {unreadCount}
               </span>
             )}
           </button>
         </div>
-      </div>
+      </aside>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="mb-6">
-          {[
-            { value: "overview", icon: LayoutDashboard, label: "Overview" },
-            { value: "analytics", icon: BarChart3, label: "Analytics" },
-            { value: "profile", icon: Settings, label: "Profile" },
-          ].map(({ value, icon: Icon, label }) => (
-            <TabsTrigger key={value} value={value} className="gap-2">
-              <Icon className="h-4 w-4" /> {label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      {/* Main */}
+      <div className="flex-1 min-w-0 overflow-y-auto">
+        <div className="mx-auto w-full max-w-(--container-max) px-4 sm:px-6 lg:px-12 py-8">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-8">
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
@@ -733,6 +764,8 @@ export function FacultyDashboard() {
           </div>
         </div>
       )}
-    </PageContainer>
+        </div>
+      </div>
+    </div>
   );
 }
