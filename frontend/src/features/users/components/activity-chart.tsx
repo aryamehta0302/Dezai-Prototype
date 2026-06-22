@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { ActivityCalendar } from "react-activity-calendar";
+import "react-activity-calendar/tooltips.css";
 import { learningApi } from "@/features/learning/services/learning-api.service";
 import type { DailyActivityEntry } from "@/features/learning/types/learning-intelligence.types";
 
@@ -108,6 +109,11 @@ export function ActivityChart() {
           fontSize={11}
           showWeekdayLabels={["mon", "wed", "fri"]}
           showTotalCount={false}
+          tooltips={{
+            activity: {
+              text: (a) => `${a.count} activity on ${a.date}`,
+            },
+          }}
           theme={{
             light: ["hsl(0, 0%, 95%)", "#d0e4ff", "#77b5fe", "#3388ff", "#0055cc"],
           }}
