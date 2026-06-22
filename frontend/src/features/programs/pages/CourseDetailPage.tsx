@@ -49,10 +49,10 @@ export function CourseDetailPage({ slug }: CourseDetailPageProps) {
     );
   }
 
-  const allModules = course.tracks.flatMap(t => t.modules);
-  const allLessons = allModules.flatMap(m => m.lessons);
+  const allModules = (course.tracks ?? []).flatMap(t => t.modules ?? []);
+  const allLessons = allModules.flatMap(m => m.lessons ?? []);
   const totalLessons = allLessons.length;
-  const hasCurriculum = course.tracks.length > 0;
+  const hasCurriculum = (course.tracks?.length ?? 0) > 0;
 
   return (
     <div className="min-h-screen bg-background">

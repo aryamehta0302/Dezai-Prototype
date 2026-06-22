@@ -9,8 +9,8 @@ interface CourseHeroProps {
 }
 
 export function CourseHero({ course }: CourseHeroProps) {
-  const totalLessons = course.tracks.reduce((sum, t) =>
-    sum + t.modules.reduce((msum, m) => msum + m.lessons.length, 0), 0);
+  const totalLessons = (course.tracks ?? []).reduce((sum, t) =>
+    sum + (t.modules ?? []).reduce((msum, m) => msum + (m.lessons ?? []).length, 0), 0);
   const instructorName = course.faculty?.user.name ?? "Dezai Faculty";
 
   return (
