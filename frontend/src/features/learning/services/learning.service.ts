@@ -36,7 +36,7 @@ export const learningService = {
           courseId: program.id,
           courseTitle: program.title,
           courseSlug: slugify(program.title),
-          thumbnailUrl: getThumbnailUrl(program.id),
+          thumbnailUrl: program.thumbnail ?? getThumbnailUrl(program.id),
           universityName: program.institution?.name ?? "",
           instructorName: program.faculty?.user?.name ?? "",
           progress, // Locally calculated to match the count below

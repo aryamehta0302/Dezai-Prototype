@@ -23,6 +23,10 @@ export class CreateProgramDto {
 
   @IsString()
   @IsOptional()
+  thumbnail?: string;
+
+  @IsString()
+  @IsOptional()
   institutionId?: string;
 }
 
@@ -35,6 +39,10 @@ export class UpdateProgramDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @IsString()
+  @IsOptional()
+  thumbnail?: string;
 
   @IsOptional()
   isPublished?: boolean;

@@ -16,7 +16,7 @@ export function CourseHero({ course }: CourseHeroProps) {
   return (
     <div className="relative bg-linear-to-br from-[#0a1628] via-[#0d1f3c] to-[#071224] text-white overflow-hidden">
       <img
-        src={getThumbnailUrl(course.id)}
+        src={course.thumbnail ?? getThumbnailUrl(course.id)}
         alt=""
         className="absolute inset-0 w-full h-full object-cover opacity-15"
         onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}

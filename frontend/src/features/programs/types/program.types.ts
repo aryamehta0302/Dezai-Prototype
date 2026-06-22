@@ -2,6 +2,7 @@ export interface ApiProgram {
   id: string;
   title: string;
   description: string;
+  thumbnail?: string | null;
   institutionId: string;
   facultyId: string | null;
   createdAt: string;

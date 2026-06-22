@@ -167,6 +167,7 @@ export class ProgramsService {
       data: {
         title: data.title,
         description: data.description,
+        thumbnail: data.thumbnail,
         institutionId,
         facultyId,
       },
