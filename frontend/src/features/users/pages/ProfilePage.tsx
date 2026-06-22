@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { PageContainer } from "@/shared/components/page-container";
 import { ProfileHeaderCard } from "../components/profile-header-card";
 import { ProfileStatBento } from "../components/profile-stat-bento";
+import { ActivityChart } from "../components/activity-chart";
 import { ActivityTimeline } from "../components/activity-timeline";
 import { useProfile } from "../hooks/useProfile";
 import { useAchievements } from "@/features/achievements/hooks/useAchievements";
@@ -75,6 +76,8 @@ export function ProfilePage() {
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
+              <ActivityChart />
+
               <section className="card-elevation p-6 space-y-4">
                 <h3 className="text-lg font-semibold text-on-surface">About</h3>
                 <p className="text-sm text-muted leading-relaxed max-w-2xl">

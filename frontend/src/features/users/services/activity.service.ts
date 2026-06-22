@@ -38,7 +38,7 @@ export const activityService = {
                     type: "COMPLETION",
                     title: "Program Completed",
                     description: `Excellent work! You finished ${programTitle}`,
-                    timestamp: new Date().toISOString(),
+                    timestamp: enrollment.enrolledAt,
                 });
             }
         });
@@ -50,7 +50,7 @@ export const activityService = {
                 type: "ACHIEVEMENT",
                 title: "Achievement Unlocked",
                 description: `${a.title}: ${a.description}`,
-                timestamp: new Date().toISOString(),
+                timestamp: a.unlockedAt || new Date().toISOString(),
             });
         });
 

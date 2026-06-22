@@ -1,10 +1,5 @@
-import { PageContainer } from "@/shared/components/page-container";
-import { LoadingSkeleton } from "@/shared/components/loading-skeleton";
+import { CourseDetailSkeleton } from "@/features/programs/pages/CourseDetailPage";
 
 export default function Loading() {
-  return (
-    <PageContainer className="py-16">
-      <LoadingSkeleton />
-    </PageContainer>
-  );
+  return <CourseDetailSkeleton />;
 }
