@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import {
+  AchievementCategory,
   AuditAction,
   ExamStatus,
   NotificationType,
@@ -15,6 +16,7 @@ import {
 } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { XpService } from '../../users/services/xp.service';
+import { AwardService } from '../../achievements/services/award.service';
 import { AssessmentService } from './assessment.service';
 import { QuestionSelectionService } from './question-selection.service';
 import {
@@ -37,6 +39,7 @@ export class AttemptService {
     private prisma: PrismaService,
     private auditService: AuditService,
     private xpService: XpService,
+    private awardService: AwardService,
     private assessmentService: AssessmentService,
     private questionSelectionService: QuestionSelectionService,
     private passFailEvaluationService: PassFailEvaluationService,
@@ -385,6 +388,9 @@ export class AttemptService {
     if (passed) {
       await this.checkCredentialEligibility(userId, attempt.assessment.moduleId);
     }
+
+    // Check and award ASSESSMENT achievements
+    await this.awardService.checkAndAward(userId, AchievementCategory.ASSESSMENT);
 
     return {
       success: true,

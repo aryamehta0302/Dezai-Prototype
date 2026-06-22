@@ -137,11 +137,24 @@ export class ChatService {
   }
 
   /**
-   * Build a system prompt with context injection
+   * Build a system prompt with context injection and conversation history
    * Includes lesson/module/program information for RAG
    */
   private async buildSystemPrompt(session: any): Promise<string> {
     const contextParts: string[] = [];
+
+    // Include recent conversation history for context
+    const recentMessages = await this.prisma.chatMessage.findMany({
+      where: { sessionId: session.id },
+      orderBy: { createdAt: 'asc' },
+      take: 20,
+    });
+    if (recentMessages.length > 0) {
+      const history = recentMessages
+        .map((m) => `${m.sender === 'USER' ? 'Student' : 'Mentor'}: ${m.content}`)
+        .join('\n');
+      contextParts.push(`Conversation History:\n${history}`);
+    }
 
     // Add lesson context
     if (session.activeLessonId) {
@@ -192,7 +205,7 @@ Your role is to help students learn effectively through:
 
 ${
   contextParts.length > 0
-    ? `Current Learning Context:\n${contextParts.join('\n')}\n\nPlease tailor your responses to the student's current lesson and learning path.`
+    ? `Current Learning Context:\n${contextParts.join('\n')}\n\nPlease tailor your responses to the student's current lesson, learning path, and conversation history.`
     : 'Help the student with any learning questions they have.'
 }
 

@@ -54,7 +54,7 @@ export const learningService = {
    */
   getDashboardStats: (
     userId: string,
-    enrollments: Record<string, any>,
+    enrollments: Record<string, { id: string; courseId: string; enrolledAt: string; progress: number; lessonsCompleted: { lessonId: string; completed: boolean; completedAt?: string }[]; lastAccessedLessonId?: string; notes: Record<string, string> }>,
     xpEarned: number
   ): DashboardStats => {
     const enrolledArr = Object.values(enrollments);

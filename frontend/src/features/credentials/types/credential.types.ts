@@ -40,16 +40,14 @@ export interface Credential {
     verificationUrl: string;
     verificationStatus: VerifyStatus;
     issuedAt: string;
-    
-    // New Template Integration Fields
-    credentialType: CredentialType;
-    templateId: string;
+    metadata?: string;
+    credentialTemplateId?: string;
     
     // Relations (Populated from backend)
     user?: UserSnippet;
     program?: ProgramSnippet;
     institution?: InstitutionSnippet;
-    template?: CredentialTemplate;
+    credentialTemplate?: CredentialTemplate;
 }
 
 export interface CreateCredentialDto {

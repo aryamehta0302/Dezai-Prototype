@@ -12,7 +12,7 @@ export function LoadingSkeleton({ className, count = 1 }: LoadingSkeletonProps) 
         <div
           key={i}
           className={cn(
-            "animate-pulse rounded-lg bg-surface-low",
+            "skeleton-shimmer rounded-lg",
             className
           )}
         />
@@ -31,6 +31,26 @@ export function CardSkeleton() {
   );
 }
 
+export function CourseCardSkeleton() {
+  return (
+    <div className="card-elevation flex flex-col overflow-hidden">
+      <LoadingSkeleton className="h-40 w-full rounded-none" />
+      <div className="p-4 space-y-3">
+        <LoadingSkeleton className="h-4 w-3/4" />
+        <LoadingSkeleton className="h-3 w-full" />
+        <LoadingSkeleton className="h-3 w-1/2" />
+        <div className="pt-2 space-y-2">
+          <LoadingSkeleton className="h-3 w-2/3" />
+          <div className="flex items-center justify-between pt-2">
+            <LoadingSkeleton className="h-5 w-12" />
+            <LoadingSkeleton className="h-5 w-20" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function TableSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <div className="space-y-3">
@@ -44,13 +64,13 @@ export function TableSkeleton({ rows = 5 }: { rows?: number }) {
 
 export function PageSkeleton() {
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       <LoadingSkeleton className="h-8 w-1/4" />
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <CardSkeleton />
-        <CardSkeleton />
-        <CardSkeleton />
-        <CardSkeleton />
+        <CourseCardSkeleton />
+        <CourseCardSkeleton />
+        <CourseCardSkeleton />
+        <CourseCardSkeleton />
       </div>
       <TableSkeleton />
     </div>

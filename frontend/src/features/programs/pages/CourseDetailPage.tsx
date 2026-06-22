@@ -21,6 +21,7 @@ export function CourseDetailPage({ slug }: CourseDetailPageProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     courseService.getBySlug(slug).then((c) => {
       setCourse(c);
@@ -112,7 +113,7 @@ export function CourseDetailPage({ slug }: CourseDetailPageProps) {
                   : "Curriculum coming soon"}
               </p>
               {hasCurriculum ? (
-                <SyllabusAccordion tracks={course.tracks} />
+                <SyllabusAccordion tracks={course.tracks} programSlug={slug} />
               ) : (
                 <div className="flex flex-col items-center gap-3 py-12 text-muted">
                   <FileText className="h-8 w-8" />

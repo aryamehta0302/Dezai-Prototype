@@ -26,6 +26,15 @@ export interface ApiModule {
   title: string;
   order: number;
   lessons: ApiLesson[];
+  assessments?: ApiAssessment[];
+}
+
+export interface ApiAssessment {
+  id: string;
+  title: string;
+  passingScore: number;
+  timeLimit: number;
+  sampleSize: number;
 }
 
 export interface ApiResource {

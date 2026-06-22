@@ -1,4 +1,4 @@
-import { Attempt, AttemptResult, AttemptHistoryItem } from "../types/assessment.types";
+import { Attempt, AttemptResult, AttemptHistoryItem, AttemptStatusResponse } from "../types/assessment.types";
 
 const getApiUrl = () => {
   return process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
@@ -112,11 +112,26 @@ export const assessmentAttemptService = {
     return res.json();
   },
 
+  async getAttemptStatus(assessmentId: string, token: string): Promise<AttemptStatusResponse> {
+    const res = await fetch(`${getApiUrl()}/assessments/${assessmentId}/attempt-status`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || "Failed to retrieve attempt status");
+    }
+
+    return res.json();
+  },
+
   async logViolation(
     sessionId: string,
     type: "TAB_SWITCH" | "FOCUS_LOSS" | "COPY_PASTE",
     token: string
-  ): Promise<any> {
+  ): Promise<{ session: { warningsCount: number; scoreDeduction: number; status: string; lockoutUntil: string | null } }> {
     const res = await fetch(`${getApiUrl()}/assessments/sessions/${sessionId}/violations`, {
       method: "POST",
       headers: {

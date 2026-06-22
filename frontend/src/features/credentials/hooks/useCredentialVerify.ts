@@ -11,6 +11,7 @@ export function useCredentialVerify(code: string) {
 
   useEffect(() => {
     if (!code) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false);
       return;
     }

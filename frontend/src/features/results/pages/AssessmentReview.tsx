@@ -28,15 +28,19 @@ export function AssessmentReview({ slug, assessmentId }: AssessmentReviewProps) 
 
   useEffect(() => {
     const fetchResult = async () => {
-      if (!token || !attemptId) return;
+      if (!token || !attemptId) {
+        setIsLoading(false);
+        return;
+      }
 
       setIsLoading(true);
       try {
         const data = await assessmentAttemptService.getAttemptResult(attemptId, token);
         setResult(data);
-      } catch (err: any) {
+      } catch (err) {
         console.error("Failed to load attempt result:", err);
-        toast.error(err.message || "Failed to load attempt details");
+        const message = err instanceof Error ? err.message : "Failed to load attempt details";
+        toast.error(message);
       } finally {
         setIsLoading(false);
       }

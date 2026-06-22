@@ -84,6 +84,9 @@ export class ProgramsService {
                   orderBy: { order: 'asc' },
                   select: { id: true, title: true, order: true, videoUrl: true },
                 },
+                assessments: {
+                  select: { id: true, title: true, passingScore: true, timeLimit: true, sampleSize: true },
+                },
               },
             },
           },
@@ -113,6 +116,9 @@ export class ProgramsService {
                     order: true,
                     videoUrl: true,
                   },
+                },
+                assessments: {
+                  select: { id: true, title: true, passingScore: true, timeLimit: true, sampleSize: true },
                 },
               },
             },

@@ -55,8 +55,8 @@ export function IssueCredentialModal({ onClose, onSuccess }: Props) {
         try {
             await issueCredential({
                 ...formData,
-                tier: formData.tier || undefined // Send undefined to use default tier
-            } as any); // Cast as any due to partial tier typing
+                tier: formData.tier || undefined
+            } as Parameters<typeof issueCredential>[0]);
             onSuccess();
         } catch (error) {
             console.error("Failed to issue credential", error);
@@ -147,7 +147,7 @@ export function IssueCredentialModal({ onClose, onSuccess }: Props) {
                                 <select 
                                     className="w-full text-sm px-3 py-2.5 rounded-xl border border-emerald-200 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all appearance-none font-medium text-emerald-900"
                                     value={formData.tier}
-                                    onChange={(e) => setFormData({...formData, tier: e.target.value as any})}
+                                    onChange={(e) => setFormData({...formData, tier: e.target.value as CredentialTier | ''})}
                                 >
                                     <option value="">(Use Template Default)</option>
                                     <option value="FORGE">FORGE (Foundational)</option>

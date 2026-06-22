@@ -45,14 +45,15 @@ export class QuestionSelectionService {
     const allQuestions = assessment.questionBank.questions;
 
     if (allQuestions.length === 0) {
-      return {
-        assessmentId: assessment.id,
-        assessmentTitle: assessment.title,
-        passingScore: assessment.passingScore,
-        sampleSize: 0,
-        totalAvailable: 0,
-        questions: [],
-      };
+    return {
+      assessmentId: assessment.id,
+      assessmentTitle: assessment.title,
+      passingScore: assessment.passingScore,
+      timeLimit: assessment.timeLimit,
+      sampleSize: 0,
+      totalAvailable: 0,
+      questions: [],
+    };
     }
 
     // Step 1: Clone the questions array to avoid mutating the original
@@ -93,6 +94,7 @@ export class QuestionSelectionService {
       assessmentId: assessment.id,
       assessmentTitle: assessment.title,
       passingScore: assessment.passingScore,
+      timeLimit: assessment.timeLimit,
       sampleSize,
       totalAvailable: allQuestions.length,
       questions: selected,

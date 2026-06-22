@@ -53,8 +53,8 @@ export function TopAppBar({
   const nav = variant === "student" || variant === "default" ? studentNav : [];
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border-light bg-white/95 backdrop-blur-sm">
-      <div className="mx-auto flex h-16 max-w-[var(--container-max)] items-center justify-between px-4 sm:px-6 lg:px-12">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-white">
+      <div className="mx-auto flex h-[72px] max-w-[var(--container-max)] items-center justify-between px-6 sm:px-8 lg:px-12">
         {/* Logo */}
         <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
@@ -75,10 +75,10 @@ export function TopAppBar({
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    "flex items-center gap-2 rounded-xl px-4 h-11 text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-on-surface-variant hover:bg-surface-low hover:text-on-surface"
+                      ? "bg-primary-container text-primary"
+                      : "text-secondary hover:bg-surface-low hover:text-on-surface"
                   )}
                 >
                   <item.icon className="h-4 w-4" />
@@ -93,7 +93,7 @@ export function TopAppBar({
         <div className="flex items-center gap-2">
           {/* Search */}
           {user && (
-            <button className="hidden sm:flex items-center gap-2 rounded-lg border border-border-light bg-surface-low px-3 py-1.5 text-sm text-muted hover:border-border transition-colors">
+            <button className="hidden sm:flex items-center gap-2 rounded-xl border border-border bg-surface-low px-4 h-11 text-sm text-muted hover:border-outline transition-colors">
               <Search className="h-4 w-4" />
               <span className="hidden lg:inline">Search courses...</span>
             </button>
@@ -121,8 +121,12 @@ export function TopAppBar({
                 onClick={() => setProfileOpen(!profileOpen)}
                 className="flex items-center gap-2 rounded-lg p-1.5 hover:bg-surface-low transition-colors"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                  {user.name.charAt(0).toUpperCase()}
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary overflow-hidden">
+                  {user.avatar ? (
+                    <img src={user.avatar} alt="" className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                  ) : (
+                    user.name.charAt(0).toUpperCase()
+                  )}
                 </div>
                 <span className="hidden lg:block text-sm font-medium text-on-surface">
                   {user.name.split(" ")[0]}

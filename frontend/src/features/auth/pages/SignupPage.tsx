@@ -48,8 +48,9 @@ export function SignupPage() {
         router.refresh();
         router.push("/onboarding");
       }
-    } catch (err: any) {
-      toast.error(err.message || "Registration failed. Please try again.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Registration failed. Please try again.";
+      toast.error(message);
       setIsSubmitting(false);
     }
   };

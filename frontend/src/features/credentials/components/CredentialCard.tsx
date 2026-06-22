@@ -22,7 +22,7 @@ export function CredentialCard({ credential, className }: CredentialCardProps) {
         if (isDownloading) return;
         setIsDownloading(true);
         try {
-            const getPdfUrlFunc = CredentialService.getDownloadUrl(credential.id) as any;
+            const getPdfUrlFunc = CredentialService.getDownloadUrl(credential.id);
             const url = await getPdfUrlFunc();
             alert(`Generating high-quality branded PDF for: ${credential.program?.title}`);
         } catch (error) {
@@ -55,9 +55,9 @@ export function CredentialCard({ credential, className }: CredentialCardProps) {
                         <Sparkles className="h-3.5 w-3.5 text-yellow-300" />
                         {credential.tier}
                     </div>
-                    {credential.credentialType && (
+                    {credential.credentialTemplate?.type && (
                         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/20 backdrop-blur-md border border-white/10 text-white text-[10px] font-bold tracking-wider shadow-sm w-fit">
-                            {credential.credentialType}
+                            {credential.credentialTemplate.type}
                         </div>
                     )}
                 </div>
@@ -86,10 +86,10 @@ export function CredentialCard({ credential, className }: CredentialCardProps) {
 
                 <div className="flex-1 space-y-2 mb-6">
                     <h3 className="font-bold text-on-surface text-lg leading-tight group-hover:text-primary transition-colors line-clamp-2">
-                        {credential.template?.name || credential.program?.title || 'Advanced Certification'}
+                        {credential.credentialTemplate?.name || credential.program?.title || 'Advanced Certification'}
                     </h3>
                     <p className="text-sm text-muted line-clamp-2">
-                        {credential.template?.description || 'Successfully completed all assessments and modules required for this credential.'}
+                        {credential.credentialTemplate?.description || 'Successfully completed all assessments and modules required for this credential.'}
                     </p>
                 </div>
 

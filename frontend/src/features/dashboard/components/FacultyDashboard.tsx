@@ -102,6 +102,23 @@ interface FacultyProfile {
   };
 }
 
+// --- Minimal API Response Types ---
+interface DashboardResponse { stats: DashboardStats }
+interface ExtendedAnalyticsResponse { success: boolean; data: ExtendedAnalytics }
+interface ActivityResponse { success: boolean; data: ActivityEvent[] }
+interface NotificationsResponse { notifications: NotificationItem[] }
+interface ProgramsListResponse { programs: ProgramItem[] }
+interface QuestionBanksResponse { questionBanks: QuestionBankItem[] }
+interface ProgramItem {
+  id: string;
+  title: string;
+  tracks?: { modules?: { id: string; title: string }[] }[];
+}
+interface QuestionBankItem {
+  id: string;
+  title: string;
+}
+
 export function FacultyDashboard() {
   const { user: authUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "profile">("overview");
@@ -141,15 +158,15 @@ export function FacultyDashboard() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // Auxiliary data for creation modals
-  const [programsList, setProgramsList] = useState<any[]>([]);
-  const [banksList, setBanksList] = useState<any[]>([]);
+  const [programsList, setProgramsList] = useState<ProgramItem[]>([]);
+  const [banksList, setBanksList] = useState<QuestionBankItem[]>([]);
 
   // Fetch all dashboard data
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       // Fetch profile
-      const profRes = await apiClient.get<any>("/users/faculty/profile");
+      const profRes = await apiClient.get<FacultyProfile>("/users/faculty/profile");
       if (profRes) {
         setProfile(profRes);
         setEditName(profRes.user.name || "");
@@ -158,13 +175,13 @@ export function FacultyDashboard() {
       }
 
       // Fetch summary stats
-      const statsRes = await apiClient.get<any>("/users/faculty/dashboard");
+      const statsRes = await apiClient.get<DashboardResponse>("/users/faculty/dashboard");
       if (statsRes?.stats) {
         setStats(statsRes.stats);
       }
 
       // Fetch extended analytics
-      const analyticsRes = await apiClient.get<any>("/analytics/faculty/extended");
+      const analyticsRes = await apiClient.get<ExtendedAnalyticsResponse>("/analytics/faculty/extended");
       if (analyticsRes && analyticsRes.success && analyticsRes.data) {
         const analyticsData = analyticsRes.data;
         setAnalytics(analyticsData);
@@ -178,36 +195,38 @@ export function FacultyDashboard() {
       }
 
       // Fetch activity feed
-      const activityRes = await apiClient.get<any>("/analytics/faculty/activity");
+      const activityRes = await apiClient.get<ActivityResponse>("/analytics/faculty/activity");
       if (activityRes && activityRes.success && Array.isArray(activityRes.data)) {
         setActivity(activityRes.data);
       }
 
       // Fetch notifications
-      const notifRes = await apiClient.get<any>("/notifications");
+      const notifRes = await apiClient.get<NotificationsResponse>("/notifications");
       if (notifRes?.notifications) {
         setNotifications(notifRes.notifications);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error loading dashboard details:", err);
-      toast.error(err.message || "Failed to load dashboard data.");
+      const message = err instanceof Error ? err.message : "Failed to load dashboard data.";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDashboardData();
   }, []);
 
   // Fetch programs and question banks for creation modals
   const fetchModalPrerequisites = async () => {
     try {
-      const progRes = await apiClient.get<any>("/programs");
+      const progRes = await apiClient.get<ProgramsListResponse>("/programs");
       if (progRes?.programs) {
         setProgramsList(progRes.programs);
       }
-      const bankRes = await apiClient.get<any>("/assessments/question-banks");
+      const bankRes = await apiClient.get<QuestionBanksResponse>("/assessments/question-banks");
       if (bankRes?.questionBanks) {
         setBanksList(bankRes.questionBanks);
       }
@@ -255,8 +274,9 @@ export function FacultyDashboard() {
       setProgramTitle("");
       setProgramDesc("");
       fetchDashboardData();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to create program");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create program";
+      toast.error(message);
     } finally {
       setIsCreatingProgram(false);
     }
@@ -284,8 +304,9 @@ export function FacultyDashboard() {
       setSelectedModuleId("");
       setSelectedBankId("");
       fetchDashboardData();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to create assessment");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create assessment";
+      toast.error(message);
     } finally {
       setIsCreatingAssessment(false);
     }
@@ -297,7 +318,7 @@ export function FacultyDashboard() {
     if (isSavingProfile) return;
     setIsSavingProfile(true);
     try {
-      const res = await apiClient.patch<any>("/users/faculty/profile", {
+      const res = await apiClient.patch<{ profile: FacultyProfile }>("/users/faculty/profile", {
         name: editName,
         department: editDept,
         designation: editDesignation,
@@ -306,8 +327,9 @@ export function FacultyDashboard() {
         setProfile(res.profile);
         toast.success("Profile updated successfully!");
       }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to update profile info");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update profile info";
+      toast.error(message);
     } finally {
       setIsSavingProfile(false);
     }
@@ -317,7 +339,7 @@ export function FacultyDashboard() {
 
   if (loading) {
     return (
-      <div className="flex h-[calc(100vh-80px)] w-full items-center justify-center bg-surface-lowest">
+      <div className="flex h-[calc(100vh-80px)] w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
           <span className="text-sm font-semibold text-muted">Retrieving dashboard consoles...</span>
@@ -1026,8 +1048,8 @@ export function FacultyDashboard() {
                     <option value="">-- Choose Module --</option>
                     {programsList.map((prog) => (
                       <optgroup key={prog.id} label={prog.title}>
-                        {prog.tracks?.map((track: any) => (
-                          track.modules?.map((mod: any) => (
+                        {prog.tracks?.map((track: { modules?: { id: string; title: string }[] }) => (
+                          track.modules?.map((mod: { id: string; title: string }) => (
                             <option key={mod.id} value={mod.id}>
                               {mod.title}
                             </option>
