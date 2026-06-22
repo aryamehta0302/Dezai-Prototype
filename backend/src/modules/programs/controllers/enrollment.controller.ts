@@ -6,12 +6,13 @@ import { Roles } from '../../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 
 @Controller('enrollments')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.STUDENT)
+@UseGuards(JwtAuthGuard)
 export class EnrollmentController {
   constructor(private readonly enrollmentService: EnrollmentService) {}
 
   @Post(':programId')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.STUDENT)
   async enroll(@Param('programId') programId: string, @Req() req) {
     if (!programId) {
       throw new BadRequestException('programId is required');
