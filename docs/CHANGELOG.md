@@ -4,6 +4,69 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Sprint 5] — 2026-06-22
+
+### Assessment Module Completion (Manan Panchal)
+
+#### Added
+
+- **Assessment Result Endpoint** — Rich attempt result with per-question breakdown including selected option, correct option, percentage, time taken, and passing status.
+  - Files: [attempt.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/attempt.service.ts), [attempt.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/attempt.controller.ts)
+  - Endpoint: `GET /api/assessments/attempts/:attemptId/result`
+
+- **Attempt History Endpoint** — Assessment-scoped attempt list with score, percentage, and pass status. Dual-role: students see own history, faculty see all students' history with ownership validation.
+  - Files: [attempt.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/attempt.service.ts), [results.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/results.controller.ts)
+  - Endpoint: `GET /api/assessments/:assessmentId/attempts/history`
+
+- **My History Endpoint** — Cross-assessment attempt history for the current student, including module titles.
+  - Files: [attempt.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/attempt.service.ts), [attempt.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/attempt.controller.ts)
+  - Endpoint: `GET /api/assessments/attempts/my-history`
+
+- **Attempt Status + Remaining Attempts Logic** — Shows attempts used/remaining, active attempt info, best score, and eligibility to start new attempt. Enforces `MAX_ATTEMPTS_DEFAULT = 3`.
+  - Files: [attempt.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/attempt.service.ts), [results.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/results.controller.ts)
+  - Endpoint: `GET /api/assessments/:assessmentId/attempt-status`
+
+- **PassFailEvaluationService** — Centralised scoring, status derivation, percentage calculation, and missed-question analysis. Pure computation service with zero database dependencies.
+  - File: [pass-fail-evaluation.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/pass-fail-evaluation.service.ts)
+
+- **Result Analytics** — Faculty-only endpoint returning pass rate, average score/percentage, unique students, and score distribution buckets (0-20%, 21-40%, etc.).
+  - Files: [assessment.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/assessment.service.ts), [results.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/results.controller.ts)
+  - Endpoint: `GET /api/assessments/:assessmentId/result-analytics`
+
+- **Missed Questions Analytics** — Faculty-only endpoint returning per-question wrong-answer rates sorted by wrongRate DESC (hardest questions first).
+  - Files: [assessment.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/assessment.service.ts), [results.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/results.controller.ts)
+  - Endpoint: `GET /api/assessments/:assessmentId/missed-questions-analytics`
+
+- **Credential Eligibility Notification Trigger** — After a student passes the final assessment in a track, checks if all modules are passed and fires a `CREDENTIAL` notification + `CREDENTIAL_ISSUED` audit log.
+  - File: [attempt.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/attempt.service.ts)
+
+- **XP Award on Assessment Pass** — 100 XP via `XpService.awardXp()` on first pass only (idempotent — subsequent passes do not re-award).
+
+- **Response DTOs** — Type-safe response interfaces for all Sprint 5 endpoints.
+  - File: [result.dto.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/dto/result.dto.ts)
+
+- **Faculty Assessment Ownership Validation** — Reusable `validateAssessmentFacultyOwnership()` method traversing Assessment → Module → Track → Program → Faculty chain.
+  - File: [assessment.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/assessment.service.ts)
+
+- **API Documentation** — Full endpoint contract for all 6 new endpoints.
+  - File: [docs/API/assessment-results.md](file:///d:/git/dezai/Dezai-Prototype/docs/API/assessment-results.md)
+
+#### Changed
+
+- **AttemptService.startAttempt()** — Added enforcement of `MAX_ATTEMPTS_DEFAULT = 3` and active attempt conflict detection (`ConflictException`).
+
+- **AttemptService.submitAttempt()** — Now delegates scoring to `PassFailEvaluationService`, fires audit log, and checks credential eligibility.
+
+- **AttemptService.getAttemptResult()** — Enhanced to include percentage, passingScore, totalQuestions, timeTaken, and faculty access.
+
+- **AttemptController** — Added `my-history` route before parameterised routes; enhanced `getAttemptResult` with dual-role support.
+
+- **AssessmentsModule** — Registered `ResultsController` and `PassFailEvaluationService`.
+
+### Developer: Manan Panchal · Branch: feature/assessment-completion
+
+---
+
 ## [Sprint 4] — 2026-06-18
 
 **Developers:** Faculty Experience & Dashboard Lead, Manan Panchal (Assessment & Learning Exp. Lead), AI Mentor Owner (AI Mentor), You (Learning Experience)

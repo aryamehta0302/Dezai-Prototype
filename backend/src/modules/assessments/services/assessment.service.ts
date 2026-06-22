@@ -7,6 +7,11 @@ import {
 import { PrismaService } from "../../../database/prisma.service";
 import { UserRole, AuditAction, ExamStatus, ViolationType, Difficulty } from "@prisma/client";
 import { AuditService } from "../../audit/services/audit.service";
+import { PassFailEvaluationService } from './pass-fail-evaluation.service';
+import type {
+  ResultAnalyticsResponseDto,
+  MissedQuestionsAnalyticsResponseDto,
+} from '../dto/result.dto';
 import {
   CreateQuestionBankDto,
   UpdateQuestionBankDto,
@@ -31,8 +36,9 @@ function shuffleArray<T>(array: T[]): T[] {
 export class AssessmentService {
   constructor(
     private prisma: PrismaService,
-    private auditService: AuditService
-  ) { }
+    private auditService: AuditService,
+    private passFailEvaluationService: PassFailEvaluationService,
+  ) {}
 
   // ─────────────────── OWNERSHIP GUARD ───────────────────
 
@@ -954,6 +960,262 @@ export class AssessmentService {
       attemptId: attempt.id,
       score: percentage,
       passed,
+    };
+  }
+
+  // ─────────────────── FACULTY OWNERSHIP VALIDATION (Sprint 5) ───────────────────
+
+  /**
+   * Validates that a faculty member owns the assessment through the
+   * Assessment → Module → Track → Program → Faculty chain.
+   * DEZAI_ADMIN and UNIVERSITY_ADMIN bypass with institution check.
+   */
+  async validateAssessmentFacultyOwnership(
+    assessmentId: string,
+    userId: string,
+  ): Promise<true> {
+    const assessment = await this.prisma.assessment.findUnique({
+      where: { id: assessmentId },
+      include: {
+        module: {
+          include: {
+            track: {
+              include: {
+                program: {
+                  include: {
+                    faculty: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!assessment) {
+      throw new NotFoundException(`Assessment with ID ${assessmentId} not found`);
+    }
+
+    const program = assessment.module.track.program;
+
+    // Check if the faculty member owns this program
+    const faculty = await this.prisma.facultyMember.findUnique({
+      where: { userId },
+    });
+
+    if (!faculty) {
+      throw new ForbiddenException('Faculty profile not found');
+    }
+
+    if (program.facultyId !== faculty.id && program.institutionId !== faculty.institutionId) {
+      throw new ForbiddenException(
+        'You do not have access to this assessment',
+      );
+    }
+
+    return true;
+  }
+
+  // ─────────────────── RESULT ANALYTICS (Sprint 5 Task 4) ───────────────────
+
+  /**
+   * Aggregates completed attempt data for faculty analytics:
+   * total attempts, unique students, average score/percentage,
+   * pass rate, and score distribution buckets.
+   */
+  async getResultAnalytics(
+    assessmentId: string,
+  ): Promise<ResultAnalyticsResponseDto> {
+    const assessment = await this.prisma.assessment.findUnique({
+      where: { id: assessmentId },
+    });
+
+    if (!assessment) {
+      throw new NotFoundException(`Assessment with ID ${assessmentId} not found`);
+    }
+
+    const attempts = await this.prisma.assessmentAttempt.findMany({
+      where: {
+        assessmentId,
+        completedAt: { not: null },
+      },
+      select: {
+        score: true,
+        passed: true,
+        userId: true,
+      },
+    });
+
+    const totalAttempts = attempts.length;
+
+    if (totalAttempts === 0) {
+      return {
+        assessmentId,
+        totalAttempts: 0,
+        uniqueStudents: 0,
+        averageScore: 0,
+        averagePercentage: 0,
+        passRate: 0,
+        passedAttempts: 0,
+        failedAttempts: 0,
+        scoreDistribution: [
+          { range: '0-20%', count: 0 },
+          { range: '21-40%', count: 0 },
+          { range: '41-60%', count: 0 },
+          { range: '61-80%', count: 0 },
+          { range: '81-100%', count: 0 },
+        ],
+      };
+    }
+
+    const uniqueStudents = new Set(attempts.map((a) => a.userId)).size;
+    const passedAttempts = attempts.filter((a) => a.passed).length;
+    const failedAttempts = totalAttempts - passedAttempts;
+    const passRate = this.passFailEvaluationService.calculatePercentage(
+      passedAttempts,
+      totalAttempts,
+    );
+
+    const scores = attempts.map((a) => a.score);
+    const scoreSum = scores.reduce((acc, s) => acc + s, 0);
+    const averageScore = Math.round((scoreSum / totalAttempts) * 100) / 100;
+
+    // Calculate percentages for each attempt
+    const percentages = attempts.map((a) =>
+      this.passFailEvaluationService.calculatePercentage(
+        a.score,
+        assessment.sampleSize,
+      ),
+    );
+    const percentageSum = percentages.reduce((acc, p) => acc + p, 0);
+    const averagePercentage =
+      Math.round((percentageSum / totalAttempts) * 100) / 100;
+
+    // Score distribution buckets
+    const buckets = [
+      { range: '0-20%', min: 0, max: 20, count: 0 },
+      { range: '21-40%', min: 21, max: 40, count: 0 },
+      { range: '41-60%', min: 41, max: 60, count: 0 },
+      { range: '61-80%', min: 61, max: 80, count: 0 },
+      { range: '81-100%', min: 81, max: 100, count: 0 },
+    ];
+
+    for (const pct of percentages) {
+      for (const bucket of buckets) {
+        if (pct >= bucket.min && pct <= bucket.max) {
+          bucket.count += 1;
+          break;
+        }
+      }
+    }
+
+    return {
+      assessmentId,
+      totalAttempts,
+      uniqueStudents,
+      averageScore,
+      averagePercentage,
+      passRate,
+      passedAttempts,
+      failedAttempts,
+      scoreDistribution: buckets.map((b) => ({
+        range: b.range,
+        count: b.count,
+      })),
+    };
+  }
+
+  // ─────────────────── MISSED QUESTIONS ANALYTICS (Sprint 5 Task 4) ───────────────────
+
+  /**
+   * Aggregates per-question wrong-answer rates across all completed
+   * attempts for a given assessment. Sorted by wrongRate DESC
+   * (hardest questions first).
+   */
+  async getMissedQuestionsAnalytics(
+    assessmentId: string,
+  ): Promise<MissedQuestionsAnalyticsResponseDto> {
+    const assessment = await this.prisma.assessment.findUnique({
+      where: { id: assessmentId },
+      include: {
+        questionBank: {
+          include: {
+            questions: {
+              select: {
+                id: true,
+                text: true,
+                category: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!assessment) {
+      throw new NotFoundException(`Assessment with ID ${assessmentId} not found`);
+    }
+
+    // Get all attempt answers for completed attempts of this assessment
+    const answers = await this.prisma.attemptAnswer.findMany({
+      where: {
+        attempt: {
+          assessmentId,
+          completedAt: { not: null },
+        },
+      },
+      select: {
+        questionId: true,
+        isCorrect: true,
+      },
+    });
+
+    // Aggregate per question
+    const questionStatsMap = new Map<
+      string,
+      { totalAnswered: number; totalWrong: number }
+    >();
+
+    for (const ans of answers) {
+      const stats = questionStatsMap.get(ans.questionId) ?? {
+        totalAnswered: 0,
+        totalWrong: 0,
+      };
+      stats.totalAnswered += 1;
+      if (!ans.isCorrect) {
+        stats.totalWrong += 1;
+      }
+      questionStatsMap.set(ans.questionId, stats);
+    }
+
+    // Build response, joining with question metadata
+    const questionMap = new Map(
+      assessment.questionBank.questions.map((q) => [q.id, q]),
+    );
+
+    const questions = Array.from(questionStatsMap.entries())
+      .map(([questionId, stats]) => {
+        const qMeta = questionMap.get(questionId);
+        const wrongRate = this.passFailEvaluationService.calculatePercentage(
+          stats.totalWrong,
+          stats.totalAnswered,
+        );
+
+        return {
+          questionId,
+          questionText: qMeta?.text ?? 'Unknown question',
+          category: qMeta?.category ?? null,
+          totalAnswered: stats.totalAnswered,
+          totalWrong: stats.totalWrong,
+          wrongRate,
+        };
+      })
+      .sort((a, b) => b.wrongRate - a.wrongRate);
+
+    return {
+      assessmentId,
+      questions,
     };
   }
 }
