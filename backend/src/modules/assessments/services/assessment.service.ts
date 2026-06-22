@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { PrismaService } from "../../../database/prisma.service";
-import { UserRole, AuditAction, ExamStatus, ViolationType } from "@prisma/client";
+import { UserRole, AuditAction, ExamStatus, ViolationType, Difficulty } from "@prisma/client";
 import { AuditService } from "../../audit/services/audit.service";
 import {
   CreateQuestionBankDto,
@@ -16,12 +16,23 @@ import {
   UpdateAssessmentDto,
 } from "../dto/assessment.dto";
 
+// ─────────────────── SHUFFLE UTILITY ───────────────────
+
+function shuffleArray<T>(array: T[]): T[] {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 @Injectable()
 export class AssessmentService {
   constructor(
     private prisma: PrismaService,
     private auditService: AuditService
-  ) {}
+  ) { }
 
   // ─────────────────── OWNERSHIP GUARD ───────────────────
 
@@ -194,6 +205,8 @@ export class AssessmentService {
         questionBankId: bankId,
         text: data.text,
         category: data.category,
+        difficulty: data.difficulty ?? Difficulty.MEDIUM,
+        tags: data.tags ?? [],
         timerSeconds: data.timerSeconds ?? 60,
         options: {
           create: data.options.map((opt) => ({
@@ -226,6 +239,8 @@ export class AssessmentService {
       data: {
         text: data.text,
         category: data.category,
+        difficulty: data.difficulty,
+        tags: data.tags,
         timerSeconds: data.timerSeconds,
       },
       include: { options: true },
@@ -272,6 +287,8 @@ export class AssessmentService {
         questionBankId: original.questionBankId,
         text: `${original.text} (Copy)`,
         category: original.category,
+        difficulty: original.difficulty,
+        tags: original.tags,
         timerSeconds: original.timerSeconds,
         options: {
           create: original.options.map((opt) => ({
@@ -359,6 +376,7 @@ export class AssessmentService {
         title: data.title,
         passingScore: data.passingScore ?? 80,
         sampleSize: data.sampleSize ?? 15,
+        timeLimit: data.timeLimit ?? 1800,
       },
     });
 
@@ -388,6 +406,7 @@ export class AssessmentService {
         title: data.title,
         passingScore: data.passingScore,
         sampleSize: data.sampleSize,
+        timeLimit: data.timeLimit,
       },
     });
 
@@ -656,6 +675,56 @@ export class AssessmentService {
     return assessment;
   }
 
+  /**
+ * Samples `sampleSize` random questions from the assessment's question bank,
+ * shuffles question order and each question's option order, and returns
+ * a locked, JSON-serializable structure to store on the ExamSession.
+ */
+  private async generateQuestionSet(assessmentId: string) {
+    const assessment = await this.prisma.assessment.findUnique({
+      where: { id: assessmentId },
+      include: {
+        questionBank: {
+          include: {
+            questions: {
+              include: { options: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!assessment) {
+      throw new NotFoundException(`Assessment with ID ${assessmentId} not found`);
+    }
+
+    const allQuestions = assessment.questionBank.questions;
+
+    if (allQuestions.length < assessment.sampleSize) {
+      throw new BadRequestException(
+        `Question bank only has ${allQuestions.length} questions, but assessment requires ${assessment.sampleSize}.`
+      );
+    }
+
+    // 1. Randomly select `sampleSize` questions (no repeats)
+    const shuffledPool = shuffleArray(allQuestions);
+    const selected = shuffledPool.slice(0, assessment.sampleSize);
+
+    // 2. Shuffle each selected question's options too
+    const questionSet = selected.map((q) => ({
+      questionId: q.id,
+      text: q.text,
+      options: shuffleArray(
+        q.options.map((opt) => ({ optionId: opt.id, text: opt.text }))
+        // NOTE: deliberately NOT including isCorrect here —
+        // this object gets sent to the frontend, so the correct answer
+        // must never be exposed to the client.
+      ),
+    }));
+
+    return questionSet;
+  }
+
   async createSession(userId: string, assessmentId: string) {
     // Ensure the assessment exists (seeding if missing)
     await this.ensureAssessmentExists(assessmentId);
@@ -685,6 +754,9 @@ export class AssessmentService {
       throw new BadRequestException('Maximum attempts (3) exceeded for this assessment.');
     }
 
+    // Generate this student's locked, shuffled question set
+    const questionSet = await this.generateQuestionSet(assessmentId);
+
     // Create new exam session
     return this.prisma.examSession.create({
       data: {
@@ -693,6 +765,7 @@ export class AssessmentService {
         status: ExamStatus.ACTIVE,
         warningsCount: 0,
         scoreDeduction: 0,
+        questionSet,
       },
     });
   }
@@ -716,16 +789,11 @@ export class AssessmentService {
       include: {
         violations: true,
         assessment: {
-          include: {
-            questionBank: {
-              include: {
-                questions: {
-                  include: {
-                    options: true,
-                  },
-                },
-              },
-            },
+          select: {
+            id: true,
+            title: true,
+            passingScore: true,
+            timeLimit: true,
           },
         },
       },
@@ -735,7 +803,7 @@ export class AssessmentService {
       throw new NotFoundException('Exam session not found');
     }
 
-    return session;
+    return session; // session.questionSet has the locked, shuffled questions
   }
 
   async logViolation(userId: string, sessionId: string, type: ViolationType) {
@@ -803,46 +871,46 @@ export class AssessmentService {
     return updatedSession;
   }
 
-  async submitSession(userId: string, sessionId: string, selectedAnswers: Record<string, string | number>) {
+  async submitSession(userId: string, sessionId: string, selectedAnswers: Record<string, string>) {
     const session = await this.getSession(userId, sessionId);
 
     if (session.status !== ExamStatus.ACTIVE) {
       throw new BadRequestException('Exam session is not active or already submitted.');
     }
 
-    const questions = session.assessment.questionBank.questions;
+    // Use the LOCKED question set from session creation, not the live bank
+    const lockedQuestions = session.questionSet as Array<{
+      questionId: string;
+      text: string;
+      options: { optionId: string; text: string }[];
+    }>;
+
     let score = 0;
-    const totalQuestions = questions.length;
-
-    // Calculate score
+    const totalQuestions = lockedQuestions.length;
     const attemptAnswersToCreate = [];
-    for (const question of questions) {
-      const selectedVal = selectedAnswers[question.id];
-      let selectedOptionId: string | null = null;
 
-      if (selectedVal !== undefined && selectedVal !== null) {
-        // If it's a number (representing option index), map it to the deterministic ID
-        if (typeof selectedVal === 'number' || !isNaN(Number(selectedVal))) {
-          selectedOptionId = `${question.id}-opt-${selectedVal}`;
-        } else {
-          selectedOptionId = String(selectedVal);
-        }
-      }
+    for (const question of lockedQuestions) {
+      const selectedOptionId = selectedAnswers[question.questionId] ?? null;
 
-      const correctOption = question.options.find((o) => o.isCorrect);
-      const isCorrect = selectedOptionId === correctOption?.id;
+      if (!selectedOptionId) continue;
+
+      // Look up the real option from the DB to check isCorrect
+      // (isCorrect was deliberately stripped from questionSet so it's never sent to the client)
+      const realOption = await this.prisma.questionOption.findUnique({
+        where: { id: selectedOptionId },
+      });
+
+      const isCorrect = realOption?.isCorrect ?? false;
 
       if (isCorrect) {
         score += 1;
       }
 
-      if (selectedOptionId) {
-        attemptAnswersToCreate.push({
-          questionId: question.id,
-          selectedOptionId,
-          isCorrect,
-        });
-      }
+      attemptAnswersToCreate.push({
+        questionId: question.questionId,
+        selectedOptionId,
+        isCorrect,
+      });
     }
 
     // Apply percentage-based score calculation
