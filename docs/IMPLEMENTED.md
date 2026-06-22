@@ -317,7 +317,6 @@ Implemented the complete Assessment Engine module as the backbone of Dezai's eva
 | 12 | POST | `/api/assessments` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
 | 13 | PUT | `/api/assessments/:id` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
 | 14 | DELETE | `/api/assessments/:id` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
-| 15 | GET | `/api/assessments/:id/questions/select` | JWT |
 | 16 | GET | `/api/assessments/:id/analytics` | JWT + FACULTY/UNIV_ADMIN/DEZAI_ADMIN |
 
 ---
@@ -372,6 +371,46 @@ Implemented the complete Assessment Attempt lifecycle, proctoring integration, d
 | 9 | GET | `/api/assessments/recommendations/continue-learning` | JWT + STUDENT | Get continue learning widget |
 | 10 | GET | `/api/assessments/recommendations/ready-assessments` | JWT + STUDENT | Get ready assessments list |
 
+---
+
+## 11. Sprint 4: Faculty Experience & Dashboard 2.0 (Nil)
+
+Implemented the complete Faculty Experience, Dashboard 2.0, Notification Center, Profile Settings, and Diagnostic Analytics.
+
+### Key Deliverables
+
+1. **Faculty Dashboard 2.0 Interface** (`FacultyDashboard.tsx`):
+   - Interactive multi-tab layout (Console Overview, Cohort Analytics, Instructor Profile).
+   - High-fidelity metrics cards showing Programs count, Enrolled Students, Pending Reviews, and Completion Rate.
+   - Quick Action triggers to Publish Programs and Assessments in modals.
+   - Recent Student Activity Feed tracking enrollments, completions, and attempts chronologically.
+
+2. **Faculty Analytics Widgets** (leaderboard & diagnostic cards):
+   - **Top Students Leaderboard**: Lists the top 5 students in programs taught by the faculty based on XP.
+   - **Weak Students Focus List**: Identifies students with progress below 20% who need attention.
+   - **Difficult Modules Widget**: Flags modules where assessment pass rates are low and lists average scores and attempt volumes.
+
+3. **Notification Center**:
+   - Backend module `notifications` fully wired with `NotificationsService` and `NotificationsController` exposing endpoints to fetch user alerts, mark as read, and mark all as read.
+   - Slide-over notification drawer on the frontend displaying unread alerts and triggering marking actions.
+
+4. **Faculty Profile System**:
+   - Exposed `PATCH /api/users/faculty/profile` endpoint on the NestJS backend to update faculty member fields atomically.
+   - Interactive settings form on the frontend to update instructor name, department, designation, and view affiliated institution details.
+
+### Files Added / Modified
+
+| Action | File |
+|---|---|
+| MODIFIED | [backend/src/modules/users/controllers/users.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/users/controllers/users.controller.ts) |
+| MODIFIED | [backend/src/modules/users/services/users.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/users/services/users.service.ts) |
+| CREATED | [backend/src/modules/users/dto/users.dto.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/users/dto/users.dto.ts) |
+| MODIFIED | [backend/src/modules/analytics/controllers/analytics.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/controllers/analytics.controller.ts) |
+| MODIFIED | [backend/src/modules/analytics/services/analytics.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/services/analytics.service.ts) |
+| MODIFIED | [backend/src/modules/notifications/notifications.module.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/notifications/notifications.module.ts) |
+| CREATED | [backend/src/modules/notifications/controllers/notifications.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/notifications/controllers/notifications.controller.ts) |
+| CREATED | [backend/src/modules/notifications/services/notifications.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/notifications/services/notifications.service.ts) |
+| MODIFIED | [frontend/src/features/dashboard/components/FacultyDashboard.tsx](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/components/FacultyDashboard.tsx) |
 
 ---
 
@@ -433,4 +472,127 @@ Implemented the assessment module completion covering rich result retrieval, att
 | 4 | GET | `/api/assessments/:assessmentId/attempt-status` | JWT + STUDENT | Remaining attempts & status |
 | 5 | GET | `/api/assessments/:assessmentId/result-analytics` | JWT + FACULTY | Pass rate, score distribution |
 | 6 | GET | `/api/assessments/:assessmentId/missed-questions-analytics` | JWT + FACULTY | Per-question wrong rates |
+
+## 11. Sprint 4: Leaderboards & Notifications (Leaderboards & Notifications Lead)
+
+Implemented the backend modules, database schema migrations, and documentation for Leaderboards & Notifications.(by Krish Parmar)
+
+### Features Delivered
+
+1. **Notification Center:**
+   - Active inbox retrieval (non-archived notifications).
+   - Filtered queries for `unread` and `archived` states.
+   - Dual-guard ownership verification (users can only access or manage their own notifications).
+   - Individual notifications can be marked as read, unread, or archived.
+   - Bulk "mark all read" action (exempts archived notifications).
+
+2. **Ranked Leaderboards:**
+   - **Student Leaderboard:** Scoped by range (weekly = 7 days XP, monthly = 30 days XP, all-time = running total on User).
+   - **University Leaderboard:** Aggregated total XP of unique students per institution, active students (30-day window), and fastest completion speed.
+   - **Program Leaderboard:** Scoped to individual programs showing total XP, active students, and fastest completion speed.
+   - **Standard Competition Ranking:** Enforced tie-breaking logic (e.g. 1, 2, 2, 4).
+   - **User Deduplication:** Resolved multiple program enrollment conflicts at the university level to prevent double-counting of XP and active students.
+
+3. **Dashboard Widgets:**
+   - **Student Widget:** Compact top-N widget showing leading students (all-time XP), highlighting the requesting student, and resolving their exact current rank in the database.
+   - **Faculty Widget:** Compact top-N widget scoped to the faculty's most recently created program or a pinned program. Restricted to `FACULTY`, `UNIVERSITY_ADMIN`, and `DEZAI_ADMIN` roles.
+
+### Endpoint Summary (10 Total)
+
+| # | Method | Route | Auth | Roles | Description |
+|---|---|---|---|---|---|
+| 1 | GET | `/api/notifications` | JWT | All | Get notification inbox (supports ?filter=all\|unread\|archived) |
+| 2 | PATCH | `/api/notifications/mark-all-read` | JWT | All | Mark all non-archived notifications as read |
+| 3 | PATCH | `/api/notifications/:id/read` | JWT | All | Mark single notification as read |
+| 4 | PATCH | `/api/notifications/:id/unread` | JWT | All | Mark single notification as unread |
+| 5 | PATCH | `/api/notifications/:id/archive` | JWT | All | Archive single notification |
+| 6 | GET | `/api/leaderboards/students` | JWT | All | Ranked student list (?range=weekly\|monthly\|all&limit=) |
+| 7 | GET | `/api/leaderboards/universities` | JWT | All | Ranked institution list (?limit=) |
+| 8 | GET | `/api/leaderboards/programs` | JWT | All | Ranked program list (?limit=) |
+| 9 | GET | `/api/leaderboards/widgets/student` | JWT | All | Student dashboard widget |
+| 10 | GET | `/api/leaderboards/widgets/faculty` | JWT | FACULTY, UNIV_ADMIN, DEZAI_ADMIN | Faculty dashboard widget |
+
+### Files Added / Modified
+
+| Action | File |
+|---|---|
+| MODIFIED | [backend/prisma/schema.prisma](file:///d:/Dezai-Prototype-main/backend/prisma/schema.prisma) |
+| MODIFIED | [backend/src/app.module.ts](file:///d:/Dezai-Prototype-main/backend/src/app.module.ts) |
+| MODIFIED | [backend/src/modules/notifications/notifications.module.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/notifications/notifications.module.ts) |
+| CREATED | [backend/src/modules/notifications/dto/notification.dto.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/notifications/dto/notification.dto.ts) |
+| CREATED | [backend/src/modules/notifications/services/notifications.service.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/notifications/services/notifications.service.ts) |
+| CREATED | [backend/src/modules/notifications/controllers/notifications.controller.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/notifications/controllers/notifications.controller.ts) |
+| CREATED | [backend/src/modules/leaderboards/leaderboards.module.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/leaderboards/leaderboards.module.ts) |
+| CREATED | [backend/src/modules/leaderboards/dto/leaderboard.dto.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/leaderboards/dto/leaderboard.dto.ts) |
+| CREATED | [backend/src/modules/leaderboards/services/leaderboards.service.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/leaderboards/services/leaderboards.service.ts) |
+| CREATED | [backend/src/modules/leaderboards/controllers/leaderboards.controller.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/leaderboards/controllers/leaderboards.controller.ts) |
+| CREATED | [docs/API/notifications.md](file:///d:/Dezai-Prototype-main/docs/API/notifications.md) |
+| CREATED | [docs/API/leaderboards.md](file:///d:/Dezai-Prototype-main/docs/API/leaderboards.md) |
+
+---
+
+## 12. Sprint 5: Leaderboard Frontend Components (Krish Parmar)
+
+**Sprint:** 5 | **Date:** 2026-06-22
+
+### Overview
+
+Sprint 5 extended the leaderboard backend (completed in Sprint 4) with two new student-facing frontend components that surface XP rankings and top performers directly on the student dashboard.
+
+All 5 backend leaderboard API endpoints were already production-complete from Sprint 4. No backend, schema, or route changes were required in Sprint 5.
+
+### Components Added
+
+1. **`StudentRankingCard`** (`frontend/src/features/leaderboards/components/student-ranking-card.tsx`)
+   - Displays the authenticated student's global rank (`#N`), total XP, and streak count.
+   - Rank badge adapts color: gold (rank 1), silver (rank 2), bronze (rank 3), Top 10, or default.
+   - Reads data from `useEnrollmentStore()` → `globalRank`, `xpEarned`, `streakCount` — all already populated by `fetchStats()` on dashboard mount via `GET /api/learning/stats`.
+   - Conditionally rendered: only shown when `globalRank > 0` and data is loaded.
+
+2. **`TopPerformerList`** (`frontend/src/features/leaderboards/components/top-performer-list.tsx`)
+   - Shows the top 10 globally ranked students with a Monthly / All-Time tab switcher.
+   - Calls the existing `GET /api/leaderboards/students?range=<monthly|all>&limit=10` endpoint.
+   - Each row: rank badge (gold/silver/bronze/default), student name, institution, XP.
+   - Highlights the current user's own row with a blue `You` badge.
+   - Includes loading skeleton, empty state, and error/retry state.
+
+### Integration
+
+Both components were integrated into the right sidebar column (`xl:col-span-1`) of the existing `StudentDashboardPage` (`frontend/src/features/learning/pages/StudentDashboardPage.tsx`):
+
+```
+Right sidebar (xl:col-span-1):
+  ↳ StudentRankingCard    ← NEW — above activity feed
+  ↳ Activity Feed         ← unchanged
+  ↳ TopPerformerList      ← NEW — below activity feed
+```
+
+### Data Sources (No New Endpoints)
+
+| Component | Data Source | Endpoint |
+|---|---|---|
+| `StudentRankingCard` | `useEnrollmentStore()` (already loaded) | `GET /api/learning/stats` (existing) |
+| `TopPerformerList` | Direct `apiClient.get()` call | `GET /api/leaderboards/students` (existing, Sprint 4) |
+
+### Files Added / Modified
+
+| Action | File |
+|---|---|
+| CREATED | [frontend/src/features/leaderboards/components/student-ranking-card.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/leaderboards/components/student-ranking-card.tsx) |
+| CREATED | [frontend/src/features/leaderboards/components/top-performer-list.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/leaderboards/components/top-performer-list.tsx) |
+| MODIFIED | [frontend/src/features/learning/pages/StudentDashboardPage.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/learning/pages/StudentDashboardPage.tsx) |
+| MODIFIED | [docs/IMPLEMENTED.md](file:///d:/Dezai-Prototype-main/docs/IMPLEMENTED.md) |
+| MODIFIED | [docs/CHANGELOG.md](file:///d:/Dezai-Prototype-main/docs/CHANGELOG.md) |
+
+### Sprint 5 Completion Status
+
+| Sprint 5 Task | Status |
+|---|---|
+| Global Leaderboards | ✅ Complete (Sprint 4 backend) |
+| Institution Leaderboards | ✅ Complete (Sprint 4 backend) |
+| Monthly Leaderboards | ✅ Complete (Sprint 4 backend — `?range=monthly`) |
+| XP Ranking Logic & APIs | ✅ Complete (Sprint 4 backend) |
+| Leaderboard Dashboard Widgets | ✅ Complete (Sprint 4 backend + Faculty UI) |
+| Student Ranking Cards | ✅ Complete (Sprint 5 — `StudentRankingCard`) |
+| Top Performer Components | ✅ Complete (Sprint 5 — `TopPerformerList`) |
 

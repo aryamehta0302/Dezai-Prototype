@@ -113,4 +113,68 @@ export class UsersService {
       },
     };
   }
+
+  // ─────────────────── UPDATE FACULTY PROFILE ───────────────────
+
+  /**
+   * Update the faculty member's profile details.
+   * Atomically updates User table (name) and FacultyMember table (department, designation).
+   */
+  async updateFacultyProfile(userId: string, data: { name?: string; department?: string; designation?: string }) {
+    // Check if faculty member exists
+    const facultyMember = await this.prisma.facultyMember.findUnique({
+      where: { userId },
+    });
+
+    if (!facultyMember) {
+      throw new NotFoundException('Faculty profile not found for this user');
+    }
+
+    // Run database transactions to update User and FacultyMember
+    return this.prisma.$transaction(async (tx) => {
+      if (data.name) {
+        await tx.user.update({
+          where: { id: userId },
+          data: { name: data.name },
+        });
+      }
+
+      if (data.department !== undefined || data.designation !== undefined) {
+        await tx.facultyMember.update({
+          where: { userId },
+          data: {
+            department: data.department,
+            designation: data.designation,
+          },
+        });
+      }
+
+      // Return the newly updated profile
+      return tx.facultyMember.findUnique({
+        where: { userId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+              xp: true,
+              streakCount: true,
+            },
+          },
+          institution: {
+            select: {
+              id: true,
+              name: true,
+              logoUrl: true,
+              country: true,
+              state: true,
+              city: true,
+            },
+          },
+        },
+      });
+    });
+  }
 }

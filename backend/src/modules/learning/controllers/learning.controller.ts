@@ -40,7 +40,7 @@ export class LearningController {
   constructor(
     private readonly learningService: LearningService,
     private readonly programsService: ProgramsService
-  ) {}
+  ) { }
 
   /**
    * GET /api/learning/lessons/:id
@@ -51,6 +51,17 @@ export class LearningController {
   async getLesson(@Param('id') id: string) {
     const lesson = await this.learningService.getLesson(id);
     return { success: true, lesson };
+  }
+
+  /**
+   * GET /api/learning/lessons/:id/resources
+   * Get resources for a single lesson.
+   */
+  @Get('lessons/:id/resources')
+  @UseGuards(JwtAuthGuard)
+  async getLessonResources(@Param('id') id: string) {
+    const resources = await this.learningService.getLessonResources(id);
+    return { success: true, resources };
   }
 
   /**
@@ -164,5 +175,16 @@ export class LearningController {
   async getNote(@Param('id') id: string, @Req() req) {
     const note = await this.learningService.getNote(req.user.id, id);
     return { success: true, note };
+  }
+
+  /**
+   * GET /api/learning/stats
+   * Get total student stats including XP, streaks, and course completion counts.
+   */
+  @Get('stats')
+  @UseGuards(JwtAuthGuard)
+  async getStudentStats(@Req() req) {
+    const stats = await this.learningService.getStudentStats(req.user.id);
+    return { success: true, ...stats };
   }
 }

@@ -1,12 +1,38 @@
-# Dezai — Project Status Report (2026-06-18)
+# Dezai AI — Project Status Report (2026-06-18)
+
+This document tracks the current implementation progress, feature status, database models, API endpoint registries, and sprint milestones of the Dezai AI platform.
+
+---
 
 ## Executive Summary
 
-Dezai AI is a university-grade EdTech platform currently in **active development** with core infrastructure complete and progressive feature implementation. The project includes a fully functional Next.js frontend, NestJS backend, PostgreSQL database, and RBAC-secured API layer.
+Dezai AI is a university-grade EdTech platform built with a secure Next.js frontend, modular NestJS backend, and a PostgreSQL database mapped via Prisma.
 
-**Current Status**: **~70%** completion toward production MVP  
-**Latest Sprint**: Sprint 4 (AI Mentor Phase 1 Complete + Frontend UI)  
-**Active Owner**: You (AI Mentor) + Manan Panchal (Assessment Engine) + Ansh Dhanani (Enrollment/Progress)
+* **Current Status**: **~85%** completion toward production MVP
+* **Latest Sprint**: Sprint 4 (Polished Experience Sprint + Hybrid Content Delivery Engine)
+* **Latest Milestones**: 
+  * **Hybrid Content Delivery Engine**: Custom Markdown rendering, HTML5 video controls, interactive blocks (MemoryLeak, OverfitSqueeze).
+  * **AI Mentor (Phase 1)**: Context-aware chatbot backend chat session context injection, LLM provider layers, and frontend workspace.
+  * **Faculty Experience & Dashboard 2.0**: Live interactive console, Diagnostics widgets, Chronological activity feed, and Profile settings updates.
+  * **Notifications Center**: Notifications module and slide-over alert drawer.
+  * **Assessment Attempt Lifecycle & Results**: Start/resume attempts, autosave, grading with proctoring violation deductions, and recommendation engine.
+* **Development Team & Owners**:
+  * **You (Learning Experience Lead)**: Hybrid Content Delivery, Markdown/Video renderers (✅ Sprint 4 Complete)
+  * **Faculty Experience Lead**: Faculty Console, Cohort diagnostics, Notifications drawer, profile updates (✅ Sprint 4 Complete)
+  * **AI Mentor Owner**: AI Chat session context injection and LLM provider layers (✅ Sprint 4 Complete)
+  * **Manan Panchal**: Assessment Engine, attempt lifecycles, and recommendations (✅ Sprints 3 & 4 Complete)
+  * **Ansh Dhanani**: Enrollment, XP, streaks, and progress tracking (✅ Sprint 2 Complete)
+
+---
+
+## Overall Sprint Progress
+
+| Sprint | Description | Scope | Status | Date Completed |
+|---|---|---|---|---|
+| **Sprint 1** | Auth, RBAC & Curriculum | Phase 1 & 2 Auth, RBAC, Onboarding, Program/Module/Lesson CRUD | ✅ Completed | 2026-06-16 |
+| **Sprint 2** | Location & Student Progress | Cascading Location Filters, Google Sign-in Sync, User Profile, XP/Streaks | ✅ Completed | 2026-06-16 |
+| **Sprint 3** | Assessment Engine | Question Bank CRUD, Fisher-Yates 100:15 Dynamic Selection, basic analytics | ✅ Completed | 2026-06-17 |
+| **Sprint 4** | Platform Polish & Lifecycle | AI Mentor Workspace, Faculty Dashboard 2.0, Notification Center, Attempt Lifecycle, Hybrid Delivery | ✅ Completed | 2026-06-18 |
 
 ---
 
@@ -16,39 +42,19 @@ Dezai AI is a university-grade EdTech platform currently in **active development
 
 | Feature | Endpoints | Notes |
 |---------|-----------|-------|
-| **Authentication** | 4 endpoints | Login, register, onboarding, JWT refresh |
-| **User Management** | 8 endpoints | Profile, XP, settings, role-based redirects |
-| **Programs & Catalog** | 6 endpoints | Browse, search, enroll, curriculum display |
-| **Learning & Progress** | 7 endpoints | Lesson content, completion tracking, XP awards |
-| **Notes & Bookmarks** | 4 endpoints | Per-lesson persistence, CRUD operations |
-| **Assessment Engine** | 16 endpoints | Question banks, dynamic selection (100:15), scoring |
-| **AI Mentor Chat** | 6 endpoints | Sessions, messaging, context injection, providers |
+| **Authentication** | 4 endpoints | Login, register, onboarding role assignment, session-sync |
+| **User & Faculty Profile** | 10 endpoints | Profile updates, XP streaks, Faculty profile transaction, Faculty dashboard statistics |
+| **Programs & Catalog** | 6 endpoints | Browse, search, enroll, curriculum tracks |
+| **Learning & Progress** | 7 endpoints | Lesson content, completion checks, XP awarding |
+| **Notes & Bookmarks** | 4 endpoints | Per-lesson notes, slide bookmarks |
+| **Assessment Engine** | 16 endpoints | Question banks, dynamic selection (100:15), proctoring gate |
+| **Assessment Lifecycle** | 10 endpoints | Start/resume attempt, autosave, grading with deductions, recommendations |
+| **AI Mentor Chat** | 6 endpoints | Paginated sessions, messaging, context injection, LLM mock provider |
+| **Faculty Experience** | 2 endpoints | Extended analytics cohort metrics, recent activity feed |
+| **Notifications Center** | 4 endpoints | Notification alerts, mark-as-read, read-all utilities |
+| **Hybrid Content Delivery** | 1 endpoint | Custom Markdown rendering, HTML5 Video, block registry |
 
-**Subtotal: 51 endpoints, 7 major features**
-
-### 🚀 In Progress (Actively Being Built)
-
-| Feature | Phase | Owner | Status |
-|---------|-------|-------|--------|
-| **AI Mentor Chat** | 1 (Backend API) | You | ✅ Complete (Sprint 4) |
-| **AI Mentor Chat** | 2 (LLM Integration) | You | ⏳ Pending |
-| **AI Mentor Chat** | 3 (Frontend UI) | You | ✅ Complete (Sprint 4) |
-
-### ⏳ Planned (Next Priority)
-
-| Feature | Estimated Effort | Dependencies |
-|---------|------------------|--------------|
-| **Certificates & Verification** | 2 weeks | Assessment completion data |
-| **University Admin Dashboard** | 3 weeks | Analytics aggregation |
-| **Dezai Admin Dashboard** | 3 weeks | Revenue & institutional data |
-| **Razorpay Integration** | 2 weeks | Payment gateway setup |
-
-### ❌ Not Started (Future)
-
-- Notifications (schema exists)
-- File uploads & CDN
-- Real-time proctoring
-- Advanced analytics
+**Total Endpoints: 70 API Endpoints operational**
 
 ---
 
@@ -67,7 +73,6 @@ Dezai AI is a university-grade EdTech platform currently in **active development
 - **Modules**: 14 feature modules (13 existing + AI Mentor)
 - **Coverage**: Auth, users, programs, learning, assessments, **AI mentor**, analytics, audit
 - **AI Providers**: Mock (dev), Claude (Phase 2), Gemini (Phase 2), fallback to mock on error
-- **Coverage**: Auth, users, programs, learning, assessments, AI mentor, analytics, audit
 - **Guards**: JWT, RBAC
 
 ### Database (PostgreSQL + Prisma 6)
@@ -105,27 +110,28 @@ Dezai AI is a university-grade EdTech platform currently in **active development
 ## API Endpoints by Module
 
 ### Auth (4)
-```
+```http
 POST   /api/auth/register
 POST   /api/auth/onboarding
 POST   /api/auth/login-audit
 POST   /api/auth/session-sync
 ```
 
-### Users (8)
-```
+### Users & Faculty Profile (10)
+```http
 GET    /api/users/me
 GET    /api/users/:id
 PUT    /api/users/:id
+DELETE /api/users/:id
 GET    /api/users/me/xp
 POST   /api/users/me/xp
-POST   /api/users/me/profile
-GET    /api/users/profile
-DELETE /api/users/:id
+GET    /api/users/faculty/profile
+PATCH  /api/users/faculty/profile
+GET    /api/users/faculty/dashboard
 ```
 
 ### Programs (6)
-```
+```http
 GET    /api/programs
 GET    /api/programs/:id
 GET    /api/programs/:id/tracks
@@ -135,7 +141,7 @@ GET    /api/enrollments
 ```
 
 ### Learning (7)
-```
+```http
 GET    /api/learning/lessons/:id
 POST   /api/learning/lessons/:id/progress
 DELETE /api/learning/lessons/:id/progress
@@ -146,7 +152,7 @@ GET    /api/analytics
 ```
 
 ### Assessments (16)
-```
+```http
 GET    /api/assessments/question-banks
 POST   /api/assessments/question-banks
 GET    /api/assessments/question-banks/:id
@@ -165,8 +171,22 @@ GET    /api/assessments/:id/questions/select
 GET    /api/assessments/:id/analytics
 ```
 
-### AI Mentor (6) — Phase 1 Complete + Frontend
+### Assessment Lifecycle & Recommendations (10)
+```http
+POST   /api/assessments/attempts/start
+GET    /api/assessments/attempts/history/:assessmentId
+GET    /api/assessments/attempts/:id/resume
+POST   /api/assessments/attempts/:id/auto-save
+POST   /api/assessments/attempts/:id/submit
+GET    /api/assessments/attempts/:id/result
+GET    /api/assessments/:id/results
+GET    /api/assessments/recommendations/next-module/:programId
+GET    /api/assessments/recommendations/continue-learning
+GET    /api/assessments/recommendations/ready-assessments
 ```
+
+### AI Mentor (6)
+```http
 GET    /api/ai-mentor/sessions
 POST   /api/ai-mentor/sessions
 GET    /api/ai-mentor/sessions/:id
@@ -175,7 +195,40 @@ POST   /api/ai-mentor/chat
 POST   /api/ai-mentor/sessions/:id/context
 ```
 
-**Total: 53 endpoints**
+### Analytics (5)
+```http
+GET    /api/analytics/faculty
+GET    /api/analytics/programs/:id
+GET    /api/analytics/programs/:id/students
+GET    /api/analytics/faculty/extended
+GET    /api/analytics/faculty/activity
+```
+
+### Notifications (4)
+```http
+GET    /api/notifications
+PATCH  /api/notifications/:id/read
+POST   /api/notifications/read-all
+POST   /api/notifications
+```
+
+---
+
+## Database Models (22 Core + 2 Chat Models)
+
+### Core Models
+- **User Management**: User, FacultyMember, InstitutionAdmin (RBAC roles: STUDENT, FACULTY, UNIVERSITY_ADMIN, DEZAI_ADMIN)
+- **Curriculum**: Institution, Program, ProgramTrack, Module, Lesson
+- **Learning**: Progress, Bookmark, Note
+- **Assessments**: QuestionBank, QuestionBankQuestion, QuestionOption, Assessment, AssessmentAttempt, AttemptAnswer
+- **Proctoring**: ViolationLog, ExamSession
+- **Credentials**: Credential
+- **Gamification**: XpTransaction
+- **Platform**: Upload, Notification, AuditLog
+
+### Chat Models (Phase 1)
+- **ChatSession**: User context + active program/module/lesson tracking
+- **ChatMessage**: Bidirectional messages with sender type (USER | MENTOR)
 
 ---
 
@@ -207,10 +260,11 @@ POST   /api/ai-mentor/sessions/:id/context
 
 | Owner | Module | Status |
 |-------|--------|--------|
-| **You** | AI Mentor (modules/ai + features/ai-mentor) | 🚀 Phase 1 Complete |
-| **Manan Panchal** | Assessment Engine (modules/assessments) | ✅ Complete (Sprint 3) |
-| **Ansh Dhanani** | Enrollment & Progress (modules/learning) | ✅ Complete (Sprint 2) |
-| **Shared** | Auth, Users, Programs, Infrastructure | ✅ Complete (Sprint 1) |
+| **Faculty Experience Lead** | Faculty Console, Extended Analytics, Notifications Drawer | 🚀 Sprint 4 Complete |
+| **AI Mentor Owner** | AI Mentor (modules/ai + features/ai-mentor) | 🚀 Phase 1 Complete |
+| **Manan Panchal** | Assessment Engine, Lifecycle, Recommendations | ✅ Sprints 3 & 4 Complete |
+| **Ansh Dhanani** | Enrollment & Progress (modules/learning) | ✅ Sprint 2 Complete |
+| **Shared** | Auth, Users, Programs, Infrastructure | ✅ Sprint 1 Complete |
 
 ---
 
@@ -295,11 +349,10 @@ POST   /api/ai-mentor/sessions/:id/context
 1. **Mock AI Responses** — Phase 1 uses template-based responses, no real LLM
 2. **No RAG System** — Phase 2 will inject lesson context into prompts
 3. **No Streaming** — Phase 2 will implement Server-Sent Events for real-time responses
-4. **Limited Analytics** — Only basic dashboard; no advanced insights
+4. **Limited Analytics Styling** — Cohort analytics has data widgets but lacks graphical chart interfaces (Recharts pending)
 5. **No Payment Processing** — Razorpay integration pending
-6. **No Notifications** — Schema exists, endpoints not implemented
-7. **No File Uploads** — CDN infrastructure not configured
-8. **Limited Tests** — QA mostly manual; automated tests needed
+6. **No File Uploads** — CDN infrastructure not configured
+7. **Limited Tests** — QA mostly manual; automated tests needed
 
 ---
 

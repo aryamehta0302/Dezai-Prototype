@@ -1,38 +1,89 @@
 import { apiClient } from "@/core/api/client";
-import type {
-  ApiEnrollmentsResponse,
-  ApiEnrollResponse,
-  ApiLessonResponse,
-  ApiProgressResponse,
-  ApiNoteResponse,
-  ApiBookmarkResponse,
-} from "@/features/programs/types/program.types";
+import type { ApiProgram, ApiTrack, ApiModule, ApiLesson, ApiResource } from "@/features/programs/types/program.types";
+
+export type { ApiProgram, ApiTrack, ApiModule, ApiLesson, ApiResource };
+
+// ─── API Services ────────────────────────────────────────────────────────────
+
+export const programsApi = {
+  getAll: (institutionId?: string) =>
+    apiClient.get<{ success: boolean; programs: ApiProgram[] }>("/programs", {
+      params: institutionId ? { institutionId } : undefined,
+    }),
+
+  getById: (id: string) =>
+    apiClient.get<{ success: boolean; program: ApiProgram }>(`/programs/${id}`),
+};
 
 export const learningApi = {
+  /**
+   * Get all active enrollments for the student
+   */
   getEnrollments: () =>
-    apiClient.get<ApiEnrollmentsResponse>("/enrollments"),
+    apiClient.get<{ success: boolean; enrollments: any[] }>("/enrollments"),
 
+  /**
+   * Enroll in a program
+   */
   enroll: (programId: string) =>
-    apiClient.post<ApiEnrollResponse>(`/enrollments/${programId}`),
+    apiClient.post<{ success: boolean; enrollment: any }>(`/enrollments/${programId}`),
 
+  /**
+   * Get student's current XP and stats
+   */
+  getMyStats: () =>
+    apiClient.get<{
+      success: boolean;
+      xp: number;
+      streakCount: number;
+      enrolledCourses: number;
+      completedCourses: number;
+      globalRank: number;
+    }>("/learning/stats"),
+
+  /**
+   * Get lesson details
+   */
   getLesson: (lessonId: string) =>
-    apiClient.get<ApiLessonResponse>(`/learning/lessons/${lessonId}`),
+    apiClient.get<{ success: boolean; lesson: any }>(`/learning/lessons/${lessonId}`),
 
+  /**
+   * Get resources for a lesson
+   */
+  getResources: (lessonId: string) =>
+    apiClient.get<{ success: boolean; resources: ApiResource[] }>(`/learning/lessons/${lessonId}/resources`),
+
+  /**
+   * Mark lesson as complete
+   */
   completeLesson: (lessonId: string) =>
-    apiClient.post<ApiProgressResponse>(`/learning/lessons/${lessonId}/progress`),
+    apiClient.post<{
+      success: boolean;
+      xpResult?: { amountAwarded: number; currentXp: number };
+      alreadyCompleted?: boolean;
+    }>(`/learning/lessons/${lessonId}/progress`),
 
+  /**
+   * Revert lesson completion
+   */
   uncompleteLesson: (lessonId: string) =>
     apiClient.delete<{ success: boolean }>(`/learning/lessons/${lessonId}/progress`),
 
+  /**
+   * Toggle lesson bookmark
+   */
   toggleBookmark: (lessonId: string) =>
-    apiClient.post<ApiBookmarkResponse>(`/learning/lessons/${lessonId}/bookmark`),
+    apiClient.post<{ success: boolean; bookmarked: boolean }>(`/learning/lessons/${lessonId}/bookmark`),
 
+  /**
+   * Upsert lesson note
+   */
   upsertNote: (lessonId: string, content: string) =>
-    apiClient.put<ApiNoteResponse>(`/learning/lessons/${lessonId}/notes`, { content }),
+    apiClient.put<{ success: boolean; note: any }>(`/learning/lessons/${lessonId}/notes`, { content }),
 
+  /**
+   * Get lesson note
+   */
   getNote: (lessonId: string) =>
-    apiClient.get<ApiNoteResponse>(`/learning/lessons/${lessonId}/notes`),
-
-  getMyXp: () =>
-    apiClient.get<{ success: boolean; xp: number; streakCount: number }>("/users/me/xp"),
+    apiClient.get<{ success: boolean; note: any }>(`/learning/lessons/${lessonId}/notes`),
 };

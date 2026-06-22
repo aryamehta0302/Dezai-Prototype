@@ -69,6 +69,50 @@ All notable changes to this project will be documented in this file.
 
 ## [Sprint 4] — 2026-06-18
 
+**Developers:** Faculty Experience & Dashboard Lead, Manan Panchal (Assessment & Learning Exp. Lead), AI Mentor Owner (AI Mentor), You (Learning Experience)
+
+### Hybrid Content Delivery Engine (Learning Experience Lead)
+
+#### Added
+
+- **Additive Schema & DB Migration** — Added `Resource` model and `ContentFormat` enum to `schema.prisma` mapping lesson attachments and format.
+  - Endpoints: `GET /api/learning/lessons/:id/resources`
+  - Files: [schema.prisma](file:///d:/DEZAI/Dezai-Prototype/backend/prisma/schema.prisma)
+
+- **Markdown & Video Renderers** — Replaced regex-based renderer and mocked video player with safe ReactMarkdown and custom HTML5 video controls.
+  - Files: [lesson-markdown-renderer.tsx](file:///d:/DEZAI/Dezai-Prototype/frontend/src/features/learning/components/lesson-markdown-renderer.tsx), [lesson-video-player.tsx](file:///d:/DEZAI/Dezai-Prototype/frontend/src/features/learning/components/lesson-video-player.tsx)
+
+- **Interactive Blocks & Registry** — Framer Motion block components (`MemoryLeakBlock`, `OverfitSqueezeBlock`), scroll-observer typography anchors (`interactive-cognitive-anchor.tsx`), and visual callouts (`concept-highlight.tsx`) connected dynamically via a unified `block-registry.ts`.
+  - Files: [block-registry.ts](file:///d:/DEZAI/Dezai-Prototype/frontend/src/features/learning/components/blocks/block-registry.ts), [MemoryLeakBlock.tsx](file:///d:/DEZAI/Dezai-Prototype/frontend/src/features/learning/components/blocks/MemoryLeakBlock.tsx), [OverfitSqueezeBlock.tsx](file:///d:/DEZAI/Dezai-Prototype/frontend/src/features/learning/components/blocks/OverfitSqueezeBlock.tsx), [interactive-cognitive-anchor.tsx](file:///d:/DEZAI/Dezai-Prototype/frontend/src/features/learning/components/blocks/interactive-cognitive-anchor.tsx), [concept-highlight.tsx](file:///d:/DEZAI/Dezai-Prototype/frontend/src/features/learning/components/blocks/concept-highlight.tsx)
+
+---
+
+### Faculty Experience & Dashboard 2.0 (Faculty Experience Lead)
+
+#### Added
+
+- **Faculty Dashboard 2.0 Interface** — Created an interactive, tabbed dashboard console for faculty users supporting Overview, Cohort Analytics, and Instructor Profile settings, with modals for program/assessment publication triggers.
+  - File: [FacultyDashboard.tsx](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/components/FacultyDashboard.tsx)
+- **Extended Faculty Analytics** — Implemented metrics calculations for top 5 students leaderboard (by XP), low-progress weak students focus alerts, and diagnostic module warnings (low assessment pass rates).
+  - Files: [analytics.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/services/analytics.service.ts), [analytics.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/controllers/analytics.controller.ts)
+  - Endpoints: `GET /api/analytics/faculty/extended`
+- **Chronological Activity Feed** — Aggregated recent student enrollments, micro-credential completions, and assessment attempt events into a unified chronological activity feed.
+  - Files: [analytics.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/services/analytics.service.ts), [analytics.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/controllers/analytics.controller.ts)
+  - Endpoints: `GET /api/analytics/faculty/activity`
+- **Notifications Module & Slide-Over Drawer** — Implemented backend notifications module for generating and tracking read status of system alerts, paired with an interactive slide-over drawer on the frontend.
+  - Files: [notifications.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/notifications/services/notifications.service.ts), [notifications.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/notifications/controllers/notifications.controller.ts), [notifications.module.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/notifications/notifications.module.ts)
+  - Endpoints: `GET /api/notifications`, `PATCH /api/notifications/:id/read`, `POST /api/notifications/read-all`, `POST /api/notifications`
+- **Faculty Profile Update API** — Added an endpoint to update faculty member name, department, and designation in a single atomic database transaction.
+  - Files: [users.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/users/services/users.service.ts), [users.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/users/controllers/users.controller.ts), [users.dto.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/users/dto/users.dto.ts)
+  - Endpoints: `PATCH /api/users/faculty/profile`
+
+#### Changed
+
+- **IMPLEMENTED.md updated** — Added Section 11 documenting Sprint 4 features and endpoints.
+  - File: [IMPLEMENTED.md](file:///d:/Project/Dezai-ai/Dezai-Prototype/docs/IMPLEMENTED.md)
+
+---
+
 ### Assessment Lifecycle & Results (Manan Panchal)
 
 #### Added
@@ -76,28 +120,23 @@ All notable changes to this project will be documented in this file.
 - **Assessment Attempt System** — Backend service and controller to start, resume, autosave, and submit student assessment attempts. Integrates with the existing `ExamSession` proctoring logs and enforces maximum attempts limits.
   - Files: [attempt.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/attempt.service.ts), [attempt.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/attempt.controller.ts)
   - Endpoints: `POST /api/assessments/attempts/start`, `GET /api/assessments/attempts/history/:assessmentId`, `GET /api/assessments/attempts/:id/resume`, `POST /api/assessments/attempts/:id/auto-save`, `POST /api/assessments/attempts/:id/submit`, `GET /api/assessments/attempts/:id/result`
-
 - **Faculty Assessment Results Review** — Faculty-facing endpoint to retrieve detailed student score breakdowns and proctoring violation counts for class tracking.
   - Files: [assessment.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/assessment.service.ts), [assessment.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/assessment.controller.ts)
   - Endpoints: `GET /api/assessments/:id/results`
-
 - **Recommendation Engine** — Implements a learning path recommendation system to suggest: the next module and lesson based on progress, a continue learning payload based on recent activity, and a list of completed-lesson modules with ready-to-take assessments.
   - Files: [recommendation.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/recommendation.service.ts), [assessment.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/assessment.controller.ts)
   - Endpoints: `GET /api/assessments/recommendations/next-module/:programId`, `GET /api/assessments/recommendations/continue-learning`, `GET /api/assessments/recommendations/ready-assessments`
-
 - **Assessment Player UI** — Student-facing React component, types, and hooks implementing a secure taking layout. Integrates countdown timer, navigation sidebar, auto-save status indicators, and proctoring violation alerts/blocking overlays.
   - Files: [AssessmentPlayer.tsx](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/pages/AssessmentPlayer.tsx), [useAttempt.ts](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/hooks/useAttempt.ts), [assessment.types.ts](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/types/assessment.types.ts), [assessment-attempt.service.ts](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/services/assessment-attempt.service.ts)
   - Pages: `/programs/:slug/assessment/:assessmentId`
-
 - **Assessment Results & Review UI** — Custom, styled screens displaying passing/failing banners, attempt score breakdowns, question-by-question reviews highlighting selected options and explanations, and previous attempt history tables.
-  - Files: [AssessmentResult.tsx](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/pages/AssessmentResult.tsx), [AssessmentReview.tsx](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/assessments/pages/AssessmentReview.tsx)
+  - Files: [AssessmentResult.tsx](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/results/pages/AssessmentResult.tsx), [AssessmentReview.tsx](file:///d:/git/dezai/Dezai-Prototype/frontend/src/features/results/pages/AssessmentReview.tsx)
   - Pages: `/programs/:slug/assessment/:assessmentId/results`, `/programs/:slug/assessment/:assessmentId/review`
 
 #### Changed
 
 - **QuestionSelectionService Seeding** — Updated `selectQuestions` to support seed strings, enabling deterministic shuffles and question subset selections. Resuming an attempt now serves the exact same question set and option ordering.
   - File: [question-selection.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/question-selection.service.ts)
-
 - **AssessmentsModule Wiring** — Imported `UsersModule` to inject `XpService` into `AttemptService` and registered all new controllers and services.
   - File: [assessments.module.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/assessments.module.ts)
 
@@ -108,30 +147,25 @@ All notable changes to this project will be documented in this file.
 #### Added
 
 - **AI Mentor Module: Complete Phase 1 Implementation** — Full backend API + AI provider abstraction + context injection for lesson-aware responses.
-
 - **Backend: AI Provider Abstraction Layer** — Pluggable provider architecture supporting multiple LLM backends.
   - **AIProvider Interface**: `ai-provider.interface.ts` — Contract for all providers
   - **MockProvider**: `mock-provider.ts` — Development/fallback provider with contextual responses
   - **ClaudeProvider**: `claude-provider.ts` — Anthropic Claude integration (structure ready for Phase 2)
   - **GeminiProvider**: `gemini-provider.ts` — Google Gemini integration (structure ready for Phase 2)
   - **AIProviderService**: `ai-provider.service.ts` — Provider selection & delegation with automatic fallback
-
 - **Backend: Context Injection System** — Lesson/Module/Program context automatically injected into AI prompts.
   - Fetches lesson content, module title, program title from database
   - Builds enriched system prompt with curriculum context
   - Fallback gracefully if context unavailable
   - Enables semantic relevance without external vector DB
-
 - **Frontend: AI Mentor Workspace** — Complete chat UI with sidebar, message history, smart buttons.
   - **Components**: ChatWindow (message display), MessageInput (send prompt), SessionSidebar (session list), SmartButtons (quick actions)
   - **Chat Page**: `chat-page.tsx` — Main chat interface with session management
   - **Route**: `/(student)/chat` — Accessible from student dashboard
-
 - **Frontend: State Management** — Zustand store with localStorage persistence.
   - **useChatStore**: Manages sessions, current session ID, message history, loading states
   - Persists currentSessionId to localStorage for resuming chats
   - Excludes message bodies from persistence (refetch from API)
-
 - **Frontend: React Query Integration** — Server state management for API operations.
   - **useChatSessions**: Fetch user sessions with pagination
   - **useChatSession**: Fetch specific session with messages
@@ -139,13 +173,11 @@ All notable changes to this project will be documented in this file.
   - **useDeleteSession**: Delete session
   - **useSendMessage**: Send message & get response
   - **useUpdateContext**: Update active lesson/module/program
-
 - **Frontend: Smart Buttons** — Quick action prompts for common tasks.
   - Explain Concept
   - Summarize
   - Generate Notes
   - Real Example
-
 - **API Service Layer** — Type-safe API client for chat operations.
   - `aiMentorApi.getSessions()`
   - `aiMentorApi.createSession()`
@@ -153,7 +185,6 @@ All notable changes to this project will be documented in this file.
   - `aiMentorApi.deleteSession()`
   - `aiMentorApi.sendMessage()`
   - `aiMentorApi.updateContext()`
-
 - **6 API Endpoints** (all protected by `JwtAuthGuard`):
   - `GET /api/ai-mentor/sessions` — List user sessions (paginated)
   - `POST /api/ai-mentor/sessions` — Create new session
@@ -161,7 +192,6 @@ All notable changes to this project will be documented in this file.
   - `DELETE /api/ai-mentor/sessions/:id` — Delete session
   - `POST /api/ai-mentor/chat` — Send message & get response
   - `POST /api/ai-mentor/sessions/:id/context` — Update active lesson/module/program
-
 - **TypeScript Types**: Full type safety across all layers.
   - `ChatSession`, `ChatMessage`, `CreateSessionRequest`, `SendMessageRequest`, `UpdateContextRequest`
   - Response types: `ChatSessionResponse`, `ChatSessionsResponse`, `SendMessageResponse`
@@ -236,6 +266,7 @@ frontend/src/features/ai-mentor/
 frontend/src/app/(student)/chat/page.tsx (NEW)
 ```
 
+
 ---
 
 ## [Sprint 3] — 2026-06-17
@@ -309,3 +340,73 @@ frontend/src/app/(student)/chat/page.tsx (NEW)
 - Authentication & RBAC System
 - Curriculum & Program Management (Manan Panchal)
 - See [IMPLEMENTED.md](file:///d:/git/dezai/Dezai-Prototype/docs/IMPLEMENTED.md) Sections 5–7.
+
+
+---
+
+---
+
+## [Sprint 5] — 2026-06-22
+
+**Developer:** Krish Parmar (Analytics & Quality Lead)
+
+### Added
+
+- **`StudentRankingCard` Component** — Dedicated frontend card displaying the student's global XP rank, total XP earned, and streak count. Rank badge adapts for top-3 and top-10 positions. Reads from existing `useEnrollmentStore()` — no new API calls.
+  - File: [frontend/src/features/leaderboards/components/student-ranking-card.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/leaderboards/components/student-ranking-card.tsx)
+
+- **`TopPerformerList` Component** — Student-facing leaderboard list showing top 10 globally ranked students. Monthly / All-Time tab switcher. Rank badge, student name, institution, XP per row. Highlights the current user with a `You` badge. Includes loading skeleton, empty state, and error/retry.
+  - File: [frontend/src/features/leaderboards/components/top-performer-list.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/leaderboards/components/top-performer-list.tsx)
+  - Endpoint: `GET /api/leaderboards/students` (existing Sprint 4 endpoint — no backend changes)
+
+### Changed
+
+- **Student Dashboard** — Both components integrated into the right sidebar of `StudentDashboardPage`. Ranking card placed above the activity feed; performer list placed below it.
+  - File: [frontend/src/features/learning/pages/StudentDashboardPage.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/learning/pages/StudentDashboardPage.tsx)
+
+- **IMPLEMENTED.md** — Added Section 12 documenting Sprint 5 leaderboard frontend components.
+
+### Notes
+
+- No backend changes. All 5 leaderboard API endpoints were production-complete from Sprint 4.
+- No Prisma schema changes, no new routes, no new pages.
+
+---
+
+## [Sprint 4] — 2026-06-18
+
+**Developer:** Leaderboards & Notifications Lead
+
+### Added
+
+- **Notification Center** — Endpoints to fetch active, unread, or archived notifications. Includes bulk and single-operation status management (read, unread, archive).
+  - Files: [notification.dto.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/notifications/dto/notification.dto.ts), [notifications.service.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/notifications/services/notifications.service.ts), [notifications.controller.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/notifications/controllers/notifications.controller.ts)
+  - Endpoints: `GET /api/notifications`, `PATCH /api/notifications/mark-all-read`, `PATCH /api/notifications/:id/read`, `PATCH /api/notifications/:id/unread`, `PATCH /api/notifications/:id/archive`
+
+- **Ranked Leaderboards** — Weekly, monthly, and all-time student rankings. Also includes university and program rankings based on total student XP, active students (30-day window), and completion speeds.
+  - Files: [leaderboard.dto.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/leaderboards/dto/leaderboard.dto.ts), [leaderboards.service.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/leaderboards/services/leaderboards.service.ts), [leaderboards.controller.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/leaderboards/controllers/leaderboards.controller.ts)
+  - Endpoints: `GET /api/leaderboards/students`, `GET /api/leaderboards/universities`, `GET /api/leaderboards/programs`
+
+- **Dashboard Widgets** — Compact student and faculty dashboard widgets.
+  - Endpoints: `GET /api/leaderboards/widgets/student`, `GET /api/leaderboards/widgets/faculty`
+
+- **API Documentation** — Detailed API documents for both modules.
+  - Files: [notifications.md](file:///d:/Dezai-Prototype-main/docs/API/notifications.md), [leaderboards.md](file:///d:/Dezai-Prototype-main/docs/API/leaderboards.md)
+
+### Changed
+
+- **Notifications Schema** — Added `archived Boolean @default(false)` to support soft-archiving of notifications.
+  - File: [schema.prisma](file:///d:/Dezai-Prototype-main/backend/prisma/schema.prisma)
+
+- **AppModule and NotificationsModule** — Registered the new controllers, services, and wired the modules.
+  - Files: [app.module.ts](file:///d:/Dezai-Prototype-main/backend/src/app.module.ts), [notifications.module.ts](file:///d:/Dezai-Prototype-main/backend/src/modules/notifications/notifications.module.ts)
+
+- **IMPLEMENTED.md updated** — Appended Section 10 for Sprint 4.
+  - File: [docs/IMPLEMENTED.md](file:///d:/Dezai-Prototype-main/docs/IMPLEMENTED.md)
+
+---
+
+
+
+
+
