@@ -35,7 +35,7 @@ function ProfilePageSkeleton() {
 export function ProfilePage() {
   const { user, stats, activity } = useProfile();
   const { achievements } = useAchievements();
-  const { xpEarned, globalRank, fetchEnrollments, fetchStats } = useEnrollmentStore();
+  const { xpEarned, fetchEnrollments, fetchStats } = useEnrollmentStore();
 
   useEffect(() => {
     fetchEnrollments();
@@ -53,31 +53,25 @@ export function ProfilePage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         <div className="lg:col-span-1 space-y-6">
           <LevelProgressCard xp={xpEarned} />
-
-          <div className="card-elevation p-5 space-y-3">
-            <h3 className="text-xs font-semibold text-muted uppercase tracking-wider">Ranking</h3>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-surface-low">
-              <span className="text-sm text-muted">Global Rank</span>
-              <span className="text-lg font-bold text-on-surface">#{globalRank}</span>
-            </div>
-          </div>
         </div>
 
         <div className="lg:col-span-3 space-y-6">
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="mb-6 bg-surface-low border border-border-light p-1">
-              <TabsTrigger value="overview" className="gap-2">
-                <User className="h-4 w-4" /> Overview
-              </TabsTrigger>
-              <TabsTrigger value="achievements" className="gap-2">
-                <Trophy className="h-4 w-4" /> Achievements
-              </TabsTrigger>
-              <TabsTrigger value="activity" className="gap-2">
-                <Activity className="h-4 w-4" /> Activity
-              </TabsTrigger>
-              <TabsTrigger value="credentials" className="gap-2">
-                <Award className="h-4 w-4" /> Credentials
-              </TabsTrigger>
+            <TabsList variant="line" className="mb-6 gap-6 bg-transparent border-0 p-0 h-auto">
+              {[
+                { value: "overview", icon: User, label: "Overview" },
+                { value: "achievements", icon: Trophy, label: "Achievements" },
+                { value: "activity", icon: Activity, label: "Activity" },
+                { value: "credentials", icon: Award, label: "Credentials" },
+              ].map(({ value, icon: Icon, label }) => (
+                <TabsTrigger
+                  key={value}
+                  value={value}
+                  className="gap-2 bg-transparent border-0 shadow-none p-0 h-auto data-active:bg-transparent data-active:text-foreground data-active:shadow-none after:hidden"
+                >
+                  <Icon className="h-4 w-4" /> {label}
+                </TabsTrigger>
+              ))}
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">

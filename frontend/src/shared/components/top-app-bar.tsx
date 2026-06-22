@@ -151,7 +151,7 @@ export function TopAppBar({
                       Profile
                     </Link>
                     <Link
-                      href="/settings/profile"
+                      href="/profile/settings"
                       onClick={() => setProfileOpen(false)}
                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-on-surface-variant hover:bg-surface-low transition-colors"
                     >

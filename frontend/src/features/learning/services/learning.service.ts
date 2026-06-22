@@ -64,7 +64,7 @@ export const learningService = {
     return {
       enrolledCourses: enrolled,
       completedCourses: completed,
-      certificatesEarned: completed,
+      certificatesEarned: 0,
       xpEarned,
       learningStreak: 1,
       hoursLearned: Math.round(enrolled * 12.5),

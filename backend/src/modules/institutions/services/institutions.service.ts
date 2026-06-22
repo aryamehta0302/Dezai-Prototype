@@ -4,12 +4,16 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
-import { UserRole, FacultyVerificationStatus } from '@prisma/client';
+import { UserRole, FacultyVerificationStatus, AuditAction } from '@prisma/client';
+import { AuditService } from '../../audit/services/audit.service';
 import { CreateInstitutionDto, UpdateInstitutionDto } from '../dto/institution.dto';
 
 @Injectable()
 export class InstitutionsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private auditService: AuditService,
+  ) {}
 
   // ─────────────────── INSTITUTIONS ───────────────────
 
@@ -111,16 +115,28 @@ export class InstitutionsService {
   /**
    * Create a new institution. Only DEZAI_ADMIN can do this.
    */
-  async createInstitution(data: CreateInstitutionDto) {
-    return this.prisma.institution.create({ data });
+  async createInstitution(createdByUserId: string, data: CreateInstitutionDto) {
+    const institution = await this.prisma.institution.create({ data });
+    await this.auditService.logAction(
+      createdByUserId,
+      AuditAction.INSTITUTION_CREATED,
+      `Institution "${institution.name}" (ID: ${institution.id}) created`,
+    );
+    return institution;
   }
 
   /**
    * Update an institution. Only DEZAI_ADMIN can do this.
    */
-  async updateInstitution(id: string, data: UpdateInstitutionDto) {
-    await this.getInstitutionById(id); // throws 404 if not found
-    return this.prisma.institution.update({ where: { id }, data });
+  async updateInstitution(updatedByUserId: string, id: string, data: UpdateInstitutionDto) {
+    await this.getInstitutionById(id);
+    const institution = await this.prisma.institution.update({ where: { id }, data });
+    await this.auditService.logAction(
+      updatedByUserId,
+      AuditAction.INSTITUTION_UPDATED,
+      `Institution "${institution.name}" (ID: ${id}) updated`,
+    );
+    return institution;
   }
 
   // ─────────────────── FACULTY MANAGEMENT ───────────────────
@@ -195,12 +211,20 @@ export class InstitutionsService {
       throw new ForbiddenException('Only University Admins or Dezai Admins can verify faculty');
     }
 
-    return this.prisma.facultyMember.update({
+    const result = await this.prisma.facultyMember.update({
       where: { id: facultyMemberId },
       data: { verificationStatus: newStatus },
       include: {
         user: { select: { id: true, name: true, email: true } },
       },
     });
+
+    await this.auditService.logAction(
+      requestingUserId,
+      AuditAction.FACULTY_VERIFIED,
+      `Faculty member ${facultyMemberId} verification status changed to ${newStatus}`,
+    );
+
+    return result;
   }
 }

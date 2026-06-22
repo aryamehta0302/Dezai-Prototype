@@ -91,7 +91,7 @@ export class LearningController {
     }
 
     await this.programsService.validateProgramOwnership(req.user.id, module.track.programId, req.user.role as UserRole);
-    const lesson = await this.learningService.createLesson(moduleId, body);
+    const lesson = await this.learningService.createLesson(req.user.id, moduleId, body);
     return { success: true, lesson };
   }
 
@@ -110,7 +110,7 @@ export class LearningController {
     });
 
     await this.programsService.validateProgramOwnership(req.user.id, module.track.programId, req.user.role as UserRole);
-    const updated = await this.learningService.updateLesson(id, body);
+    const updated = await this.learningService.updateLesson(req.user.id, id, body);
     return { success: true, lesson: updated };
   }
 

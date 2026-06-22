@@ -3,7 +3,8 @@ import { PrismaService } from '../../../database/prisma.service';
 import { EnrollmentService } from '../../programs/services/enrollment.service';
 import { XpService } from '../../users/services/xp.service';
 import { AwardService } from '../../achievements/services/award.service';
-import { XpType, AchievementCategory } from '@prisma/client';
+import { AuditService } from '../../audit/services/audit.service';
+import { XpType, AchievementCategory, AuditAction } from '@prisma/client';
 
 @Injectable()
 export class LearningService {
@@ -12,6 +13,7 @@ export class LearningService {
     private enrollmentService: EnrollmentService,
     private xpService: XpService,
     private awardService: AwardService,
+    private auditService: AuditService,
   ) { }
 
   /**
@@ -58,8 +60,8 @@ export class LearningService {
   /**
    * Create a new lesson. Gated by program ownership validation.
    */
-  async createLesson(moduleId: string, data: { title: string; content: string; videoUrl?: string; order: number }) {
-    return this.prisma.lesson.create({
+   async createLesson(userId: string, moduleId: string, data: { title: string; content: string; videoUrl?: string; order: number }) {
+    const lesson = await this.prisma.lesson.create({
       data: {
         moduleId,
         title: data.title,
@@ -68,16 +70,32 @@ export class LearningService {
         order: data.order,
       },
     });
+
+    await this.auditService.logAction(
+      userId,
+      AuditAction.LESSON_CREATED,
+      `Lesson "${lesson.title}" (ID: ${lesson.id}) created in module ${moduleId}`,
+    );
+
+    return lesson;
   }
 
   /**
    * Update lesson content.
    */
-  async updateLesson(id: string, data: { title?: string; content?: string; videoUrl?: string; order?: number }) {
-    return this.prisma.lesson.update({
+   async updateLesson(userId: string, id: string, data: { title?: string; content?: string; videoUrl?: string; order?: number }) {
+    const lesson = await this.prisma.lesson.update({
       where: { id },
       data,
     });
+
+    await this.auditService.logAction(
+      userId,
+      AuditAction.LESSON_UPDATED,
+      `Lesson "${lesson.title}" (ID: ${id}) updated`,
+    );
+
+    return lesson;
   }
 
   /**
@@ -144,6 +162,12 @@ export class LearningService {
     await this.awardService.checkAndAward(userId, AchievementCategory.STREAK);
     await this.awardService.checkAndAward(userId, AchievementCategory.COMPLETION);
     await this.awardService.checkAndAward(userId, AchievementCategory.XP);
+
+    await this.auditService.logAction(
+      userId,
+      AuditAction.LESSON_COMPLETED,
+      `Lesson ${lessonId} completed by user ${userId} in program ${programId}`,
+    );
 
     return {
       success: true,
@@ -261,6 +285,7 @@ export class LearningService {
     });
 
     this.awardService.checkAndAward(userId, AchievementCategory.ENGAGEMENT);
+    this.auditService.logAction(userId, AuditAction.BOOKMARK_TOGGLED, `Lesson ${lessonId} bookmarked by user ${userId}`);
 
     return { success: true, bookmarked: true };
   }
@@ -281,6 +306,7 @@ export class LearningService {
 
     if (!existing) {
       this.awardService.checkAndAward(userId, AchievementCategory.ENGAGEMENT);
+      this.auditService.logAction(userId, AuditAction.NOTE_CREATED, `Note created for lesson ${lessonId} by user ${userId}`);
     }
 
     return note;
