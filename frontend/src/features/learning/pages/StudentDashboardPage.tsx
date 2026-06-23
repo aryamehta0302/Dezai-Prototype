@@ -14,6 +14,8 @@ import { LevelProgressCard } from "@/features/achievements/components/level-prog
 import { AchievementGrid } from "@/features/achievements/components/achievement-grid";
 import { ContinueLearningCard } from "../components/continue-learning-card";
 import { EnrolledCourseCard } from "../components/enrolled-course-card";
+import { StudentRankingCard } from "@/features/leaderboards/components/student-ranking-card";
+import { TopPerformerList } from "@/features/leaderboards/components/top-performer-list";
 import { Button } from "@/shared/ui/button";
 import {
   BookOpen,
@@ -204,6 +206,15 @@ export function StudentDashboardPage() {
         </div>
 
         <div className="xl:col-span-1 space-y-8">
+          {/* Student Ranking Card — Sprint 5 */}
+          {!isLoading && globalRank > 0 && (
+            <StudentRankingCard
+              rank={globalRank}
+              xp={xpEarned}
+              streakCount={stats.streakCount}
+            />
+          )}
+          
           {/* Activity Tracking Placeholder */}
           <section className="space-y-4">
             <h2 className="text-xl font-bold text-on-surface capitalize">activity feed</h2>
@@ -254,6 +265,10 @@ export function StudentDashboardPage() {
               )}
             </div>
           </section>
+
+          {/* Top Performer List — Sprint 5 */}
+          <TopPerformerList />
+
         </div>
       </div>
     </PageContainer>
