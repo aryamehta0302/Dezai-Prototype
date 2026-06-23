@@ -5,9 +5,10 @@ import { CredentialsRepository } from './repositories/credentials.repository';
 import { TemplateService } from './services/template.service';
 
 import { DatabaseModule } from '../../database/database.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, AuditModule],
   controllers: [CredentialsController],
   providers: [CredentialsService, CredentialsRepository, TemplateService],
   exports: [CredentialsService, TemplateService],

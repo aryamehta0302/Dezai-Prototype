@@ -4,9 +4,9 @@ import { PageContainer } from "@/shared/components/page-container";
 import { CourseCard } from "../components/course-card";
 import { CourseFilters } from "../components/course-filters";
 import { EmptyState } from "@/shared/components/empty-state";
-import { LoadingSkeleton } from "@/shared/components/loading-skeleton";
+import { CourseCardSkeleton } from "@/shared/components/loading-skeleton";
 import { useCourses } from "../hooks/useCourses";
-import { SearchX } from "lucide-react";
+import { SearchX, Loader2 } from "lucide-react";
 
 export function CatalogPage() {
   const {
@@ -40,9 +40,19 @@ export function CatalogPage() {
         />
 
         {isLoading ? (
-          <LoadingSkeleton />
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm text-secondary">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading courses...
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <CourseCardSkeleton key={i} />
+              ))}
+            </div>
+          </div>
         ) : courses.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 fade-in-staggered">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {courses.map((course) => (
               <CourseCard key={course.id} course={course} />
             ))}

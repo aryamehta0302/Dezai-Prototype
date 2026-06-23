@@ -87,6 +87,7 @@ export function TopPerformerList() {
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchLeaderboard(range);
   }, [range, fetchLeaderboard]);
 

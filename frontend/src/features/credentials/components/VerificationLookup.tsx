@@ -118,7 +118,7 @@ export function VerificationLookup({ isFaculty }: Props) {
                                     <div>
                                         <div className="flex items-center gap-3 mb-2">
                                             <h2 className="text-2xl font-bold text-on-surface">
-                                                {result.data!.template?.name || result.data!.program?.title}
+                                                {result.data!.credentialTemplate?.name || result.data!.program?.title}
                                             </h2>
                                             <Badge variant={result.data!.verificationStatus === 'ACTIVE' ? 'default' : 'destructive'} className="uppercase">
                                                 {result.data!.verificationStatus}

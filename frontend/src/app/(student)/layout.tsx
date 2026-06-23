@@ -2,7 +2,7 @@
 
 import { AuthGuard } from "@/features/auth/components/auth-guard";
 import { TopAppBar } from "@/shared/components/top-app-bar";
-import { Footer } from "@/shared/components/footer";
+
 import { UserRole } from "@/shared/types/common.types";
 import { useAuthStore } from "@/lib/stores/auth.store";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -14,6 +14,7 @@ import { Button } from "@/shared/ui/button";
 import { Shield } from "lucide-react";
 import { useEnrollmentStore } from "@/lib/stores/enrollment.store";
 import { useProgramsStore } from "@/lib/stores/programs.store";
+import { AchievementNotificationWatcher } from "@/features/achievements/components/achievement-notification-watcher";
 
 export default function StudentLayout({
   children,
@@ -23,7 +24,11 @@ export default function StudentLayout({
   const { user } = useAuthStore();
   const { logout, session } = useAuth();
   const { unreadCount, initialize } = useNotificationStore();
-  const [activeSession, setActiveSession] = useState<any>(null);
+  const [activeSession, setActiveSession] = useState<{
+    assessmentId?: string;
+    id?: string;
+    [key: string]: unknown;
+  } | null>(null);
   const { fetchEnrollments, fetchStats } = useEnrollmentStore();
   const { programs, fetchPrograms } = useProgramsStore();
   const pathname = usePathname();
@@ -54,13 +59,18 @@ export default function StudentLayout({
     }
   };
 
-  const accessToken = (session as any)?.accessToken;
+  const accessToken = (session as { accessToken?: string })?.accessToken;
 
   // Query database for any active proctoring session
   useEffect(() => {
     if (!accessToken) return;
 
+    let lastCheck = 0;
+
     const checkActiveSession = async () => {
+      const now = Date.now();
+      if (now - lastCheck < 5000) return; // throttle: 5s cooldown
+      lastCheck = now;
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
         const response = await fetch(`${apiUrl}/assessments/sessions/active`, {
@@ -79,7 +89,6 @@ export default function StudentLayout({
 
     checkActiveSession();
 
-    // Re-check whenever window gains focus or tab becomes active
     window.addEventListener("focus", checkActiveSession);
     document.addEventListener("visibilitychange", checkActiveSession);
 
@@ -89,15 +98,17 @@ export default function StudentLayout({
     };
   }, [accessToken, pathname]);
 
-  const isTakingQuiz = pathname.includes("/quiz/") && !pathname.includes("/results");
-  const isCurrentlyOnQuizPage = activeSession && pathname.includes(`/quiz/${activeSession.assessmentId}`);
-  console.log("StudentLayout verification:", { pathname, isCurrentlyOnQuizPage, activeSessionId: activeSession?.id, isTakingQuiz });
+  const isOnAssessmentPath = pathname.includes("/assessment/");
+  const isOnQuizPath = pathname.includes("/quiz/") && !pathname.includes("/results");
+  const isTakingQuiz = isOnAssessmentPath || isOnQuizPath;
+  const isCurrentlyOnQuizPage = activeSession && (pathname.includes(`/assessment/${activeSession.assessmentId}`) || pathname.includes(`/quiz/${activeSession.assessmentId}`));
   const activeCourse = activeSession ? programs.find((c) => c.id === activeSession.assessmentId) : null;
   const redirectSlug = activeCourse ? activeCourse.id : "digital-marketing-strategy";
-  const redirectUrl = `/programs/${redirectSlug}/quiz/${activeSession?.assessmentId}`;
+  const redirectUrl = `/programs/${redirectSlug}/assessment/${activeSession?.assessmentId}`;
 
   return (
     <AuthGuard>
+      <AchievementNotificationWatcher />
       <div className="flex min-h-screen flex-col">
         {!isTakingQuiz && (
           <TopAppBar
@@ -135,9 +146,8 @@ export default function StudentLayout({
             </div>
           </div>
         ) : (
-          <main className="flex-1 bg-surface-lowest">{children}</main>
+          <main className="flex-1 bg-background">{children}</main>
         )}
-        {!isTakingQuiz && !isProgramPage && <Footer />}
       </div>
     </AuthGuard>
   );

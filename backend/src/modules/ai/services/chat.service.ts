@@ -7,6 +7,8 @@ import {
 import { PrismaService } from '../../../database/prisma.service';
 import { ChatRepository } from '../repositories/chat.repository';
 import { AIProviderService } from './ai-provider.service';
+import { AuditService } from '../../audit/services/audit.service';
+import { AuditAction } from '@prisma/client';
 import { CreateChatSessionDto, SendMessageDto, UpdateSessionContextDto } from '../dto/chat.dto';
 
 /**
@@ -20,13 +22,20 @@ export class ChatService {
     private chatRepository: ChatRepository,
     private aiProviderService: AIProviderService,
     private prisma: PrismaService,
+    private auditService: AuditService,
   ) {}
 
   /**
    * Create a new chat session for the user
    */
   async createSession(userId: string, dto: CreateChatSessionDto) {
-    return this.chatRepository.createSession(userId, dto);
+    const session = await this.chatRepository.createSession(userId, dto);
+    await this.auditService.logAction(
+      userId,
+      AuditAction.CHAT_SESSION_CREATED,
+      `Chat session ${session.id} created`,
+    );
+    return session;
   }
 
   /**
@@ -64,6 +73,12 @@ export class ChatService {
     }
 
     await this.chatRepository.deleteSession(sessionId);
+
+    await this.auditService.logAction(
+      userId,
+      AuditAction.CHAT_SESSION_DELETED,
+      `Chat session ${sessionId} deleted`,
+    );
 
     return { success: true, message: 'Chat session deleted successfully' };
   }
@@ -137,11 +152,24 @@ export class ChatService {
   }
 
   /**
-   * Build a system prompt with context injection
+   * Build a system prompt with context injection and conversation history
    * Includes lesson/module/program information for RAG
    */
   private async buildSystemPrompt(session: any): Promise<string> {
     const contextParts: string[] = [];
+
+    // Include recent conversation history for context
+    const recentMessages = await this.prisma.chatMessage.findMany({
+      where: { sessionId: session.id },
+      orderBy: { createdAt: 'asc' },
+      take: 20,
+    });
+    if (recentMessages.length > 0) {
+      const history = recentMessages
+        .map((m) => `${m.sender === 'USER' ? 'Student' : 'Mentor'}: ${m.content}`)
+        .join('\n');
+      contextParts.push(`Conversation History:\n${history}`);
+    }
 
     // Add lesson context
     if (session.activeLessonId) {
@@ -192,7 +220,7 @@ Your role is to help students learn effectively through:
 
 ${
   contextParts.length > 0
-    ? `Current Learning Context:\n${contextParts.join('\n')}\n\nPlease tailor your responses to the student's current lesson and learning path.`
+    ? `Current Learning Context:\n${contextParts.join('\n')}\n\nPlease tailor your responses to the student's current lesson, learning path, and conversation history.`
     : 'Help the student with any learning questions they have.'
 }
 

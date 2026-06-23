@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useAttempt } from "../hooks/useAttempt";
+import { assessmentAttemptService } from "../services/assessment-attempt.service";
 import { SecurityToast } from "../../quizzes/components/security-toast";
 import { Button } from "@/shared/ui/button";
 import { Badge } from "@/shared/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/shared/ui/dialog";
-import { HelpCircle, AlertTriangle, Shield, Lock, XOctagon, Clock, CheckCircle, Flag, ChevronLeft, ChevronRight, Save } from "lucide-react";
+import { HelpCircle, AlertTriangle, Shield, Lock, XOctagon, Clock, CheckCircle, Flag, ChevronLeft, ChevronRight, Layers } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -46,18 +47,24 @@ export function AssessmentPlayer({ slug, assessmentId }: AssessmentPlayerProps) 
     setIsFullscreenActive,
     handleViolation,
     initializeAttempt,
-  } = useAttempt(assessmentId, token);
+  } = useAttempt(assessmentId, token, slug);
 
   const [started, setStarted] = useState(false);
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [attemptStatus, setAttemptStatus] = useState<{
+    attemptsRemaining: number;
+    maxAttempts: number;
+    everPassed: boolean;
+  } | null>(null);
 
   // Initialize assessment attempt once token is loaded
   useEffect(() => {
     if (token) {
       initializeAttempt();
+      assessmentAttemptService.getAttemptStatus(assessmentId, token).then(setAttemptStatus).catch(() => {});
     }
-  }, [token, initializeAttempt]);
+  }, [token, initializeAttempt, assessmentId]);
 
   // Request fullscreen when entering the assessment
   const handleStart = async () => {
@@ -126,8 +133,9 @@ export function AssessmentPlayer({ slug, assessmentId }: AssessmentPlayerProps) 
         toast.success("Assessment submitted successfully!");
         router.push(`/programs/${slug}/assessment/${assessmentId}/results?attemptId=${res.attemptId}`);
       }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to submit assessment");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to submit assessment";
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
       setShowConfirmSubmit(false);
@@ -172,8 +180,14 @@ export function AssessmentPlayer({ slug, assessmentId }: AssessmentPlayerProps) 
             </div>
             <div>
               <p className="text-muted">Total Time Limit</p>
-              <p className="font-medium text-on-surface">30 minutes</p>
+              <p className="font-medium text-on-surface">{Math.floor((attempt.timeLimit || 1800) / 60)} minutes</p>
             </div>
+            {attemptStatus && (
+              <div>
+                <p className="text-muted">Attempts Remaining</p>
+                <p className="font-medium text-on-surface">{attemptStatus.attemptsRemaining} / {attemptStatus.maxAttempts}</p>
+              </div>
+            )}
             <div>
               <p className="text-muted">Required Passing Grade</p>
               <p className="font-medium text-on-surface">{attempt.passingScore}%</p>

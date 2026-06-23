@@ -2,6 +2,7 @@ export interface ApiProgram {
   id: string;
   title: string;
   description: string;
+  thumbnail?: string | null;
   institutionId: string;
   facultyId: string | null;
   createdAt: string;
@@ -26,6 +27,15 @@ export interface ApiModule {
   title: string;
   order: number;
   lessons: ApiLesson[];
+  assessments?: ApiAssessment[];
+}
+
+export interface ApiAssessment {
+  id: string;
+  title: string;
+  passingScore: number;
+  timeLimit: number;
+  sampleSize: number;
 }
 
 export interface ApiResource {

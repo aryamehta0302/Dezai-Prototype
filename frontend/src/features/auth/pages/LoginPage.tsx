@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import { GoogleSignInButton } from "../components/provider-sign-in-button";
+import { PremiumButton } from "@/shared/ui/premium-button";
 import { GraduationCap } from "lucide-react";
 
 export function LoginPage() {
@@ -42,7 +43,7 @@ export function LoginPage() {
   return (
     <div className="flex w-full min-h-screen flex-col xl:flex-row">
       {/* Left Panel — Branding */}
-      <div className="hidden xl:flex xl:w-[48%] 2xl:w-[50%] relative bg-linear-to-br from-primary via-primary-container to-secondary overflow-hidden">
+      <div className="hidden xl:flex xl:w-[48%] 2xl:w-[50%] relative bg-primary overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-20 h-72 w-72 rounded-full bg-white/20 blur-3xl animate-float" />
           <div className="absolute bottom-32 right-16 h-56 w-56 rounded-full bg-white/15 blur-2xl animate-float" style={{ animationDelay: "2s" }} />
@@ -128,17 +129,16 @@ export function LoginPage() {
                 />
               </div>
 
-              <button
+              <PremiumButton
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white shadow-md hover:bg-primary-hover focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.99] flex items-center justify-center gap-2"
+                className="w-full rounded-xl px-4 py-2.5 text-sm"
               >
-                {isSubmitting ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                ) : (
-                  "Sign In"
+                {isSubmitting && (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white shrink-0" />
                 )}
-              </button>
+                {isSubmitting ? "Signing in\u2026" : "Sign In"}
+              </PremiumButton>
             </form>
 
             <div className="relative flex items-center justify-center my-4">

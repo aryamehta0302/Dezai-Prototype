@@ -60,8 +60,9 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
 
   // Initial lesson fetch
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
     if (lessonId) fetchLesson(lessonId);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Update URL silently + fetch lesson content on navigation
   const goToLesson = useCallback((id: string) => {

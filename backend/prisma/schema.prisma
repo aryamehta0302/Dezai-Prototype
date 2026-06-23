@@ -37,6 +37,7 @@ model User {
   uploads        Upload[]
   auditLogs      AuditLog[]
   examSessions   ExamSession[]
+  userAchievements UserAchievement[]
 
   facultyInfo   FacultyMember?
   instAdminInfo InstitutionAdmin?
@@ -107,6 +108,7 @@ model Program {
   id            String   @id @default(uuid())
   title         String
   description   String
+  thumbnail     String?
   institutionId String
   facultyId     String?
   createdAt     DateTime @default(now())
@@ -374,6 +376,53 @@ enum XpType {
   DAILY_STREAK
   MODULE_COMPLETION
   ASSESSMENT_PASS
+  ACHIEVEMENT_REWARD
+}
+
+model Achievement {
+  id          String              @id @default(uuid())
+  key         String              @unique
+  title       String
+  description String
+  category    AchievementCategory
+  rarity      AchievementRarity
+  icon        String
+  xpReward    Int                 @default(0)
+  criteria    Json
+
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+enum AchievementCategory {
+  STREAK
+  XP
+  COMPLETION
+  ASSESSMENT
+  ENGAGEMENT
+}
+
+enum AchievementRarity {
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+model UserAchievement {
+  id            String    @id @default(uuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime  @default(now())
+  progress      Int       @default(0)
+  current       Int       @default(0)
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
 }
 
 model Credential {
@@ -491,6 +540,20 @@ enum AuditAction {
   ASSESSMENT_PUBLISHED
   CREDENTIAL_ISSUED
   ROLE_CHANGED
+  PROFILE_UPDATED
+  INSTITUTION_CREATED
+  INSTITUTION_UPDATED
+  FACULTY_VERIFIED
+  ENROLLMENT_CREATED
+  LESSON_CREATED
+  LESSON_UPDATED
+  LESSON_COMPLETED
+  CHAT_SESSION_CREATED
+  CHAT_SESSION_DELETED
+  NOTIFICATION_SENT
+  XP_AWARDED
+  BOOKMARK_TOGGLED
+  NOTE_CREATED
 }
 
 model AuditLog {
@@ -563,6 +626,8 @@ model CredentialTemplate {
   id            String         @id @default(uuid())
   name          String
   type          CredentialType
+  description   String?
+  defaultTier   CredentialTier @default(CITADEL)
   institutionId String
   designUrl     String?
   createdAt     DateTime       @default(now())

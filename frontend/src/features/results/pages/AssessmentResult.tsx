@@ -24,12 +24,28 @@ export function AssessmentResult({ slug, assessmentId }: AssessmentResultProps) 
 
   const [result, setResult] = useState<AttemptResult | null>(null);
   const [history, setHistory] = useState<AttemptHistoryItem[]>([]);
-  const [recommendations, setRecommendations] = useState<any | null>(null);
+  interface ContinueLearningRec {
+    success?: boolean;
+    completed?: boolean;
+    programId?: string;
+    programTitle?: string;
+    trackType?: string;
+    moduleTitle?: string;
+    moduleId?: string;
+    moduleOrder?: number;
+    firstIncompleteLesson?: { id: string; title: string };
+    completedLessonsCount?: number;
+    totalLessonsCount?: number;
+  }
+  const [recommendations, setRecommendations] = useState<ContinueLearningRec | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!token || !attemptId) return;
+      if (!token || !attemptId) {
+        setIsLoading(false);
+        return;
+      }
 
       setIsLoading(true);
       try {
@@ -54,9 +70,10 @@ export function AssessmentResult({ slug, assessmentId }: AssessmentResultProps) 
         } catch (err) {
           console.warn("Failed to load continue learning recommendation:", err);
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error("Failed to load result page data:", err);
-        toast.error(err.message || "Failed to load assessment results");
+        const message = err instanceof Error ? err.message : "Failed to load assessment results";
+        toast.error(message);
       } finally {
         setIsLoading(false);
       }
@@ -92,6 +109,7 @@ export function AssessmentResult({ slug, assessmentId }: AssessmentResultProps) 
   }
 
   const passed = result.passed;
+  const displayScore = result.percentage ?? result.score;
 
   return (
     <div className="max-w-3xl mx-auto py-10 px-4 space-y-8">
@@ -117,7 +135,7 @@ export function AssessmentResult({ slug, assessmentId }: AssessmentResultProps) 
 
         <div className="space-y-2">
           <h1 className="text-3xl font-extrabold text-on-surface">
-            {passed ? "Congratulations! 🎉" : "Keep Trying!"}
+            {passed ? "Congratulations!" : "Keep Trying!"}
           </h1>
           <p className="text-muted max-w-md mx-auto">
             {passed
@@ -130,7 +148,7 @@ export function AssessmentResult({ slug, assessmentId }: AssessmentResultProps) 
         <div className="flex items-center justify-center gap-8 pt-4">
           <div className="text-center">
             <p className={`text-4xl font-extrabold ${passed ? "text-green-500" : "text-red-500"}`}>
-              {result.score}%
+              {displayScore}%
             </p>
             <p className="text-xs text-muted font-medium uppercase tracking-wider mt-1">Score</p>
           </div>
@@ -220,7 +238,7 @@ export function AssessmentResult({ slug, assessmentId }: AssessmentResultProps) 
               </thead>
               <tbody className="divide-y divide-border/20">
                 {history.map((h, idx) => (
-                  <tr key={h.id} className={h.id === attemptId ? "bg-primary/5" : ""}>
+                  <tr key={h.attemptId} className={h.attemptId === attemptId ? "bg-primary/5" : ""}>
                     <td className="px-6 py-4 text-muted">
                       {new Date(h.completedAt).toLocaleDateString(undefined, {
                         year: "numeric",
@@ -231,7 +249,7 @@ export function AssessmentResult({ slug, assessmentId }: AssessmentResultProps) 
                       })}
                     </td>
                     <td className="px-6 py-4 font-bold text-on-surface">
-                      {h.score}%
+                      {h.percentage ?? h.score}%
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
@@ -243,7 +261,7 @@ export function AssessmentResult({ slug, assessmentId }: AssessmentResultProps) 
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Link href={`/programs/${slug}/assessment/${assessmentId}/review?attemptId=${h.id}`}>
+                      <Link href={`/programs/${slug}/assessment/${assessmentId}/review?attemptId=${h.attemptId}`}>
                         <Button variant="ghost" size="sm" className="text-primary hover:underline">
                           View Details
                         </Button>

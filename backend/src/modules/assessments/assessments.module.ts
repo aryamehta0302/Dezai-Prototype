@@ -10,9 +10,10 @@ import { PassFailEvaluationService } from './services/pass-fail-evaluation.servi
 import { AuditModule } from '../audit/audit.module';
 import { DatabaseModule } from '../../database/database.module';
 import { UsersModule } from '../users/users.module';
+import { AchievementsModule } from '../achievements/achievements.module';
 
 @Module({
-  imports: [AuditModule, DatabaseModule, UsersModule],
+  imports: [AuditModule, DatabaseModule, UsersModule, AchievementsModule],
   controllers: [AssessmentController, AttemptController, ResultsController],
   providers: [
     AssessmentService,

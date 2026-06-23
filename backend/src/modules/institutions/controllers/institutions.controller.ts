@@ -68,8 +68,8 @@ export class InstitutionsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.DEZAI_ADMIN)
   @HttpCode(HttpStatus.CREATED)
-  async createInstitution(@Body() body: CreateInstitutionDto) {
-    return this.institutionsService.createInstitution(body);
+  async createInstitution(@Req() req, @Body() body: CreateInstitutionDto) {
+    return this.institutionsService.createInstitution(req.user.id, body);
   }
 
   /**
@@ -116,10 +116,11 @@ export class InstitutionsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.DEZAI_ADMIN)
   async updateInstitution(
+    @Req() req,
     @Param('id') id: string,
     @Body() body: UpdateInstitutionDto,
   ) {
-    return this.institutionsService.updateInstitution(id, body);
+    return this.institutionsService.updateInstitution(req.user.id, id, body);
   }
 
   /**
