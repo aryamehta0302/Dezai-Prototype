@@ -81,7 +81,7 @@ export default function StudentLayout({
       window.removeEventListener("focus", checkActiveSession);
       document.removeEventListener("visibilitychange", checkActiveSession);
     };
-  }, [session, pathname]);
+  }, [session?.accessToken, pathname]);
 
   const isTakingQuiz = pathname.includes("/quiz/") && !pathname.includes("/results");
   const isCurrentlyOnQuizPage = activeSession && pathname.includes(`/quiz/${activeSession.assessmentId}`);

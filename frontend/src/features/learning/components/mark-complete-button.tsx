@@ -13,16 +13,16 @@ interface MarkCompleteButtonProps {
 }
 
 export function MarkCompleteButton({ courseId, lessonId, onComplete }: MarkCompleteButtonProps) {
-  const { markLessonComplete, isLoading } = useEnrollmentStore();
+  const { markLessonComplete, isLessonCompleted, isLoading } = useEnrollmentStore();
   const [completing, setCompleting] = useState(false);
-  const [completed, setCompleted] = useState(false);
+  
+  const completed = isLessonCompleted(courseId, lessonId);
 
   const handleClick = async () => {
     if (completed || completing) return;
     setCompleting(true);
     await markLessonComplete(courseId, lessonId);
     setCompleting(false);
-    setCompleted(true);
 
     toast.success(
       <div className="flex items-center gap-2">

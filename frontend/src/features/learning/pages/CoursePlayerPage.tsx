@@ -128,9 +128,8 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
   return (
     <div className="flex h-[calc(100vh-64px)]">
       <div
-        className={`${
-          sidebarOpen ? "w-80" : "w-0"
-        } shrink-0 border-r border-border-light bg-white transition-all duration-300 overflow-hidden`}
+        className={`${sidebarOpen ? "w-80" : "w-0"
+          } shrink-0 border-r border-border-light bg-white transition-all duration-300 overflow-hidden`}
       >
         <div className="w-80 h-full flex flex-col">
           <div className="p-4 border-b border-border-light space-y-3">
@@ -163,6 +162,7 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
 
           <CourseModuleSidebar
             courseId={course.id}
+            courseSlug={slug}
             modules={allModules}
             currentLessonId={currentLessonId}
             onLessonSelect={(id) => goToLesson(id)}

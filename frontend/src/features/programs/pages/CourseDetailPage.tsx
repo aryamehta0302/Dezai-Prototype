@@ -112,7 +112,7 @@ export function CourseDetailPage({ slug }: CourseDetailPageProps) {
                   : "Curriculum coming soon"}
               </p>
               {hasCurriculum ? (
-                <SyllabusAccordion tracks={course.tracks} />
+                <SyllabusAccordion tracks={course.tracks} courseSlug={slug} />
               ) : (
                 <div className="flex flex-col items-center gap-3 py-12 text-muted">
                   <FileText className="h-8 w-8" />

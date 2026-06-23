@@ -40,7 +40,7 @@ export class EnrollmentService {
    * List all program enrollments for a given student user.
    */
   async getStudentEnrollments(userId: string) {
-    return this.prisma.enrollment.findMany({
+    const enrollments = await this.prisma.enrollment.findMany({
       where: { userId },
       include: {
         program: {
@@ -50,6 +50,16 @@ export class EnrollmentService {
         },
       },
     });
+
+    const progresses = await this.prisma.progress.findMany({
+      where: { userId },
+      select: { lessonId: true, completedAt: true },
+    });
+
+    return enrollments.map(e => ({
+      ...e,
+      progresses
+    }));
   }
 
   /**

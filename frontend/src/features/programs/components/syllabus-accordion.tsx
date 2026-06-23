@@ -2,15 +2,16 @@
 
 import { useState } from "react";
 import { cn } from "@/shared/utils/cn";
-import { ChevronDown, PlayCircle, FileText, Clock } from "lucide-react";
+import { ChevronDown, PlayCircle, FileText, Clock, HelpCircle } from "lucide-react";
 import type { ApiTrack } from "../types/program.types";
 
 interface SyllabusAccordionProps {
   tracks: ApiTrack[];
+  courseSlug?: string;
   className?: string;
 }
 
-export function SyllabusAccordion({ tracks, className }: SyllabusAccordionProps) {
+export function SyllabusAccordion({ tracks, courseSlug, className }: SyllabusAccordionProps) {
   const flatModules = tracks.flatMap(t => t.modules);
   const [openModules, setOpenModules] = useState<Set<string>>(
     new Set([flatModules[0]?.id].filter(Boolean))
@@ -45,7 +46,7 @@ export function SyllabusAccordion({ tracks, className }: SyllabusAccordionProps)
                 <div>
                   <h4 className="font-medium text-sm text-on-surface">{mod.title}</h4>
                   <p className="text-xs text-muted mt-0.5">
-                    {mod.lessons.length} lessons
+                    {mod.lessons.length} lessons {mod.assessments && mod.assessments.length > 0 ? `\u00B7 ${mod.assessments.length} quiz(zes)` : ""}
                   </p>
                 </div>
               </div>
@@ -74,6 +75,21 @@ export function SyllabusAccordion({ tracks, className }: SyllabusAccordionProps)
                         video
                       </span>
                     )}
+                  </div>
+                ))}
+
+                {mod.assessments && mod.assessments.map((assessment) => (
+                  <div
+                    key={assessment.id}
+                    className="flex items-center gap-3 px-4 py-3 border-b border-border-light last:border-0 bg-primary/5"
+                  >
+                    <HelpCircle className="h-4 w-4 text-primary flex-shrink-0" />
+                    <span className="flex-1 text-sm font-medium text-primary">
+                      {assessment.title}
+                    </span>
+                    <span className="text-xs text-primary font-semibold bg-primary/10 px-1.5 py-0.5 rounded">
+                      Quiz
+                    </span>
                   </div>
                 ))}
               </div>

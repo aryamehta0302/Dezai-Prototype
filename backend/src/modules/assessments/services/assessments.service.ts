@@ -1,14 +1,18 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
+import { CredentialsService } from '../../credentials/services/credentials.service';
 import { ExamStatus, ViolationType, UserRole } from '@prisma/client';
 
 @Injectable()
 export class AssessmentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private credentialsService: CredentialsService,
+  ) {}
 
   // Helper to retrieve mock questions matching frontend data
   private getMockQuestionsData(assessmentId: string) {
-    if (assessmentId === 'quiz-1') {
+    if (assessmentId === 'quiz-1' || assessmentId === 'quiz-program') {
       return [
         { id: "q-1-1", text: "What is the primary advantage of transformer architecture over RNNs?", options: ["Faster training through parallelization", "Lower memory usage", "Simpler implementation", "Better for small datasets"], correctAnswer: 0 },
         { id: "q-1-2", text: "Which of the following is NOT a key consideration in an AI readiness assessment?", options: ["Data infrastructure maturity", "Organizational culture", "Office location", "Technical talent availability"], correctAnswer: 2 },
@@ -308,8 +312,24 @@ export class AssessmentsService {
 
     // Calculate score
     const attemptAnswersToCreate = [];
+    const frontendCorrectAnswers: Record<string, number> = {
+      'q-1-1': 0, 'q-1-2': 2, 'q-1-3': 1, 'q-1-4': 1, 'q-1-5': 1,
+      'q-1-6': 1, 'q-1-7': 1, 'q-1-8': 1, 'q-1-9': 2, 'q-1-10': 1,
+    };
+
     for (const question of questions) {
-      const selectedVal = selectedAnswers[question.id];
+      let selectedVal = selectedAnswers[question.id];
+      let frontendId = question.id;
+
+      // Translate frontend IDs (q-1-X) to database IDs (q-quiz-program-X) for quiz-program
+      if (selectedVal === undefined && session.assessmentId === 'quiz-program') {
+        const match = question.id.match(/^q-quiz-program-(\d+)$/);
+        if (match) {
+          frontendId = `q-1-${match[1]}`;
+          selectedVal = selectedAnswers[frontendId];
+        }
+      }
+
       let selectedOptionId: string | null = null;
 
       if (selectedVal !== undefined && selectedVal !== null) {
@@ -321,8 +341,14 @@ export class AssessmentsService {
         }
       }
 
-      const correctOption = question.options.find((o) => o.isCorrect);
-      const isCorrect = selectedOptionId === correctOption?.id;
+      // Grade against frontendCorrectAnswers if it is quiz-program
+      let isCorrect = false;
+      if (session.assessmentId === 'quiz-program' && frontendCorrectAnswers[frontendId] !== undefined) {
+        isCorrect = Number(selectedVal) === frontendCorrectAnswers[frontendId];
+      } else {
+        const correctOption = question.options.find((o) => o.isCorrect);
+        isCorrect = selectedOptionId === correctOption?.id;
+      }
 
       if (isCorrect) {
         score += 1;
@@ -374,6 +400,34 @@ export class AssessmentsService {
       data: { attemptId: attempt.id },
     });
 
+    // --- CREDENTIAL AUTO-ISSUANCE HOOK ---
+    if (passed) {
+      try {
+        // Retrieve the program ID associated with this assessment
+        const assessment = await this.prisma.assessment.findUnique({
+          where: { id: session.assessmentId },
+          include: {
+            module: {
+              include: {
+                track: true,
+              },
+            },
+          },
+        });
+        
+        if (assessment?.module?.track?.programId) {
+          const programId = assessment.module.track.programId;
+          // Trigger eligibility and issue if eligible
+          const { eligible } = await this.credentialsService.checkEligibility(userId, programId);
+          if (eligible) {
+            await this.credentialsService.issueCredential(userId, programId);
+          }
+        }
+      } catch (err) {
+        console.error('Credential auto-issuance failed:', err);
+      }
+    }
+
     return {
       attemptId: attempt.id,
       score: percentage,
@@ -381,3 +435,4 @@ export class AssessmentsService {
     };
   }
 }
+

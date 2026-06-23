@@ -63,13 +63,17 @@ export const useEnrollmentStore = create<EnrollmentState>()(
           const response = await learningApi.getEnrollments();
           if (response.success) {
             const enrollmentsMap: Record<string, CourseEnrollment> = {};
-            response.enrollments.forEach((e) => {
+            response.enrollments.forEach((e: any) => {
               enrollmentsMap[e.programId] = {
                 id: e.id,
                 courseId: e.programId,
                 enrolledAt: e.createdAt,
                 progress: e.progress,
-                lessonsCompleted: [],
+                lessonsCompleted: (e.progresses || []).map((p: any) => ({
+                  lessonId: p.lessonId,
+                  completed: true,
+                  completedAt: p.completedAt,
+                })),
                 notes: {},
               };
             });
@@ -131,6 +135,28 @@ export const useEnrollmentStore = create<EnrollmentState>()(
             if (response.xpResult?.currentXp) {
               get().setXp(response.xpResult.currentXp);
             }
+            set((state) => {
+              const enrollment = state.enrollments[courseId];
+              if (!enrollment) return state;
+
+              const exists = enrollment.lessonsCompleted.some((l) => l.lessonId === lessonId);
+              if (exists) return state;
+
+              const updatedLessons = [
+                ...enrollment.lessonsCompleted,
+                { lessonId, completed: true, completedAt: new Date().toISOString() },
+              ];
+
+              return {
+                enrollments: {
+                  ...state.enrollments,
+                  [courseId]: {
+                    ...enrollment,
+                    lessonsCompleted: updatedLessons,
+                  },
+                },
+              };
+            });
           }
         } catch (error) {
           console.error("Failed to mark lesson complete:", error);

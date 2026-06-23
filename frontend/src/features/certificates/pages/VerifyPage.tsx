@@ -1,26 +1,64 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { PageContainer } from "@/shared/components/page-container";
 import { CertificatePreview } from "../components/certificate-preview";
 import { CertificateQRCode } from "../components/certificate-qr-code";
-import { certificateService } from "../services/certificate.service";
 import { EmptyState } from "@/shared/components/empty-state";
-import { ShieldCheck, ShieldX } from "lucide-react";
+import { ShieldCheck, ShieldX, Loader2 } from "lucide-react";
+import { credentialsService } from "@/features/credentials/services/credentials.service";
+import { mapCredentialToCertificate } from "@/features/credentials/utils/mapping";
+import type { MockCertificate } from "@/lib/mock-data/certificates";
 
 interface VerifyPageProps {
   id: string;
 }
 
 export function VerifyPage({ id }: VerifyPageProps) {
-  const { valid, certificate } = certificateService.verify(id);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [certificate, setCertificate] = useState<MockCertificate | null>(null);
 
-  if (!valid || !certificate) {
+  useEffect(() => {
+    async function loadCredential() {
+      try {
+        setLoading(true);
+        setError(false);
+        const cred = await credentialsService.verifyCredential(id);
+        if (cred) {
+          setCertificate(mapCredentialToCertificate(cred));
+        } else {
+          setError(true);
+        }
+      } catch (err) {
+        console.error(err);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (id) {
+      loadCredential();
+    }
+  }, [id]);
+
+  if (loading) {
+    return (
+      <PageContainer className="py-16 flex flex-col items-center justify-center min-h-[50vh] gap-4">
+        <Loader2 className="h-10 w-10 text-primary animate-spin" />
+        <p className="text-on-surface-variant text-sm">Verifying credential ledger...</p>
+      </PageContainer>
+    );
+  }
+
+  if (error || !certificate) {
     return (
       <PageContainer className="py-16">
         <EmptyState
           icon={ShieldX}
           title="Certificate Not Found"
-          description="This certificate ID could not be verified. It may not exist or has been revoked."
+          description="This certificate ID could not be verified on the Dezai ledger. It may not exist or has been revoked."
         />
       </PageContainer>
     );

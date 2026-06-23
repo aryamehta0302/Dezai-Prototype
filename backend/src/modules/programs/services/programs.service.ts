@@ -22,7 +22,7 @@ export class ProgramsService {
   constructor(
     private prisma: PrismaService,
     private auditService: AuditService
-  ) {}
+  ) { }
 
   // ─────────────────── OWNERSHIP GUARD ───────────────────
 
@@ -84,6 +84,9 @@ export class ProgramsService {
                   orderBy: { order: 'asc' },
                   select: { id: true, title: true, order: true, videoUrl: true },
                 },
+                assessments: {
+                  select: { id: true, title: true, passingScore: true },
+                },
               },
             },
           },
@@ -113,6 +116,9 @@ export class ProgramsService {
                     order: true,
                     videoUrl: true,
                   },
+                },
+                assessments: {
+                  select: { id: true, title: true, passingScore: true },
                 },
               },
             },
@@ -221,7 +227,10 @@ export class ProgramsService {
       include: {
         modules: {
           orderBy: { order: "asc" },
-          include: { lessons: { orderBy: { order: "asc" } } },
+          include: {
+            lessons: { orderBy: { order: "asc" } },
+            assessments: { select: { id: true, title: true, passingScore: true } },
+          },
         },
       },
     });
