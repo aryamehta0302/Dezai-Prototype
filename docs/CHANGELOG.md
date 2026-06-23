@@ -67,6 +67,27 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+### Faculty Monitoring & Insights Modules (Faculty Experience & Dashboard Lead)
+
+#### Added
+
+- **Faculty Monitoring Endpoints** — Integrated 3 new REST endpoints to fetch programs taught by a faculty member (`GET /api/analytics/faculty/programs`), calculate module completion rates (`GET /api/analytics/programs/:id/modules/stats`), and pull detailed student progress checksheets and proctoring violation logs (`GET /api/analytics/programs/:programId/students/:userId`).
+  - Files: [analytics.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/services/analytics.service.ts), [analytics.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/controllers/analytics.controller.ts)
+
+- **Faculty Insights & Intervention Endpoints** — Implemented 3 new REST endpoints to detect at-risk students (`GET /api/analytics/programs/:id/insights`), trigger intervention outreach reminders (`POST /api/analytics/programs/:id/interventions`), and view sent interventions logs (`GET /api/analytics/programs/:id/interventions`).
+  - Files: [analytics.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/services/analytics.service.ts), [analytics.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/controllers/analytics.controller.ts)
+
+- **Faculty Monitoring & Audit Panel** — Developed an interactive console within the Faculty Dashboard showing module-level progress averages, an enrolled student cohort list, and a detailed audit drawer showcasing lesson-by-lesson completions, quiz scores, and proctoring alerts.
+  - File: [FacultyDashboard.tsx](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/components/FacultyDashboard.tsx)
+
+- **Faculty Insights & Interventions Tab** — Added a dashboard section featuring dynamic at-risk metrics cards, a sorted at-risk student table showing trigger reasons (inactivity, low progress, or assessment failures), a message drafting dialog modal, and an intervention history timeline feed.
+  - File: [FacultyDashboard.tsx](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/components/FacultyDashboard.tsx)
+
+### Developer: Faculty Experience & Dashboard Lead · Branch: feature/faculty-institution-lead
+
+---
+
+
 ## [Sprint 4] — 2026-06-18
 
 **Developers:** Faculty Experience & Dashboard Lead, Manan Panchal (Assessment & Learning Exp. Lead), AI Mentor Owner (AI Mentor), You (Learning Experience)

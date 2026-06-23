@@ -595,4 +595,67 @@ Right sidebar (xl:col-span-1):
 | Leaderboard Dashboard Widgets | ✅ Complete (Sprint 4 backend + Faculty UI) |
 | Student Ranking Cards | ✅ Complete (Sprint 5 — `StudentRankingCard`) |
 | Top Performer Components | ✅ Complete (Sprint 5 — `TopPerformerList`) |
+| Faculty Monitoring Module | ✅ Complete (Sprint 5) |
+| Faculty Insights & Intervention System | ✅ Complete (Sprint 5) |
+
+---
+
+## 13. Sprint 5: Faculty Monitoring, Insights & Interventions (Faculty Experience & Dashboard Lead)
+
+**Sprint:** 5 | **Date:** 2026-06-23
+
+### Overview
+
+Sprint 5 added the **Faculty Monitoring Module** and the **Faculty Insights & Intervention System**, equipping faculty members with real-time tools to audit student learning paths, analyze cohort bottlenecks, automatically flag at-risk behaviors, and log outreach intervention notifications.
+
+No database migrations or schema alterations were required. Sent student outreach communications are logged under the existing `Notification` model of type `REMINDER` using a distinct `[Intervention]` title prefix, and audit actions are registered under the `AuditLog` table.
+
+### Features Delivered
+
+1. **Faculty Program Listing & Stats Dashboard:**
+   - Populates a simplified dropdown of all programs owned or taught by the faculty.
+   - Computes progress bars reflecting average cohort completion per module within the selected program.
+   - Shows active widgets for overall program statistics (enrolled students, progress metrics, at-risk/warning breakdowns).
+
+2. **Cohort Student Monitoring List:**
+   - Displays a clean data table containing student names, emails, enrollment dates, XP, last active timestamps, and progress indicators.
+   - Provides status filtering triggers (e.g. at-risk, completed, active).
+
+3. **Detailed Student Audit Panel (Slide-over):**
+   - Renders a deep-dive drawer for auditing individual students.
+   - Renders a hierarchical curriculum track checklist showing lesson-by-lesson completions.
+   - Displays a comprehensive exam and quiz assessment attempt history showing scores, date submitted, and proctoring violations.
+   - Features a chronological timeline log detailing specific proctoring violations (tab switching, copy-pasting, focus loss).
+
+4. **Cohort Health Insights & At-Risk Flags:**
+   - Automatically evaluates and flags at-risk students using three criteria:
+     - **Inactive**: No login activity in the last 7 days.
+     - **Low Progress**: Overall syllabus progress is below 25%.
+     - **Repeated Failures**: Failed the same assessment 2 or more times.
+   - Automatically updates cohort health counters (Healthy vs. Warning vs. Critical).
+
+5. **Direct Student Intervention Outreach:**
+   - Faculty members can click "Outreach" to open a modal drafting a custom message.
+   - Sends a reminder notification to the student and appends it to the "Interventions Sent History" timeline logs on the dashboard.
+
+### Endpoint Summary (6 New Endpoints)
+
+| # | Method | Route | Auth | Roles | Description |
+|---|---|---|---|---|---|
+| 1 | GET | `/api/analytics/faculty/programs` | JWT | FACULTY, UNIV_ADMIN, DEZAI_ADMIN | List of programs taught by faculty |
+| 2 | GET | `/api/analytics/programs/:id/modules/stats` | JWT | FACULTY, UNIV_ADMIN, DEZAI_ADMIN | Module completion rate metrics |
+| 3 | GET | `/api/analytics/programs/:programId/students/:userId` | JWT | FACULTY, UNIV_ADMIN, DEZAI_ADMIN | Deep student syllabus/quiz audit data |
+| 4 | GET | `/api/analytics/programs/:id/insights` | JWT | FACULTY, UNIV_ADMIN, DEZAI_ADMIN | Flagged at-risk students list and metrics |
+| 5 | POST | `/api/analytics/programs/:id/interventions` | JWT | FACULTY, UNIV_ADMIN, DEZAI_ADMIN | Create outreach reminder notification & audit log |
+| 6 | GET | `/api/analytics/programs/:id/interventions` | JWT | FACULTY, UNIV_ADMIN, DEZAI_ADMIN | Get sent intervention history log |
+
+### Files Added / Modified
+
+| Action | File |
+|---|---|
+| MODIFIED | [backend/src/modules/analytics/services/analytics.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/services/analytics.service.ts) |
+| MODIFIED | [backend/src/modules/analytics/controllers/analytics.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/controllers/analytics.controller.ts) |
+| MODIFIED | [frontend/src/features/dashboard/components/FacultyDashboard.tsx](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/components/FacultyDashboard.tsx) |
+| MODIFIED | [docs/API/analytics.md](file:///d:/Project/Dezai-ai/Dezai-Prototype/docs/API/analytics.md) |
+
 
