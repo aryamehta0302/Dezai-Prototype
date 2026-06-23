@@ -7,7 +7,7 @@ import {
 import { PrismaService } from '../../../database/prisma.service';
 import { ChatRepository } from '../repositories/chat.repository';
 import { AIProviderService } from './ai-provider.service';
-import { CreateChatSessionDto, SendMessageDto, UpdateSessionContextDto } from '../dto/chat.dto';
+import { CreateChatSessionDto, SendMessageDto, UpdateSessionContextDto, UpdateSessionTitleDto } from '../dto/chat.dto';
 
 /**
  * ChatService handles business logic for chat sessions and messaging.
@@ -137,13 +137,30 @@ export class ChatService {
   }
 
   /**
-   * Build a system prompt with context injection
-   * Includes lesson/module/program information for RAG
+   * Update session title
+   */
+  async updateSessionTitle(
+    sessionId: string,
+    userId: string,
+    dto: UpdateSessionTitleDto,
+  ) {
+    const isOwner = await this.chatRepository.verifySessionOwnership(sessionId, userId);
+
+    if (!isOwner) {
+      throw new ForbiddenException('You do not have access to this chat session');
+    }
+
+    return this.chatRepository.updateSessionTitle(sessionId, dto);
+  }
+
+  /**
+   * Build a system prompt with enhanced context injection
+   * Includes lesson/module/program information with objectives and content
    */
   private async buildSystemPrompt(session: any): Promise<string> {
     const contextParts: string[] = [];
 
-    // Add lesson context
+    // Add lesson context with full enrichment
     if (session.activeLessonId) {
       try {
         const lesson = await this.prisma.lesson.findUnique({
@@ -162,17 +179,33 @@ export class ChatService {
         });
 
         if (lesson) {
-          contextParts.push(`Lesson: ${lesson.title}`);
+          // Add program context if available
+          if (lesson.module?.track?.program) {
+            contextParts.push(`Program: ${lesson.module.track.program.title}`);
+          }
+
+          // Add module context if available
           if (lesson.module) {
             contextParts.push(`Module: ${lesson.module.title}`);
-            if (lesson.module.track && lesson.module.track.program) {
-              contextParts.push(`Program: ${lesson.module.track.program.title}`);
-            }
           }
+
+          // Add lesson title and details
+          contextParts.push(`Lesson: ${lesson.title}`);
+
+          // Add learning objectives if available
+          if ((lesson as any).objectives) {
+            contextParts.push(`Learning Objectives: ${(lesson as any).objectives}`);
+          }
+
+          // Include lesson content (first 800 chars for better context)
           if (lesson.content) {
-            // Include lesson content summary (first 500 chars as context)
-            const contentSummary = lesson.content.substring(0, 500);
-            contextParts.push(`Lesson Content Preview: ${contentSummary}...`);
+            const contentSummary = lesson.content.substring(0, 800);
+            contextParts.push(`Lesson Content: ${contentSummary}${lesson.content.length > 800 ? '...' : ''}`);
+          }
+
+          // Add prerequisites if available
+          if ((lesson as any).prerequisites) {
+            contextParts.push(`Prerequisites: ${(lesson as any).prerequisites}`);
           }
         }
       } catch (error) {
@@ -181,7 +214,7 @@ export class ChatService {
       }
     }
 
-    // Build final system prompt
+    // Build final system prompt with enhanced instructions
     const basePrompt = `You are an AI Mentor for the Dezai educational platform. 
 Your role is to help students learn effectively through:
 - Explaining concepts clearly and concisely
@@ -192,7 +225,7 @@ Your role is to help students learn effectively through:
 
 ${
   contextParts.length > 0
-    ? `Current Learning Context:\n${contextParts.join('\n')}\n\nPlease tailor your responses to the student's current lesson and learning path.`
+    ? `Current Learning Context:\n${contextParts.join('\n')}\n\nPlease tailor your responses to the student's current lesson and learning path. Focus on the lesson content and objectives provided above.`
     : 'Help the student with any learning questions they have.'
 }
 

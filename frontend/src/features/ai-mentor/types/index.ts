@@ -1,14 +1,15 @@
 /**
  * AI Mentor Types
  */
-
 export interface ChatSession {
   id: string;
   userId: string;
+  title?: string;
   activeProgramId?: string;
   activeModuleId?: string;
   activeLessonId?: string;
   createdAt: string;
+  updatedAt?: string;
   messages?: ChatMessage[];
 }
 

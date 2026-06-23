@@ -55,4 +55,13 @@ export const aiMentorApi = {
       `/ai-mentor/sessions/${sessionId}/context`,
       data,
     ),
+
+  /**
+   * Update session title
+   */
+  updateSessionTitle: (sessionId: string, data: { title: string }) =>
+    apiClient.patch<ChatSessionResponse>(
+      `/ai-mentor/sessions/${sessionId}/title`,
+      data,
+    ),
 };
