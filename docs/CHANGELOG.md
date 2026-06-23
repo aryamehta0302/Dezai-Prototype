@@ -387,6 +387,26 @@ frontend/src/app/(student)/chat/page.tsx (NEW)
 
 ---
 
+## [Sprint 6] — 2026-06-23
+
+**Developer:** Krish Parmar 
+
+### Analytics Completion
+
+#### Added
+
+- **Faculty Analytics Dashboard Enhancements** — Integrated `ModuleCompletionChart` and `ProgramPerformanceChart` directly into the existing `FacultyDashboard.tsx` "Analytics" tab, pulling data from existing endpoints without backend modification.
+- **Program Performance & Assessment Analytics UI** — Implemented Recharts-based horizontal bar charts for module success rates and comparative grouped bar charts for student XP vs. progress metrics.
+- **XP Growth & Achievement Analytics** — Created `XpGrowthChart` (an area chart mapping a student's XP level journey from 1 to 10) and injected it into the `AchievementsPage.tsx`.
+- **Leaderboard Movement Analytics** — Added a dynamic rank movement delta (↑/↓) to the `StudentRankingCard` on the student dashboard, comparing all-time vs weekly leaderboard queries.
+- **Institution Analytics Widgets** — Created a dedicated `InstitutionDashboardPage.tsx` using existing `leaderboards/universities` data to show global institution rank, active students, total XP, and program counts for university administrators.
+- **Analytics Service & Types** — Centralized `analyticsService` wrapping `apiClient` and added complete TypeScript definitions for analytics payload shapes.
+
+#### Changed
+
+- **No Backend Changes Required** — All Sprint 6 requirements were successfully delivered as a frontend-only implementation, utilizing pre-existing endpoints.
+- **StudentDashboardPage** — Updated to fetch the student widget on mount and pass the weekly rank prop down.
+
 ---
 
 ## [Sprint 5] — 2026-06-22

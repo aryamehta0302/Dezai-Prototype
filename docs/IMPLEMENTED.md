@@ -735,3 +735,50 @@ No database migrations or schema alterations were required. All calculations are
 | MODIFIED | [docs/CHANGELOG.md](file:///d:/git/dezai/Dezai-Prototype/docs/CHANGELOG.md) |
 
 
+---
+
+## Sprint 6: Analytics Completion, Institution Dashboard & Leaderboards(Krish Parmar)
+### Status: IMPLEMENTED ✅
+**Date Completed**: 2026-06-23
+
+### Overview
+
+Sprint 6 focused on finalizing the **Analytics Completion Track**, wiring up advanced frontend visualizations for student progress, faculty diagnostics, and institution-level administrative oversight. All of these deliverables were purely frontend UI implementations utilizing pre-existing backend analytics endpoints.
+
+### Features Delivered
+
+1. **Student & Faculty Analytics Dashboard Diagnostics:**
+   - Introduced a new "Cohort Metrics & Diagnostics" section to the Faculty Dashboard.
+   - Wired up the Recharts-based `ModuleCompletionChart` to visualize syllabus completion rates per module, color-coded by performance thresholds (Green: ≥70%, Amber: ≥40%, Red: <40%).
+   - Re-introduced the `ProgramPerformanceChart` to display a comparative breakdown of top performers versus low-progress students based on XP.
+
+2. **XP Growth & Achievement Analytics:**
+   - Implemented an `XpGrowthChart` visualization on the student's `AchievementsPage`.
+   - Visualizes the learner's "XP Level Journey," mapping current XP accumulation against progression milestones to gamify the learning curve.
+
+3. **Leaderboard Movement Analytics:**
+   - Added a `weeklyRank` delta indicator to the student dashboard's `StudentRankingCard`.
+   - Compares current global all-time rank against weekly performance to render upward (↑) or downward (↓) movement trends (e.g., "↑ +5 from last week").
+
+4. **Institution Analytics Dashboard:**
+   - Built the `InstitutionDashboardPage` for university-level administrators.
+   - Integrated the `GET /api/leaderboards/universities` endpoint to aggregate institution-wide metrics: total programs, enrolled students, overall completion rates, and the top performing programs within the institution.
+   - Deployed the dedicated route at `/app/(university)/university/dashboard`.
+
+### Files Added / Modified
+
+| Action | File |
+|---|---|
+| MODIFIED | [frontend/src/features/dashboard/components/FacultyDashboard.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/dashboard/components/FacultyDashboard.tsx) |
+| MODIFIED | [frontend/src/features/learning/pages/StudentDashboardPage.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/learning/pages/StudentDashboardPage.tsx) |
+| MODIFIED | [frontend/src/features/achievements/pages/AchievementsPage.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/achievements/pages/AchievementsPage.tsx) |
+| MODIFIED | [frontend/src/features/leaderboards/components/student-ranking-card.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/leaderboards/components/student-ranking-card.tsx) |
+| CREATED | [frontend/src/features/analytics/components/module-completion-chart.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/analytics/components/module-completion-chart.tsx) |
+| CREATED | [frontend/src/features/analytics/components/program-performance-chart.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/analytics/components/program-performance-chart.tsx) |
+| CREATED | [frontend/src/features/analytics/components/xp-growth-chart.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/analytics/components/xp-growth-chart.tsx) |
+| CREATED | [frontend/src/features/analytics/hooks/useProgramAnalytics.ts](file:///d:/Dezai-Prototype-main/frontend/src/features/analytics/hooks/useProgramAnalytics.ts) |
+| CREATED | [frontend/src/features/analytics/services/analytics.service.ts](file:///d:/Dezai-Prototype-main/frontend/src/features/analytics/services/analytics.service.ts) |
+| CREATED | [frontend/src/features/analytics/types/analytics.types.ts](file:///d:/Dezai-Prototype-main/frontend/src/features/analytics/types/analytics.types.ts) |
+| CREATED | [frontend/src/features/institution/pages/InstitutionDashboardPage.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/institution/pages/InstitutionDashboardPage.tsx) |
+| CREATED | [frontend/src/app/(university)/university/dashboard/page.tsx](file:///d:/Dezai-Prototype-main/frontend/src/app/(university)/university/dashboard/page.tsx) |
+
