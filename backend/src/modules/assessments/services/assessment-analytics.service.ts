@@ -35,6 +35,7 @@ interface CompletedAttemptForTrend {
   passed: boolean;
   completedAt: Date;
   userId: string;
+  sampleSize: number;
 }
 
 // ─────────────────── SERVICE ───────────────────
@@ -141,7 +142,10 @@ export class AssessmentAnalyticsService {
       }
 
       const bucket = dateMap.get(dateKey)!;
-      bucket.scores.push(attempt.score);
+      const pct = attempt.score > attempt.sampleSize
+        ? attempt.score
+        : Math.round((attempt.score / attempt.sampleSize) * 100);
+      bucket.scores.push(pct);
       bucket.total++;
       if (attempt.passed) bucket.passed++;
     }
@@ -190,9 +194,13 @@ export class AssessmentAnalyticsService {
     if (totalAttempts > 0) {
       const passedCount = attempts.filter((a) => a.passed).length;
       overallPassRate = this.round(passedCount / totalAttempts);
-      overallAverageScore = this.round(
-        attempts.reduce((sum, a) => sum + a.score, 0) / totalAttempts,
-      );
+      let sumPercentage = 0;
+      for (const a of attempts) {
+        sumPercentage += a.score > a.sampleSize
+          ? a.score
+          : Math.round((a.score / a.sampleSize) * 100);
+      }
+      overallAverageScore = this.round(sumPercentage / totalAttempts);
     }
 
     // Get difficulty breakdown, trend, and top missed questions concurrently
@@ -286,8 +294,14 @@ export class AssessmentAnalyticsService {
       for (const a of attempts) allStudentIds.add(a.userId);
 
       const passRate = attemptCount > 0 ? this.round(passed / attemptCount) : 0;
+      let sumPercentage = 0;
+      for (const a of attempts) {
+        sumPercentage += a.score > a.sampleSize
+          ? a.score
+          : Math.round((a.score / a.sampleSize) * 100);
+      }
       const averageScore = attemptCount > 0
-        ? this.round(attempts.reduce((s, a) => s + a.score, 0) / attemptCount)
+        ? this.round(sumPercentage / attemptCount)
         : 0;
 
       // Compute trend direction
@@ -446,11 +460,8 @@ export class AssessmentAnalyticsService {
         assessmentId,
         completedAt: { not: null },
       },
-      select: {
-        score: true,
-        passed: true,
-        completedAt: true,
-        userId: true,
+      include: {
+        assessment: { select: { sampleSize: true } },
       },
     });
 
@@ -459,6 +470,7 @@ export class AssessmentAnalyticsService {
       passed: a.passed,
       completedAt: a.completedAt!,
       userId: a.userId,
+      sampleSize: a.assessment.sampleSize,
     }));
   }
 
