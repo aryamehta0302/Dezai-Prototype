@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, startTransition } from "react";
 import { learningApi } from "../services/learning-api.service";
+import { useAuthStore } from "@/lib/stores/auth.store";
 import type {
   ActivityEvent,
   Milestone,
@@ -38,6 +39,11 @@ function getCached<T>(key: string): T | null {
 
 function setCache<T>(key: string, data: T): void {
   cache.set(key, { data, ts: Date.now() });
+}
+
+function userKey(suffix: string): string {
+  const uid = useAuthStore.getState().user?.id ?? "anon";
+  return `${uid}:${suffix}`;
 }
 
 function useDataFetch<T>(
@@ -120,7 +126,7 @@ export function useActivityTimeline(limit = 20) {
     () => learningApi.getActivityTimeline({ limit }),
     [limit],
   );
-  const cacheKey = `activityTimeline:${limit}`;
+  const cacheKey = userKey(`activityTimeline:${limit}`);
   const { data, loading, refetch } = useDataFetchArray<ActivityEvent>(fetcher, cacheKey);
   return { data, loading, refetch };
 }
@@ -128,7 +134,7 @@ export function useActivityTimeline(limit = 20) {
 export function useMilestones() {
   const { data, loading, refetch } = useDataFetchArray<Milestone>(
     useCallback(() => learningApi.getMilestones(), []),
-    'milestones',
+    userKey('milestones'),
   );
   const unlocked = data.filter((m) => m.isUnlocked);
   const total = data.length;
@@ -139,7 +145,7 @@ export function useMilestones() {
 export function useLearningPatterns() {
   const { data, loading, refetch } = useDataFetch<LearningPattern>(
     useCallback(() => learningApi.getLearningPatterns(), []),
-    'learningPatterns',
+    userKey('learningPatterns'),
   );
   return { data, loading, refetch };
 }
@@ -147,7 +153,7 @@ export function useLearningPatterns() {
 export function useStreakInfo() {
   const { data, loading, refetch } = useDataFetch<StreakInfo>(
     useCallback(() => learningApi.getStreakInfo(), []),
-    'streakInfo',
+    userKey('streakInfo'),
   );
   return { data, loading, refetch };
 }
@@ -155,7 +161,7 @@ export function useStreakInfo() {
 export function useInsights() {
   const { data, loading, refetch } = useDataFetchArray<StudentInsight>(
     useCallback(() => learningApi.getInsights(), []),
-    'insights',
+    userKey('insights'),
   );
   return { data, loading, refetch };
 }
@@ -163,7 +169,7 @@ export function useInsights() {
 export function useRecommendations() {
   const { data, loading, refetch } = useDataFetchArray<LearningRecommendation>(
     useCallback(() => learningApi.getRecommendations(), []),
-    'recommendations',
+    userKey('recommendations'),
   );
   return { data, loading, refetch };
 }
@@ -171,7 +177,7 @@ export function useRecommendations() {
 export function useWeakTopics() {
   const { data, loading, refetch } = useDataFetchArray<WeakTopic>(
     useCallback(() => learningApi.getWeakTopics(), []),
-    'weakTopics',
+    userKey('weakTopics'),
   );
   return { data, loading, refetch };
 }
@@ -179,7 +185,7 @@ export function useWeakTopics() {
 export function useDifficultyAnalysis() {
   const { data, loading, refetch } = useDataFetchArray<DifficultyAnalysis>(
     useCallback(() => learningApi.getDifficultyAnalysis(), []),
-    'difficultyAnalysis',
+    userKey('difficultyAnalysis'),
   );
   return { data, loading, refetch };
 }
@@ -187,7 +193,7 @@ export function useDifficultyAnalysis() {
 export function usePredictionRules() {
   const { data, loading, refetch } = useDataFetchArray<PredictionRule>(
     useCallback(() => learningApi.getPredictionRules(), []),
-    'predictionRules',
+    userKey('predictionRules'),
   );
   return { data, loading, refetch };
 }

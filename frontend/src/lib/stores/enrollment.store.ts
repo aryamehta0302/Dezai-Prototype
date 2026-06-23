@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { learningApi } from "@/features/learning/services/learning-api.service";
+import { useAuthStore } from "./auth.store";
 
 export interface LessonProgressData {
   lessonId: string;
@@ -29,6 +30,7 @@ export interface EnrollmentState {
   isLoading: boolean;
   hasFetched: boolean;
   statsFetched: boolean;
+  fetchedUserId: string | null;
 
   fetchEnrollments: () => Promise<void>;
   fetchStats: () => Promise<void>;
@@ -60,6 +62,7 @@ export const useEnrollmentStore = create<EnrollmentState>()(
       isLoading: false,
       hasFetched: false,
       statsFetched: false,
+      fetchedUserId: null,
 
       isLessonCompleted: (courseId: string, lessonId: string) => {
         const enrollment = get().enrollments[courseId];
@@ -68,7 +71,8 @@ export const useEnrollmentStore = create<EnrollmentState>()(
       },
 
       fetchEnrollments: async () => {
-        if (get().hasFetched) return;
+        const authUser = useAuthStore.getState().user;
+        if (get().hasFetched && get().fetchedUserId === authUser?.id) return;
         set({ isLoading: true });
         try {
           const response = await learningApi.getEnrollments();
@@ -87,7 +91,7 @@ export const useEnrollmentStore = create<EnrollmentState>()(
                 notes: {},
               };
             });
-            set({ enrollments: enrollmentsMap, hasFetched: true });
+            set({ enrollments: enrollmentsMap, hasFetched: true, fetchedUserId: authUser?.id ?? null });
           }
         } catch (error) {
           console.error("Failed to fetch enrollments:", error);
@@ -97,7 +101,8 @@ export const useEnrollmentStore = create<EnrollmentState>()(
       },
 
       fetchStats: async () => {
-        if (get().statsFetched) return;
+        const authUser = useAuthStore.getState().user;
+        if (get().statsFetched && get().fetchedUserId === authUser?.id) return;
         try {
           const res = await learningApi.getMyStats();
           if (res.success) {
@@ -107,6 +112,7 @@ export const useEnrollmentStore = create<EnrollmentState>()(
               hoursLearned: Math.round((res.enrolledCourses || 0) * 8.5), // estimated
               globalRank: res.globalRank ?? null,
               statsFetched: true,
+              fetchedUserId: authUser?.id ?? null,
             });
           }
         } catch { /* not critical */ }
@@ -257,6 +263,13 @@ export const useEnrollmentStore = create<EnrollmentState>()(
     }),
     {
       name: "dezai-enrollments-v3",
+      partialize: (state) => ({
+        enrollments: state.enrollments,
+        xpEarned: state.xpEarned,
+        streakCount: state.streakCount,
+        hoursLearned: state.hoursLearned,
+        globalRank: state.globalRank,
+      }),
     }
   )
 );
