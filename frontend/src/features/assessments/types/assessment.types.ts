@@ -31,17 +31,16 @@ export interface Attempt {
   answers?: Record<string, string>;
 }
 
-export interface AttemptResultBreakdownItem {
+export interface AttemptResultQuestionItem {
   questionId: string;
-  text: string;
-  category?: string;
-  options: AttemptQuestionOption[];
+  questionText: string;
   selectedOptionId: string | null;
   selectedOptionText: string | null;
+  isCorrect: boolean;
   correctOptionId: string;
   correctOptionText: string;
-  isCorrect: boolean;
-  explanation: string;
+  options: { id: string; text: string }[];
+  explanation?: string;
 }
 
 export interface AttemptResult {
@@ -53,9 +52,12 @@ export interface AttemptResult {
   passed: boolean;
   passingScore: number;
   totalQuestions: number;
+  timeTaken?: number;
   startedAt: string;
   completedAt: string;
-  breakdown: AttemptResultBreakdownItem[];
+  questions: AttemptResultQuestionItem[];
+  /** @deprecated Use `questions` instead */
+  breakdown?: AttemptResultQuestionItem[];
 }
 
 export interface AttemptHistoryItem {

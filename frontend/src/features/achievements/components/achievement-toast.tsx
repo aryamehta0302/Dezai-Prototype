@@ -29,7 +29,7 @@ export function AchievementToastContent({ title, description, icon, rarity = 'CO
   const colors = RARITY_COLORS[rarity];
 
   return (
-    <div className="flex items-start gap-3 min-w-[280px]">
+    <div className="flex items-start gap-3 min-w-[300px] bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow-2xl">
       <div className={`h-10 w-10 rounded-xl ${colors.bg} ${colors.border} border flex items-center justify-center shrink-0`}>
         <Icon className={`h-5 w-5 ${colors.text}`} />
       </div>

@@ -14,23 +14,59 @@ import type {
   PredictionRule,
 } from "../types/learning-intelligence.types";
 
+// ─── TTL Cache ────────────────────────────────────────────────────────
+// Keeps fetched data in memory so re-mounting the dashboard doesn't fire
+// 10+ API calls from scratch. Expires after CACHE_TTL_MS.
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+interface CacheEntry<T> {
+  data: T;
+  ts: number;
+}
+
+const cache = new Map<string, CacheEntry<unknown>>();
+
+function getCached<T>(key: string): T | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > CACHE_TTL_MS) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.data as T;
+}
+
+function setCache<T>(key: string, data: T): void {
+  cache.set(key, { data, ts: Date.now() });
+}
+
 function useDataFetch<T>(
   fetcher: () => Promise<{ success: boolean; data: T }>,
+  cacheKey: string,
 ): { data: T | null; loading: boolean; refetch: () => void } {
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<T | null>(() => getCached<T>(cacheKey));
+  const [loading, setLoading] = useState(() => data === null);
 
   const fetch = useCallback(() => {
+    // If fresh cache exists, skip the network call
+    const cached = getCached<T>(cacheKey);
+    if (cached !== null) {
+      startTransition(() => setData(cached));
+      startTransition(() => setLoading(false));
+      return;
+    }
+
     setLoading(true);
     fetcher()
       .then((res) => {
         if (res.success) {
+          setCache(cacheKey, res.data);
           startTransition(() => setData(res.data));
         }
       })
       .catch(() => {})
       .finally(() => startTransition(() => setLoading(false)));
-  }, [fetcher]);
+  }, [fetcher, cacheKey]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -42,21 +78,34 @@ function useDataFetch<T>(
 
 function useDataFetchArray<T>(
   fetcher: () => Promise<{ success: boolean; data: T[] }>,
+  cacheKey: string,
 ): { data: T[]; loading: boolean; refetch: () => void } {
-  const [data, setData] = useState<T[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<T[]>(() => {
+    const cached = getCached<T[]>(cacheKey);
+    return cached ?? [];
+  });
+  const [loading, setLoading] = useState(() => getCached<T[]>(cacheKey) === null);
 
   const fetch = useCallback(() => {
+    // If fresh cache exists, skip the network call
+    const cached = getCached<T[]>(cacheKey);
+    if (cached !== null) {
+      startTransition(() => setData(cached));
+      startTransition(() => setLoading(false));
+      return;
+    }
+
     setLoading(true);
     fetcher()
       .then((res) => {
         if (res.success) {
+          setCache(cacheKey, res.data);
           startTransition(() => setData(res.data));
         }
       })
       .catch(() => {})
       .finally(() => startTransition(() => setLoading(false)));
-  }, [fetcher]);
+  }, [fetcher, cacheKey]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -71,13 +120,15 @@ export function useActivityTimeline(limit = 20) {
     () => learningApi.getActivityTimeline({ limit }),
     [limit],
   );
-  const { data, loading, refetch } = useDataFetchArray<ActivityEvent>(fetcher);
+  const cacheKey = `activityTimeline:${limit}`;
+  const { data, loading, refetch } = useDataFetchArray<ActivityEvent>(fetcher, cacheKey);
   return { data, loading, refetch };
 }
 
 export function useMilestones() {
   const { data, loading, refetch } = useDataFetchArray<Milestone>(
     useCallback(() => learningApi.getMilestones(), []),
+    'milestones',
   );
   const unlocked = data.filter((m) => m.isUnlocked);
   const total = data.length;
@@ -88,6 +139,7 @@ export function useMilestones() {
 export function useLearningPatterns() {
   const { data, loading, refetch } = useDataFetch<LearningPattern>(
     useCallback(() => learningApi.getLearningPatterns(), []),
+    'learningPatterns',
   );
   return { data, loading, refetch };
 }
@@ -95,6 +147,7 @@ export function useLearningPatterns() {
 export function useStreakInfo() {
   const { data, loading, refetch } = useDataFetch<StreakInfo>(
     useCallback(() => learningApi.getStreakInfo(), []),
+    'streakInfo',
   );
   return { data, loading, refetch };
 }
@@ -102,6 +155,7 @@ export function useStreakInfo() {
 export function useInsights() {
   const { data, loading, refetch } = useDataFetchArray<StudentInsight>(
     useCallback(() => learningApi.getInsights(), []),
+    'insights',
   );
   return { data, loading, refetch };
 }
@@ -109,6 +163,7 @@ export function useInsights() {
 export function useRecommendations() {
   const { data, loading, refetch } = useDataFetchArray<LearningRecommendation>(
     useCallback(() => learningApi.getRecommendations(), []),
+    'recommendations',
   );
   return { data, loading, refetch };
 }
@@ -116,6 +171,7 @@ export function useRecommendations() {
 export function useWeakTopics() {
   const { data, loading, refetch } = useDataFetchArray<WeakTopic>(
     useCallback(() => learningApi.getWeakTopics(), []),
+    'weakTopics',
   );
   return { data, loading, refetch };
 }
@@ -123,6 +179,7 @@ export function useWeakTopics() {
 export function useDifficultyAnalysis() {
   const { data, loading, refetch } = useDataFetchArray<DifficultyAnalysis>(
     useCallback(() => learningApi.getDifficultyAnalysis(), []),
+    'difficultyAnalysis',
   );
   return { data, loading, refetch };
 }
@@ -130,6 +187,7 @@ export function useDifficultyAnalysis() {
 export function usePredictionRules() {
   const { data, loading, refetch } = useDataFetchArray<PredictionRule>(
     useCallback(() => learningApi.getPredictionRules(), []),
+    'predictionRules',
   );
   return { data, loading, refetch };
 }

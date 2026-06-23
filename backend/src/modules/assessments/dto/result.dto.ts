@@ -32,6 +32,8 @@ export interface AttemptQuestionBreakdownDto {
   isCorrect: boolean;
   correctOptionId: string;
   correctOptionText: string;
+  options: { id: string; text: string }[];
+  explanation?: string;
 }
 
 /**

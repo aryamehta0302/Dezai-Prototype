@@ -45,13 +45,13 @@ export class UserAchievementService {
 
   async getRecentUnlocks(userId: string, limit = 5): Promise<AchievementResponse[]> {
     const recent = await this.prisma.userAchievement.findMany({
-      where: { userId, NOT: { unlockedAt: null } },
+      where: { userId },
       orderBy: { unlockedAt: 'desc' },
       take: limit,
       include: { achievement: true },
     });
 
-    return recent.map((ua) => ({
+    return recent.filter((ua) => ua.unlockedAt !== null).map((ua) => ({
       id: ua.achievement.id,
       key: ua.achievement.key,
       title: ua.achievement.title,
@@ -72,7 +72,7 @@ export class UserAchievementService {
     const recent = await this.prisma.userAchievement.findMany({
       where: {
         userId,
-        unlockedAt: { not: null, gte: since },
+        unlockedAt: { gte: since },
       },
       orderBy: { unlockedAt: 'desc' },
       include: { achievement: true },
@@ -96,16 +96,19 @@ export class UserAchievementService {
   }
 
   async getStats(userId: string) {
-    const [total, unlocked, xpFromAchievements] = await Promise.all([
+    const [total, userAchievements, xpFromAchievements] = await Promise.all([
       this.prisma.achievement.count(),
-      this.prisma.userAchievement.count({
-        where: { userId, unlockedAt: { not: null } },
+      this.prisma.userAchievement.findMany({
+        where: { userId },
+        select: { unlockedAt: true },
       }),
       this.prisma.xpTransaction.aggregate({
         where: { userId, type: 'ACHIEVEMENT_REWARD' },
         _sum: { amount: true },
       }),
     ]);
+
+    const unlocked = userAchievements.filter((ua) => ua.unlockedAt !== null).length;
 
     return {
       totalAchievements: total,

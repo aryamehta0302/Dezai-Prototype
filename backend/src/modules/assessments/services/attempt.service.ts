@@ -567,6 +567,10 @@ export class AttemptService {
         isCorrect: savedAns ? savedAns.isCorrect : false,
         correctOptionId: correctOption?.id ?? '',
         correctOptionText: correctOption?.text ?? '',
+        options: (dbQuestion?.options ?? []).map((o) => ({
+          id: o.id,
+          text: o.text,
+        })),
       };
     });
 

@@ -24,18 +24,31 @@ export class LearningMilestoneService {
       select: { xp: true, streakCount: true },
     });
 
-    const enrollmentCount = await this.prisma.enrollment.count({ where: { userId } });
-    const completedPrograms = await this.prisma.enrollment.count({
-      where: { userId, completedAt: { not: null } },
-    });
+    const [progressDates, passedAssessmentDates, completedProgramDates] = await Promise.all([
+      this.prisma.progress.findMany({
+        where: { userId, completedAt: { not: null } },
+        select: { completedAt: true },
+        orderBy: { completedAt: 'asc' },
+      }),
+      this.prisma.assessmentAttempt.findMany({
+        where: { userId, passed: true, completedAt: { not: null } },
+        select: { completedAt: true },
+        orderBy: { completedAt: 'asc' },
+      }),
+      this.prisma.enrollment.findMany({
+        where: { userId, completedAt: { not: null } },
+        select: { completedAt: true },
+        orderBy: { completedAt: 'asc' },
+      }),
+    ]);
 
-    const progressCount = await this.prisma.progress.count({ where: { userId } });
+    const sortedLessonDates = progressDates.map((p) => p.completedAt).filter(Boolean) as Date[];
+    const sortedAssessmentDates = passedAssessmentDates.map((a) => a.completedAt).filter(Boolean) as Date[];
+    const sortedProgramDates = completedProgramDates.map((e) => e.completedAt).filter(Boolean) as Date[];
 
-    const passedAssessments = await this.prisma.assessmentAttempt.count({
-      where: { userId, passed: true },
-    });
-
-    const allLessons = await this.prisma.lesson.count();
+    const progressCount = sortedLessonDates.length;
+    const passedAssessments = sortedAssessmentDates.length;
+    const completedPrograms = sortedProgramDates.length;
     const moduleCompletions = await this.getModuleCompletionCount(userId);
 
     const xp = student?.xp ?? 0;
@@ -61,15 +74,26 @@ export class LearningMilestoneService {
 
     return milestoneDefs.map((def) => {
       let current = 0;
+      let unlockedAt: Date | undefined;
+
       switch (def.type) {
         case 'LESSON':
-          current = progressCount;
+          current = sortedLessonDates.length;
+          if (current >= def.target) {
+            unlockedAt = sortedLessonDates[def.target - 1];
+          }
           break;
         case 'ASSESSMENT':
-          current = passedAssessments;
+          current = sortedAssessmentDates.length;
+          if (current >= def.target) {
+            unlockedAt = sortedAssessmentDates[def.target - 1];
+          }
           break;
         case 'PROGRAM':
-          current = completedPrograms;
+          current = sortedProgramDates.length;
+          if (current >= def.target) {
+            unlockedAt = sortedProgramDates[def.target - 1];
+          }
           break;
         case 'MODULE':
           current = moduleCompletions;
@@ -90,13 +114,23 @@ export class LearningMilestoneService {
         current,
         progress,
         isUnlocked,
-        unlockedAt: isUnlocked ? new Date() : undefined,
+        unlockedAt: isUnlocked ? (unlockedAt ?? undefined) : undefined,
       };
     });
   }
 
   private async getModuleCompletionCount(userId: string): Promise<number> {
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: { userId },
+      select: { programId: true },
+    });
+
+    if (enrollments.length === 0) return 0;
+
+    const programIds = enrollments.map((e) => e.programId);
+
     const modules = await this.prisma.module.findMany({
+      where: { track: { programId: { in: programIds } } },
       include: { lessons: { select: { id: true } } },
     });
 

@@ -47,7 +47,7 @@ export function AssessmentPlayer({ slug, assessmentId }: AssessmentPlayerProps) 
     setIsFullscreenActive,
     handleViolation,
     initializeAttempt,
-  } = useAttempt(assessmentId, token);
+  } = useAttempt(assessmentId, token, slug);
 
   const [started, setStarted] = useState(false);
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);

@@ -28,6 +28,7 @@ export interface EnrollmentState {
   globalRank: number | null;
   isLoading: boolean;
   hasFetched: boolean;
+  statsFetched: boolean;
 
   fetchEnrollments: () => Promise<void>;
   fetchStats: () => Promise<void>;
@@ -58,6 +59,7 @@ export const useEnrollmentStore = create<EnrollmentState>()(
       globalRank: null,
       isLoading: false,
       hasFetched: false,
+      statsFetched: false,
 
       isLessonCompleted: (courseId: string, lessonId: string) => {
         const enrollment = get().enrollments[courseId];
@@ -66,6 +68,7 @@ export const useEnrollmentStore = create<EnrollmentState>()(
       },
 
       fetchEnrollments: async () => {
+        if (get().hasFetched) return;
         set({ isLoading: true });
         try {
           const response = await learningApi.getEnrollments();
@@ -94,6 +97,7 @@ export const useEnrollmentStore = create<EnrollmentState>()(
       },
 
       fetchStats: async () => {
+        if (get().statsFetched) return;
         try {
           const res = await learningApi.getMyStats();
           if (res.success) {
@@ -102,7 +106,7 @@ export const useEnrollmentStore = create<EnrollmentState>()(
               streakCount: res.streakCount || 0,
               hoursLearned: Math.round((res.enrolledCourses || 0) * 8.5), // estimated
               globalRank: res.globalRank ?? null,
-              hasFetched: true,
+              statsFetched: true,
             });
           }
         } catch { /* not critical */ }

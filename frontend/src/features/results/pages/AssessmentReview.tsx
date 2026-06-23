@@ -103,7 +103,7 @@ export function AssessmentReview({ slug, assessmentId }: AssessmentReviewProps) 
 
       {/* Questions Breakdown List */}
       <div className="space-y-6">
-        {result.breakdown.map((item, idx) => {
+        {(result.questions ?? result.breakdown ?? []).map((item: any, idx: number) => {
           const isAnswerCorrect = item.isCorrect;
           const isUnanswered = !item.selectedOptionId;
 
@@ -144,12 +144,12 @@ export function AssessmentReview({ slug, assessmentId }: AssessmentReviewProps) 
 
                 {/* Question Text */}
                 <h3 className="text-base font-bold text-on-surface leading-snug">
-                  {item.text}
+                  {item.questionText ?? item.text}
                 </h3>
 
                 {/* Shuffled Options rendering */}
                 <div className="space-y-2.5 pt-1">
-                  {item.options.map((opt) => {
+                  {(item.options ?? []).map((opt: any) => {
                     const isSelected = item.selectedOptionId === opt.id;
                     const isCorrectOption = item.correctOptionId === opt.id;
 
@@ -179,17 +179,19 @@ export function AssessmentReview({ slug, assessmentId }: AssessmentReviewProps) 
                 </div>
 
                 {/* Conceptual Explanation Block */}
-                <div className="mt-4 p-4 bg-surface-variant/10 border border-border/20 rounded-xl flex items-start gap-3">
-                  <BookOpen className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold text-primary uppercase tracking-wider">
-                      Explanation
-                    </p>
-                    <p className="text-xs text-muted leading-relaxed">
-                      {item.explanation}
-                    </p>
+                {item.explanation && (
+                  <div className="mt-4 p-4 bg-surface-variant/10 border border-border/20 rounded-xl flex items-start gap-3">
+                    <BookOpen className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold text-primary uppercase tracking-wider">
+                        Explanation
+                      </p>
+                      <p className="text-xs text-muted leading-relaxed">
+                        {item.explanation}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </Card>
           );

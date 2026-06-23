@@ -6,7 +6,7 @@ import { Attempt } from "../types/assessment.types";
 import { useTimer } from "../../quizzes/hooks/useTimer";
 import { toast } from "sonner";
 
-export function useAttempt(assessmentId: string, accessToken?: string) {
+export function useAttempt(assessmentId: string, accessToken?: string, slug?: string) {
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -79,10 +79,31 @@ export function useAttempt(assessmentId: string, accessToken?: string) {
   const initializeAttempt = useCallback(async () => {
     if (!accessToken) return;
 
+    let activeAttemptId: string | null = null;
+
     try {
       setSaveStatus("idle");
-      // 1. Try starting/getting an active attempt
-      const data = await assessmentAttemptService.startAttempt(assessmentId, accessToken);
+
+      let data: Attempt;
+
+      try {
+        data = await assessmentAttemptService.startAttempt(assessmentId, accessToken);
+      } catch (startErr) {
+        const msg = startErr instanceof Error ? startErr.message : "";
+        if (!msg.includes("active attempt already exists")) {
+          throw startErr;
+        }
+
+        // An active attempt exists — fetch its ID and resume
+        const status = await assessmentAttemptService.getAttemptStatus(assessmentId, accessToken);
+        activeAttemptId = status.activeAttemptId ?? null;
+
+        if (!status.hasActiveAttempt || !activeAttemptId) {
+          throw new Error("No active attempt found to resume");
+        }
+
+        data = await assessmentAttemptService.resumeAttempt(activeAttemptId, accessToken);
+      }
       
       setAttempt(data);
       setWarningsCount(data.warningsCount);
@@ -133,11 +154,21 @@ export function useAttempt(assessmentId: string, accessToken?: string) {
         timer.start();
       }
     } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      if (message.includes("already completed")) {
+        toast.info("This attempt has already been submitted. Redirecting to results...");
+        if (slug && typeof window !== "undefined") {
+          const url = activeAttemptId
+            ? `/programs/${slug}/assessment/${assessmentId}/results?attemptId=${activeAttemptId}`
+            : `/programs/${slug}/assessment/${assessmentId}/results`;
+          window.location.href = url;
+        }
+        return;
+      }
       console.error("Failed to initialize attempt:", err);
-      const message = err instanceof Error ? err.message : "Failed to load assessment";
-      toast.error(message);
+      toast.error(message || "Failed to load assessment");
     }
-  }, [assessmentId, accessToken]);
+  }, [assessmentId, accessToken, slug]);
 
   // Save Answers to Backend
   const saveCurrentAnswers = useCallback(async () => {
