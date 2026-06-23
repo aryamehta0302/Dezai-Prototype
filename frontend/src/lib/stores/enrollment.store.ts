@@ -23,10 +23,15 @@ export interface CourseEnrollment {
 export interface EnrollmentState {
   enrollments: Record<string, CourseEnrollment>;
   xpEarned: number;
+  streakCount: number;
+  hoursLearned: number;
+  globalRank: number | null;
   isLoading: boolean;
+  hasFetched: boolean;
+  statsFetched: boolean;
 
   fetchEnrollments: () => Promise<void>;
-  fetchXp: () => Promise<void>;
+  fetchStats: () => Promise<void>;
   enroll: (programId: string) => Promise<boolean>;
   isEnrolled: (courseId: string) => boolean;
   getEnrollment: (courseId: string) => CourseEnrollment | undefined;
@@ -49,7 +54,12 @@ export const useEnrollmentStore = create<EnrollmentState>()(
     (set, get) => ({
       enrollments: {},
       xpEarned: 0,
+      streakCount: 0,
+      hoursLearned: 0,
+      globalRank: null,
       isLoading: false,
+      hasFetched: false,
+      statsFetched: false,
 
       isLessonCompleted: (courseId: string, lessonId: string) => {
         const enrollment = get().enrollments[courseId];
@@ -58,6 +68,7 @@ export const useEnrollmentStore = create<EnrollmentState>()(
       },
 
       fetchEnrollments: async () => {
+        if (get().hasFetched) return;
         set({ isLoading: true });
         try {
           const response = await learningApi.getEnrollments();
@@ -69,15 +80,15 @@ export const useEnrollmentStore = create<EnrollmentState>()(
                 courseId: e.programId,
                 enrolledAt: e.createdAt,
                 progress: e.progress,
-                lessonsCompleted: (e.progresses || []).map((p: any) => ({
-                  lessonId: p.lessonId,
+                lessonsCompleted: (e.progresses || e.completedLessonIds || []).map((p: any) => ({
+                  lessonId: typeof p === 'string' ? p : p.lessonId,
                   completed: true,
-                  completedAt: p.completedAt,
+                  completedAt: typeof p === 'string' ? undefined : p.completedAt,
                 })),
                 notes: {},
               };
             });
-            set({ enrollments: enrollmentsMap });
+            set({ enrollments: enrollmentsMap, hasFetched: true });
           }
         } catch (error) {
           console.error("Failed to fetch enrollments:", error);
@@ -86,11 +97,18 @@ export const useEnrollmentStore = create<EnrollmentState>()(
         }
       },
 
-      fetchXp: async () => {
+      fetchStats: async () => {
+        if (get().statsFetched) return;
         try {
-          const res = await learningApi.getMyXp();
+          const res = await learningApi.getMyStats();
           if (res.success) {
-            set({ xpEarned: res.xp });
+            set({
+              xpEarned: res.xp,
+              streakCount: res.streakCount || 0,
+              hoursLearned: Math.round((res.enrolledCourses || 0) * 8.5), // estimated
+              globalRank: res.globalRank ?? null,
+              statsFetched: true,
+            });
           }
         } catch { /* not critical */ }
       },
@@ -129,38 +147,35 @@ export const useEnrollmentStore = create<EnrollmentState>()(
       getEnrollment: (courseId) => get().enrollments[courseId],
 
       markLessonComplete: async (courseId, lessonId) => {
-        try {
-          const response = await learningApi.completeLesson(lessonId);
+        // Optimistic local update — instant UI feedback
+        set((state) => {
+          const enrollment = state.enrollments[courseId];
+          if (!enrollment || enrollment.lessonsCompleted.some(l => l.lessonId === lessonId)) return state;
+          return {
+            enrollments: {
+              ...state.enrollments,
+              [courseId]: {
+                ...enrollment,
+                lessonsCompleted: [
+                  ...enrollment.lessonsCompleted,
+                  { lessonId, completed: true, completedAt: new Date().toISOString() }
+                ]
+              }
+            }
+          };
+        });
+
+        // Fire API in background — don't block navigation
+        learningApi.completeLesson(lessonId).then((response) => {
           if (response.success) {
             if (response.xpResult?.currentXp) {
               get().setXp(response.xpResult.currentXp);
             }
-            set((state) => {
-              const enrollment = state.enrollments[courseId];
-              if (!enrollment) return state;
-
-              const exists = enrollment.lessonsCompleted.some((l) => l.lessonId === lessonId);
-              if (exists) return state;
-
-              const updatedLessons = [
-                ...enrollment.lessonsCompleted,
-                { lessonId, completed: true, completedAt: new Date().toISOString() },
-              ];
-
-              return {
-                enrollments: {
-                  ...state.enrollments,
-                  [courseId]: {
-                    ...enrollment,
-                    lessonsCompleted: updatedLessons,
-                  },
-                },
-              };
-            });
+            get().fetchEnrollments();
           }
-        } catch (error) {
-          console.error("Failed to mark lesson complete:", error);
-        }
+        }).catch((error) => {
+          console.error("Failed to save lesson completion:", error);
+        });
       },
 
       toggleBookmark: async (courseId, lessonId) => {

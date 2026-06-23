@@ -85,7 +85,7 @@ export class ProgramsService {
                   select: { id: true, title: true, order: true, videoUrl: true },
                 },
                 assessments: {
-                  select: { id: true, title: true, passingScore: true },
+                  select: { id: true, title: true, passingScore: true, timeLimit: true, sampleSize: true },
                 },
               },
             },
@@ -118,7 +118,7 @@ export class ProgramsService {
                   },
                 },
                 assessments: {
-                  select: { id: true, title: true, passingScore: true },
+                  select: { id: true, title: true, passingScore: true, timeLimit: true, sampleSize: true },
                 },
               },
             },
@@ -167,6 +167,7 @@ export class ProgramsService {
       data: {
         title: data.title,
         description: data.description,
+        thumbnail: data.thumbnail,
         institutionId,
         facultyId,
       },

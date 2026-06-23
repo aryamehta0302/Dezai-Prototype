@@ -1,17 +1,18 @@
 import { Controller, Post, Get, Param, UseGuards, Req, BadRequestException } from '@nestjs/common';
 import { EnrollmentService } from '../services/enrollment.service';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../common/guards/roles.guard';
+import { Roles } from '../../../common/decorators/roles.decorator';
+import { UserRole } from '@prisma/client';
 
 @Controller('enrollments')
+@UseGuards(JwtAuthGuard)
 export class EnrollmentController {
   constructor(private readonly enrollmentService: EnrollmentService) {}
 
-  /**
-   * POST /api/enrollments/:programId
-   * Enroll the authenticated user in the target program track.
-   */
   @Post(':programId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.STUDENT)
   async enroll(@Param('programId') programId: string, @Req() req) {
     if (!programId) {
       throw new BadRequestException('programId is required');
@@ -20,12 +21,7 @@ export class EnrollmentController {
     return { success: true, enrollment };
   }
 
-  /**
-   * GET /api/enrollments
-   * Get all active enrollments of the current student.
-   */
   @Get()
-  @UseGuards(JwtAuthGuard)
   async getMyEnrollments(@Req() req) {
     const enrollments = await this.enrollmentService.getStudentEnrollments(req.user.id);
     return { success: true, enrollments };

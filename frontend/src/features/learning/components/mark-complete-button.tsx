@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/shared/ui/button";
 import { useEnrollmentStore } from "@/lib/stores/enrollment.store";
-import { CheckCircle, Sparkles, Loader2 } from "lucide-react";
+import { CheckCircle, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 interface MarkCompleteButtonProps {
@@ -13,7 +13,7 @@ interface MarkCompleteButtonProps {
 }
 
 export function MarkCompleteButton({ courseId, lessonId, onComplete }: MarkCompleteButtonProps) {
-  const { markLessonComplete, isLessonCompleted, isLoading } = useEnrollmentStore();
+  const { markLessonComplete, isLessonCompleted } = useEnrollmentStore();
   const [completing, setCompleting] = useState(false);
   
   const completed = isLessonCompleted(courseId, lessonId);
@@ -35,21 +35,17 @@ export function MarkCompleteButton({ courseId, lessonId, onComplete }: MarkCompl
 
   if (completed) {
     return (
-      <Button variant="outline" disabled className="gap-2">
-        <CheckCircle className="h-4 w-4 text-green-500" />
+      <Button variant="outline" disabled className="gap-2 bg-success/10 text-success border-success/20">
+        <CheckCircle className="h-4 w-4" />
         Completed
       </Button>
     );
   }
 
   return (
-    <Button onClick={handleClick} disabled={completing || isLoading} className="gap-2">
-      {completing ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : (
-        <CheckCircle className="h-4 w-4" />
-      )}
-      {completing ? "Saving..." : "Mark as Complete"}
+    <Button onClick={handleClick} className="gap-2">
+      <CheckCircle className="h-4 w-4" />
+      Mark as Complete
     </Button>
   );
 }

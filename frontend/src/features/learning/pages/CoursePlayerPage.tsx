@@ -5,9 +5,10 @@ import Link from "next/link";
 import { courseService } from "@/features/programs/services/course.service";
 import { learningApi } from "../services/learning-api.service";
 import { useEnrollmentStore } from "@/lib/stores/enrollment.store";
-import { VideoPlayer } from "../components/video-player";
+import { LessonVideoPlayer } from "../components/lesson-video-player";
 import { CourseModuleSidebar } from "../components/course-module-sidebar";
-import { LessonContent } from "../components/lesson-content";
+import { LessonMarkdownRenderer } from "../components/lesson-markdown-renderer";
+import { LessonResourceList } from "../components/lesson-resource-list";
 import { PersonalNotesPanel } from "../components/personal-notes-panel";
 import { MarkCompleteButton } from "../components/mark-complete-button";
 import { EmptyState } from "@/shared/components/empty-state";
@@ -59,8 +60,9 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
 
   // Initial lesson fetch
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
     if (lessonId) fetchLesson(lessonId);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Update URL silently + fetch lesson content on navigation
   const goToLesson = useCallback((id: string) => {
@@ -121,8 +123,19 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
   };
 
   const goNext = () => {
-    if (currentIndex < allLessons.length - 1)
-      goToLesson(allLessons[currentIndex + 1].id);
+    if (currentIndex < allLessons.length - 1) {
+      // Find the first uncompleted lesson after the current index
+      const nextUncompleted = allLessons
+        .slice(currentIndex + 1)
+        .find(l => !enrollment?.lessonsCompleted.some(lc => lc.lessonId === l.id));
+
+      if (nextUncompleted) {
+        goToLesson(nextUncompleted.id);
+      } else {
+        // If all following lessons are completed, just go to the immediate next one
+        goToLesson(allLessons[currentIndex + 1].id);
+      }
+    }
   };
 
   return (
@@ -193,13 +206,17 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
             </div>
 
             {lessonDetail?.videoUrl && (
-              <VideoPlayer
+              <LessonVideoPlayer
                 title={lessonDetail.title}
-                duration={15}
+                videoUrl={lessonDetail.videoUrl}
               />
             )}
 
-            {lessonDetail?.content && <LessonContent content={lessonDetail.content} />}
+            {lessonDetail?.content && <LessonMarkdownRenderer content={lessonDetail.content} />}
+
+            {lessonDetail?.resources && lessonDetail.resources.length > 0 && (
+              <LessonResourceList resources={lessonDetail.resources} className="mt-6" />
+            )}
 
             <div className="border-t border-border-light pt-6">
               <PersonalNotesPanel courseId={course.id} lessonId={currentLessonId} />

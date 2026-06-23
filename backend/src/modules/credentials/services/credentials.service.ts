@@ -1,374 +1,242 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { CredentialsRepository } from '../repositories/credentials.repository';
+import { CreateCredentialDto } from '../dto/CreateCredentialDto';
+import { TemplateService } from './template.service';
 import { PrismaService } from '../../../database/prisma.service';
-import { CredentialTier, VerifyStatus } from '@prisma/client';
+import { v4 as uuidv4 } from 'uuid';
+import { VerifyStatus, CredentialTier } from '@prisma/client';
+import { AuditService } from '../../audit/services/audit.service';
+import { AuditAction } from '@prisma/client';
 
 @Injectable()
 export class CredentialsService {
-  constructor(private prisma: PrismaService) {}
+    constructor(
+        private readonly credentialsRepository: CredentialsRepository,
+        private readonly templateService: TemplateService,
+        private readonly auditService: AuditService,
+        private readonly prisma: PrismaService,
+    ) { }
 
-  /**
-   * Maps a program/course ID to a CredentialTier
-   */
-  private getTierForProgram(programId: string): CredentialTier {
-    const citadelCourses = ['course-1', 'course-3', 'course-12'];
-    const arenaCourses = ['course-2', 'course-5', 'course-6', 'course-8', 'course-9'];
+    async issueCredential(data: CreateCredentialDto) {
+        const template = await this.templateService.getTemplateById(data.templateId);
+        if (!template) {
+            throw new BadRequestException('Invalid Template ID');
+        }
+        if (template.type !== data.credentialType) {
+            throw new BadRequestException('Template Type mismatch');
+        }
 
-    if (citadelCourses.includes(programId)) {
-      return CredentialTier.CITADEL;
-    } else if (arenaCourses.includes(programId)) {
-      return CredentialTier.ARENA;
-    } else {
-      return CredentialTier.FORGE;
-    }
-  }
+        const finalTier = data.tier || template.defaultTier;
 
-  /**
-   * Helper to generate unique verification code: DZA-[Year]-[UnivAbbr]-[RandomHex]
-   */
-  private async generateVerificationCode(institutionName: string): Promise<string> {
-    const year = new Date().getFullYear();
-    const cleanUnivName = institutionName
-      .replace(/[^a-zA-Z]/g, '')
-      .substring(0, 4)
-      .toUpperCase();
-    
-    let isUnique = false;
-    let code = '';
-    
-    while (!isUnique) {
-      const randVal = Math.floor(10000 + Math.random() * 90000); // 5 digit random number
-      code = `DZA-${year}-${cleanUnivName}-${randVal}`;
-      
-      const existing = await this.prisma.credential.findUnique({
-        where: { verificationCode: code },
-      });
-      if (!existing) {
-        isUnique = true;
-      }
-    }
-    
-    return code;
-  }
+        const uniqueCode = uuidv4().replace(/-/g, '').substring(0, 18).toUpperCase();
+        const publicUrl = `/verify/${uniqueCode}`;
 
-  /**
-   * Check if a student is eligible for a credential in a program.
-   * Student is eligible if:
-   * 1. Has completed all lessons (progress >= 100% or completedAt is set)
-   * 2. Has passed all assessments in the program's tracks
-   */
-  async checkEligibility(userId: string, programId: string): Promise<{ eligible: boolean; reason?: string }> {
-    // 1. Fetch the program along with tracks, modules, and assessments
-    const program = await this.prisma.program.findUnique({
-      where: { id: programId },
-      include: {
-        tracks: {
-          include: {
-            modules: {
-              include: {
-                assessments: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!program) {
-      throw new NotFoundException(`Program with ID ${programId} not found`);
-    }
-
-    // 2. Fetch the enrollment status
-    const enrollment = await this.prisma.enrollment.findUnique({
-      where: { userId_programId: { userId, programId } },
-    });
-
-    if (!enrollment) {
-      return { eligible: false, reason: 'Student is not enrolled in this program' };
-    }
-
-    if (enrollment.progress < 100 && !enrollment.completedAt) {
-      return { eligible: false, reason: `Program completion is at ${enrollment.progress}%. All lessons must be completed.` };
-    }
-
-    // 3. Extract all assessments in this program
-    const assessments = program.tracks.flatMap((track) =>
-      track.modules.flatMap((module) => module.assessments)
-    );
-
-    if (assessments.length === 0) {
-      // If there are no assessments, progress is enough
-      return { eligible: true };
-    }
-
-    // 4. Check if student has passed each assessment
-    for (const assessment of assessments) {
-      const passedAttempt = await this.prisma.assessmentAttempt.findFirst({
-        where: {
-          userId,
-          assessmentId: assessment.id,
-          passed: true,
-        },
-      });
-
-      if (!passedAttempt) {
-        return {
-          eligible: false,
-          reason: `Assessment "${assessment.title}" has not been passed yet.`,
+        const credentialData = {
+            userId: data.userId,
+            programId: data.programId,
+            institutionId: data.institutionId,
+            issuedById: data.issuedById,
+            tier: finalTier,
+            verificationCode: uniqueCode,
+            verificationUrl: publicUrl,
+            verificationStatus: 'ACTIVE' as const,
+            credentialTemplateId: data.templateId,
         };
-      }
+
+        const credential = await this.credentialsRepository.createCredential(credentialData);
+
+        await this.auditService.logAction(
+            data.issuedById,
+            AuditAction.CREDENTIAL_ISSUED,
+            `Credential "${credential.verificationCode}" (ID: ${credential.id}) issued to user ${data.userId} for program ${data.programId}`,
+        );
+
+        return credential;
     }
 
-    return { eligible: true };
-  }
-
-  /**
-   * Issue credential for a program
-   */
-  async issueCredential(userId: string, programId: string) {
-    // 1. Check eligibility first
-    const { eligible, reason } = await this.checkEligibility(userId, programId);
-    if (!eligible) {
-      throw new BadRequestException(reason || 'Student is not eligible for this credential.');
-    }
-
-    // 2. Check if already issued
-    const existing = await this.prisma.credential.findFirst({
-      where: { userId, programId },
-    });
-
-    if (existing) {
-      return existing;
-    }
-
-    // 3. Fetch program, institution, and faculty details
-    const program = await this.prisma.program.findUnique({
-      where: { id: programId },
-      include: {
-        institution: true,
-        faculty: true,
-        tracks: {
-          include: {
-            modules: {
-              include: {
-                assessments: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-
-    if (!program) {
-      throw new NotFoundException(`Program ${programId} not found`);
-    }
-
-    // Determine issuer user ID.
-    // If program has faculty with userId, use it.
-    // Otherwise fallback to any administrator user.
-    let issuerId = program.faculty?.userId;
-    if (!issuerId) {
-      const admin = await this.prisma.user.findFirst({
-        where: { role: 'DEZAI_ADMIN' },
-      });
-      if (!admin) {
-        throw new NotFoundException('No issuer or administrator found to sign the credential.');
-      }
-      issuerId = admin.id;
-    }
-
-    const verificationCode = await this.generateVerificationCode(program.institution.name);
-    // Verification URL pointing to frontend verification portal
-    const verificationUrl = `/verify/${verificationCode}`;
-    const tier = this.getTierForProgram(programId);
-
-    // Get score from the passed attempts (average or highest)
-    const assessments = program.tracks.flatMap((track) =>
-      track.modules.flatMap((module) => module.assessments)
-    );
-
-    let totalScore = 0;
-    let assessmentCount = 0;
-    for (const assessment of assessments) {
-      const attempt = await this.prisma.assessmentAttempt.findFirst({
-        where: { userId, assessmentId: assessment.id, passed: true },
-        orderBy: { score: 'desc' },
-      });
-      if (attempt) {
-        totalScore += attempt.score;
-        assessmentCount++;
-      }
-    }
-
-    const avgScore = assessmentCount > 0 ? Math.round(totalScore / assessmentCount) : 100;
-    const grade = avgScore >= 95 ? 'A+' : avgScore >= 85 ? 'A' : avgScore >= 75 ? 'B+' : 'B';
-
-    const metadataObj = {
-      score: avgScore,
-      grade,
-      instructorName: program.faculty
-        ? (await this.prisma.user.findUnique({ where: { id: program.faculty.userId } }))?.name || 'Faculty Member'
-        : 'Dezai Faculty Panel',
-    };
-
-    return this.prisma.credential.create({
-      data: {
-        userId,
-        programId,
-        institutionId: program.institutionId,
-        issuedById: issuerId,
-        tier,
-        verificationCode,
-        verificationUrl,
-        verificationStatus: VerifyStatus.ACTIVE,
-        metadata: JSON.stringify(metadataObj),
-      },
-      include: {
-        program: {
-          include: {
-            institution: true,
-          },
-        },
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        issuer: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
-  }
-
-  /**
-   * Verify credential by code
-   */
-  async verifyCredential(code: string) {
-    const cred = await this.prisma.credential.findUnique({
-      where: { verificationCode: code },
-      include: {
-        program: {
-          include: {
-            institution: true,
-          },
-        },
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        issuer: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
-
-    if (!cred) {
-      throw new NotFoundException('Credential verification record not found');
-    }
-
-    return cred;
-  }
-
-  /**
-   * Get student credentials
-   */
-  async getStudentCredentials(userId: string) {
-    return this.prisma.credential.findMany({
-      where: { userId },
-      include: {
-        program: {
-          include: {
-            institution: true,
-          },
-        },
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        issuer: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-      orderBy: { issuedAt: 'desc' },
-    });
-  }
-
-  /**
-   * Get details of a single credential by ID
-   */
-  async getCredentialDetails(id: string) {
-    let cred = await this.prisma.credential.findUnique({
-      where: { id },
-      include: {
-        program: {
-          include: {
-            institution: true,
-          },
-        },
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        issuer: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
-
-    if (!cred) {
-      cred = await this.prisma.credential.findUnique({
-        where: { verificationCode: id },
-        include: {
-          program: {
+    async verifyCredential(code: string) {
+        const cred = await this.prisma.credential.findUnique({
+            where: { verificationCode: code },
             include: {
-              institution: true,
+                program: { include: { institution: true } },
+                user: { select: { id: true, name: true, email: true } },
+                issuer: { select: { id: true, name: true } },
             },
-          },
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-          issuer: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      });
+        });
+
+        if (!cred) {
+            return { valid: false, message: 'Invalid Verification Code' };
+        }
+
+        if (cred.verificationStatus === 'REVOKED') {
+            return { valid: false, message: 'This credential has been permanently revoked.' };
+        }
+
+        if (cred.verificationStatus === 'SUSPENDED') {
+            return { valid: false, message: 'This credential is under review (Suspended).' };
+        }
+
+        return { valid: true, data: cred };
     }
 
-    if (!cred) {
-      throw new NotFoundException('Credential record not found');
+    async changeCredentialStatus(id: string, status: VerifyStatus, requesterId?: string) {
+        const result = await this.credentialsRepository.updateStatus(id, status);
+
+        if (requesterId) {
+            await this.auditService.logAction(
+                requesterId,
+                AuditAction.CREDENTIAL_ISSUED,
+                `Credential (ID: ${id}) status changed to ${status}`,
+            );
+        }
+
+        return result;
     }
 
-    return cred;
-  }
+    async getStudentCredentials(userId: string) {
+        return this.prisma.credential.findMany({
+            where: { userId },
+            include: {
+                program: { include: { institution: true } },
+                user: { select: { id: true, name: true, email: true } },
+                issuer: { select: { id: true, name: true } },
+            },
+            orderBy: { issuedAt: 'desc' },
+        });
+    }
+
+    async getAllCredentials() {
+        return await this.credentialsRepository.findAll();
+    }
+
+    async getCredentialDetails(id: string) {
+        let cred = await this.prisma.credential.findUnique({
+            where: { id },
+            include: {
+                program: { include: { institution: true } },
+                user: { select: { id: true, name: true, email: true } },
+                issuer: { select: { id: true, name: true } },
+            },
+        });
+
+        if (!cred) {
+            cred = await this.prisma.credential.findUnique({
+                where: { verificationCode: id },
+                include: {
+                    program: { include: { institution: true } },
+                    user: { select: { id: true, name: true, email: true } },
+                    issuer: { select: { id: true, name: true } },
+                },
+            });
+        }
+
+        if (!cred) {
+            throw new NotFoundException('Credential record not found');
+        }
+
+        return cred;
+    }
+
+    async checkEligibility(userId: string, programId: string): Promise<{ eligible: boolean; reason?: string }> {
+        const program = await this.prisma.program.findUnique({
+            where: { id: programId },
+            include: { tracks: { include: { modules: { include: { assessments: true } } } } },
+        });
+
+        if (!program) {
+            throw new NotFoundException(`Program with ID ${programId} not found`);
+        }
+
+        const enrollment = await this.prisma.enrollment.findUnique({
+            where: { userId_programId: { userId, programId } },
+        });
+
+        if (!enrollment) {
+            return { eligible: false, reason: 'Student is not enrolled in this program' };
+        }
+
+        if (enrollment.progress < 100 && !enrollment.completedAt) {
+            return { eligible: false, reason: `Program completion is at ${enrollment.progress}%. All lessons must be completed.` };
+        }
+
+        const assessments = program.tracks.flatMap((track) =>
+            track.modules.flatMap((module) => module.assessments)
+        );
+
+        if (assessments.length === 0) {
+            return { eligible: true };
+        }
+
+        for (const assessment of assessments) {
+            const passedAttempt = await this.prisma.assessmentAttempt.findFirst({
+                where: { userId, assessmentId: assessment.id, passed: true },
+            });
+
+            if (!passedAttempt) {
+                return { eligible: false, reason: `Assessment "${assessment.title}" has not been passed yet.` };
+            }
+        }
+
+        return { eligible: true };
+    }
+
+    async issueStudentCredential(userId: string, programId: string) {
+        const { eligible, reason } = await this.checkEligibility(userId, programId);
+        if (!eligible) {
+            throw new BadRequestException(reason || 'Student is not eligible for this credential.');
+        }
+
+        const existing = await this.prisma.credential.findFirst({
+            where: { userId, programId },
+        });
+
+        if (existing) {
+            return existing;
+        }
+
+        const program = await this.prisma.program.findUnique({
+            where: { id: programId },
+            include: { institution: true, faculty: true },
+        });
+
+        if (!program) {
+            throw new NotFoundException(`Program ${programId} not found`);
+        }
+
+        let issuerId = program.faculty?.userId;
+        if (!issuerId) {
+            const admin = await this.prisma.user.findFirst({ where: { role: 'DEZAI_ADMIN' } });
+            if (!admin) {
+                throw new NotFoundException('No issuer or administrator found to sign the credential.');
+            }
+            issuerId = admin.id;
+        }
+
+        const uniqueCode = uuidv4().replace(/-/g, '').substring(0, 18).toUpperCase();
+        const tier = this.getTierForProgram(programId);
+
+        return this.credentialsRepository.createCredential({
+            userId,
+            programId,
+            institutionId: program.institutionId,
+            issuedById: issuerId,
+            tier,
+            verificationCode: uniqueCode,
+            verificationUrl: `/verify/${uniqueCode}`,
+            verificationStatus: 'ACTIVE' as const,
+        });
+    }
+
+    private getTierForProgram(programId: string): CredentialTier {
+        const citadelCourses = ['course-1', 'course-3', 'course-12'];
+        const arenaCourses = ['course-2', 'course-5', 'course-6', 'course-8', 'course-9'];
+
+        if (citadelCourses.includes(programId)) {
+            return CredentialTier.CITADEL;
+        } else if (arenaCourses.includes(programId)) {
+            return CredentialTier.ARENA;
+        } else {
+            return CredentialTier.FORGE;
+        }
+    }
 }

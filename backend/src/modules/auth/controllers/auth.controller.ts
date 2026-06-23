@@ -1,53 +1,52 @@
-import { Controller, Post, Body, UseGuards, Req, HttpCode, HttpStatus, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Req,
+  HttpCode,
+  HttpStatus,
+  BadRequestException,
+} from '@nestjs/common';
 import { AuthService } from '../services/auth.service';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import { UserRole, AuditAction } from '@prisma/client';
+import { AuditAction, UserRole } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
-
-export class OnboardUserDto {
-  role: UserRole;
-}
-
-export class RegisterUserDto {
-  email: string;
-  name: string;
-  password?: string;
-}
-
-export class LoginUserDto {
-  email: string;
-  password?: string;
-}
-
-export class SessionSyncDto {
-  id: string;
-  email: string;
-  name: string;
-}
+import {
+  OnboardUserDto,
+  RegisterUserDto,
+  LoginUserDto,
+  SessionSyncDto,
+} from '../dto/auth.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly auditService: AuditService
+    private readonly auditService: AuditService,
   ) {}
 
   /**
    * POST /api/auth/onboarding
    * Finalizes user signup and registers their selected workspace role.
+   * For FACULTY: also accepts institutionId, department, designation.
    */
   @Post('onboarding')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async onboard(@Req() req, @Body() body: OnboardUserDto) {
-    const { role } = body;
+    const { role, institutionId, department, designation } = body;
 
     if (!role || !Object.values(UserRole).includes(role)) {
       throw new BadRequestException('Invalid or missing UserRole value');
     }
 
     const userPayload = req.user; // populated by JwtAuthGuard
-    return this.authService.onboardUser(userPayload, role);
+    return this.authService.onboardUser(userPayload, role, {
+      institutionId,
+      department,
+      designation,
+    });
   }
 
   /**
@@ -63,10 +62,11 @@ export class AuthController {
       req.user.id,
       AuditAction.LOGIN,
       `User ${req.user.email} logged in`,
-      ipAddress
+      ipAddress,
     );
     return { success: true };
   }
+
   /**
    * POST /api/auth/register
    * Registers a user via email and password credentials.
@@ -83,7 +83,7 @@ export class AuthController {
 
   /**
    * POST /api/auth/login
-   * Authenticates a user credentials (used by NextAuth flow).
+   * Authenticates a user with credentials (used by NextAuth flow).
    */
   @Post('login')
   @HttpCode(HttpStatus.OK)

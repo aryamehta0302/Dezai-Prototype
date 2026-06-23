@@ -1,49 +1,62 @@
 import type { CourseProgress, DashboardStats } from "../types/learning.types";
 import type { CourseEnrollment } from "@/lib/stores/enrollment.store";
-import { courseService } from "@/features/programs/services/course.service";
-import type { ApiTrack } from "@/features/programs/types/program.types";
-
-function getTotalLessons(tracks: ApiTrack[]): number {
-  return tracks.reduce((sum, t) =>
-    sum + t.modules.reduce((msum, m) => msum + m.lessons.length, 0), 0);
-}
+import type { ApiProgram } from "./learning-api.service";
+import { slugify } from "@/shared/utils/slug";
+import { getThumbnailUrl } from "@/shared/utils/thumbnail";
 
 export const learningService = {
-  async getEnrolledCourses(enrollments: Record<string, CourseEnrollment>): Promise<CourseProgress[]> {
-    const programs = await courseService.loadPrograms();
-    const programMap = new Map(programs.map(p => [p.id, p]));
+  /**
+   * Build CourseProgress objects from enrollment data + live API programs.
+   */
+  getEnrolledCourses: (
+    enrollments: Record<string, CourseEnrollment>,
+    programs: ApiProgram[]
+  ): CourseProgress[] => {
+    return Object.values(enrollments)
+      .map((enrollment) => {
+        const program = programs.find((p) => p.id === enrollment.courseId);
+        if (!program) return null;
 
-    const result: CourseProgress[] = [];
+        const totalLessons = program.tracks.reduce(
+          (sum, t) =>
+            sum +
+            t.modules.reduce((ms, m) => ms + m.lessons.length, 0),
+          0
+        );
 
-    for (const enrollment of Object.values(enrollments)) {
-      const program = programMap.get(enrollment.courseId);
-      if (!program) continue;
+        const nextLesson = learningService.getNextLesson(
+          program,
+          enrollment.lessonsCompleted.map((l) => l.lessonId)
+        );
 
-      const totalLessons = getTotalLessons(program.tracks);
+        const completedLessons = enrollment.lessonsCompleted.length;
+        const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
 
-      result.push({
-        courseId: program.id,
-        courseTitle: program.title,
-        courseSlug: program.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
-        thumbnailUrl: "",
-        universityName: program.institution?.name ?? "",
-        instructorName: program.faculty?.user.name ?? "",
-        progress: enrollment.progress,
-        totalLessons,
-        completedLessons: enrollment.lessonsCompleted.length,
-        lastAccessedLessonId: enrollment.lastAccessedLessonId,
-        lastAccessedAt: enrollment.enrolledAt,
-      });
-    }
-
-    return result;
+        return {
+          courseId: program.id,
+          courseTitle: program.title,
+          courseSlug: slugify(program.title),
+          thumbnailUrl: program.thumbnail ?? getThumbnailUrl(program.id),
+          universityName: program.institution?.name ?? "",
+          instructorName: program.faculty?.user?.name ?? "",
+          progress, // Locally calculated to match the count below
+          totalLessons,
+          completedLessons,
+          lastAccessedLessonId: enrollment.lastAccessedLessonId || nextLesson?.lessonId || "",
+          lastAccessedAt: enrollment.enrolledAt,
+        } as CourseProgress;
+      })
+      .filter(Boolean) as CourseProgress[];
   },
 
-  getDashboardStats(
-    _userId: string,
-    enrollments: Record<string, any>,
+  /**
+   * Get dashboard statistics for a student.
+   */
+  getDashboardStats: (
+    userId: string,
+    enrollments: Record<string, { id: string; courseId: string; enrolledAt: string; progress: number; lessonsCompleted: { lessonId: string; completed: boolean; completedAt?: string }[]; lastAccessedLessonId?: string; notes: Record<string, string> }>,
     xpEarned: number
-  ): DashboardStats {
+  ): DashboardStats => {
     const enrolledArr = Object.values(enrollments);
     const enrolled = enrolledArr.length;
     const completed = enrolledArr.filter((e) => e.progress >= 100).length;
@@ -58,10 +71,24 @@ export const learningService = {
     };
   },
 
-  getNextLesson(
-    _courseId: string,
-    _completedLessonIds: string[]
-  ): { moduleId: string; lessonId: string } | null {
+  /**
+   * Get the next lesson to continue for a course.
+   */
+  getNextLesson: (
+    program: ApiProgram | undefined,
+    completedLessonIds: string[]
+  ): { moduleId: string; lessonId: string } | null => {
+    if (!program) return null;
+
+    for (const track of program.tracks) {
+      for (const mod of track.modules) {
+        for (const lesson of mod.lessons) {
+          if (!completedLessonIds.includes(lesson.id)) {
+            return { moduleId: mod.id, lessonId: lesson.id };
+          }
+        }
+      }
+    }
     return null;
   },
 };
