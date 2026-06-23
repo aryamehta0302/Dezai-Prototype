@@ -658,4 +658,80 @@ No database migrations or schema alterations were required. Sent student outreac
 | MODIFIED | [frontend/src/features/dashboard/components/FacultyDashboard.tsx](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/components/FacultyDashboard.tsx) |
 | MODIFIED | [docs/API/analytics.md](file:///d:/Project/Dezai-ai/Dezai-Prototype/docs/API/analytics.md) |
 
+---
+
+## 14. Sprint 6: Assessment Intelligence & Faculty Insights Systems (Manan Panchal)
+
+**Sprint:** 6 | **Date:** 2026-06-23
+
+### Overview
+
+Sprint 6 implemented the **Assessment Intelligence Engine** and the **Faculty Insights & Intervention System**. It provides students with deep reviews of their performance (weak topics, incorrect questions, topic accuracy timelines) and equips faculty members and administrators with aggregated cohort weak topics, difficulty analysis, performance trends, repeated failure tracking, and student composite academic health scores.
+
+No database migrations or schema alterations were required. All calculations are performed at the service layer dynamically utilizing existing Prisma relations. All endpoints are fully protected via JWT auth and role guards, and faculty endpoints validate program scope ownership.
+
+### Features Delivered
+
+1. **Weak Topic Detection Engine (Tasks A1 + A2):**
+   - **Per-Student Weak Topics**: Group student's completed attempt answers by category, flagging categories with WRONG rate >= 40% as weak.
+   - **Faculty Cohort Aggregated Weak Topics**: Faculty dashboard lists categories where cohort students struggle, sorting by affected rate.
+   - **Incorrect Question Analysis**: Displays most missed questions with distractor analysis showing which wrong option is most frequently selected.
+   - **Topic Accuracy Timeline**: Generates per-category accuracy over time, ordered chronologically per attempt.
+   - **Topic Improvement Tracking**: Compares category accuracy from first to latest attempt showing delta and improvement status.
+
+2. **Difficulty-Based & Trend Analytics (Tasks A3 + A4):**
+   - **Difficulty Breakdown**: Group performance metrics (accuracy, total questions, correct answers) by EASY, MEDIUM, and HARD.
+   - **Daily Assessment Trend**: Visualizes attempts, average scores, and pass rates aggregated daily.
+   - **Faculty Insight Summary**: Aggregates total attempts, students, and overall pass rates across all assessments taught by the instructor, including 7-day trend indicators (`UP` / `DOWN` / `STABLE`).
+   - **Institution Assessment Summary**: Multi-tenant metrics for admin roles showing total attempts, pass rates, and highest/lowest performing assessments.
+
+3. **Faculty Insights & Interventions (Tasks B1 + B2 + B3):**
+   - **At-Risk Detection**: Identifies students with 2+ failed attempts on the same assessment.
+   - **Low Progress Detection**: Automatically alerts when a student's enrollment progress is <= 30%.
+   - **Inactive Detection**: Flags students inactive for 7+ days.
+   - **Academic Health Scoring**: Calculates a composite 0-100 score based on pass rate, progress, activity levels, and daily streak, mapping to LOW, MEDIUM, or HIGH risk.
+   - **Repeated Failure Analysis**: Detects failure patterns and streaks (consecutive failure count) scoped to an assessment or globally.
+   - **Student Detail Insight**: Compiles a comprehensive student profile containing enrollment timelines, assessment statistics, weak topics, and active health metrics for faculty auditing.
+
+### Endpoint Summary (19 New Endpoints)
+
+| # | Method | Route | Auth | Roles | Description |
+|---|---|---|---|---|---|
+| 1 | GET | `/api/assessments/intelligence/my-weak-topics` | JWT | STUDENT | Student weak topics for an assessment |
+| 2 | GET | `/api/assessments/intelligence/my-weak-topics/global` | JWT | STUDENT | Student global weak topics |
+| 3 | GET | `/api/assessments/:assessmentId/intelligence/weak-topics` | JWT | FACULTY | Cohort weak topics |
+| 4 | GET | `/api/assessments/intelligence/my-incorrect-analysis` | JWT | STUDENT | Student's most missed questions |
+| 5 | GET | `/api/assessments/intelligence/my-topic-accuracy-timeline` | JWT | STUDENT | Topic accuracy over time |
+| 6 | GET | `/api/assessments/intelligence/my-topic-improvement` | JWT | STUDENT | First vs latest attempt accuracy delta |
+| 7 | GET | `/api/assessments/:assessmentId/analytics/difficulty-breakdown` | JWT | FACULTY | Performance breakdown by difficulty |
+| 8 | GET | `/api/assessments/:assessmentId/analytics/trend` | JWT | FACULTY | Daily pass rate & score trends |
+| 9 | GET | `/api/assessments/:assessmentId/analytics/performance-report` | JWT | FACULTY | Consolidated assessment performance report |
+| 10 | GET | `/api/assessments/analytics/faculty-insight-summary` | JWT | FACULTY | Dashboard stats summary for faculty |
+| 11 | GET | `/api/assessments/analytics/institution-summary` | JWT | UNIV_ADMIN, DEZAI_ADMIN | Institution-wide assessment stats |
+| 12 | GET | `/api/assessments/faculty-insights/at-risk` | JWT | FACULTY | At-risk student list (failures >= 2) |
+| 13 | GET | `/api/assessments/faculty-insights/low-progress` | JWT | FACULTY | Students with program progress <= 30% |
+| 14 | GET | `/api/assessments/faculty-insights/inactive` | JWT | FACULTY | Enrolled students inactive for 7+ days |
+| 15 | GET | `/api/assessments/faculty-insights/dashboard` | JWT | FACULTY | Combined B1 insights dashboard |
+| 16 | GET | `/api/assessments/faculty-insights/student/:userId/academic-health` | JWT | FACULTY | Academic health score & risk status |
+| 17 | GET | `/api/assessments/faculty-insights/repeated-failures` | JWT | FACULTY | Failure streaks and rates per student |
+| 18 | GET | `/api/assessments/:assessmentId/faculty-insights/failure-pattern` | JWT | FACULTY | Cohort failures by category & difficulty |
+| 19 | GET | `/api/assessments/faculty-insights/student/:userId/detail` | JWT | FACULTY | Comprehensive student overview |
+
+### Files Added / Modified
+
+| Action | File |
+|---|---|
+| CREATED | [backend/src/modules/assessments/services/weak-topic-detection.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/weak-topic-detection.service.ts) |
+| CREATED | [backend/src/modules/assessments/services/assessment-analytics.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/assessment-analytics.service.ts) |
+| CREATED | [backend/src/modules/assessments/services/faculty-insight.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/faculty-insight.service.ts) |
+| CREATED | [backend/src/modules/assessments/controllers/intelligence.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/intelligence.controller.ts) |
+| CREATED | [backend/src/modules/assessments/controllers/faculty-insights.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/faculty-insights.controller.ts) |
+| CREATED | [backend/src/modules/assessments/dto/intelligence.dto.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/dto/intelligence.dto.ts) |
+| CREATED | [backend/src/modules/assessments/dto/faculty-insight.dto.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/dto/faculty-insight.dto.ts) |
+| MODIFIED | [backend/src/modules/assessments/assessments.module.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/assessments.module.ts) |
+| CREATED | [docs/API/assessment-intelligence.md](file:///d:/git/dezai/Dezai-Prototype/docs/API/assessment-intelligence.md) |
+| CREATED | [docs/API/faculty-insights.md](file:///d:/git/dezai/Dezai-Prototype/docs/API/faculty-insights.md) |
+| MODIFIED | [docs/IMPLEMENTED.md](file:///d:/git/dezai/Dezai-Prototype/docs/IMPLEMENTED.md) |
+| MODIFIED | [docs/CHANGELOG.md](file:///d:/git/dezai/Dezai-Prototype/docs/CHANGELOG.md) |
+
 

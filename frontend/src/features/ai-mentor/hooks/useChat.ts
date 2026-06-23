@@ -99,3 +99,23 @@ export const useUpdateContext = (sessionId: string) => {
     },
   });
 };
+
+/**
+ * Hook to update session title
+ */
+export const useUpdateSessionTitle = (sessionId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { title: string }) =>
+      aiMentorApi.updateSessionTitle(sessionId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.session(sessionId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.sessions(),
+      });
+    },
+  });
+};

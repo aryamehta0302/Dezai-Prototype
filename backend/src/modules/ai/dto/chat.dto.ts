@@ -49,6 +49,16 @@ export class UpdateSessionContextDto {
 }
 
 /**
+ * DTO for updating session title
+ */
+export class UpdateSessionTitleDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  title: string;
+}
+
+/**
  * Response DTO for chat message
  */
 export class ChatMessageResponseDto {
@@ -65,9 +75,11 @@ export class ChatMessageResponseDto {
 export class ChatSessionResponseDto {
   id: string;
   userId: string;
+  title?: string;
   activeProgramId?: string;
   activeModuleId?: string;
   activeLessonId?: string;
   createdAt: Date;
+  updatedAt: Date;
   messages?: ChatMessageResponseDto[];
 }

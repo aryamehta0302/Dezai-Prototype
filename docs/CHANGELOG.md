@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Sprint 6] — 2026-06-23
+
+### Assessment Intelligence + Faculty Insights & Intervention System (Manan Panchal)
+
+#### Added
+- WeakTopicDetectionService: per-student and aggregated weak topic detection (40% threshold)
+- Topic Accuracy Timeline & Improvement tracking per student
+- IncorrectQuestionAnalysis: most-missed questions with distractor analysis
+- AssessmentAnalyticsService: difficulty breakdown, trend analysis, performance reports
+- Faculty Insight Summary & Institution Assessment Summary aggregations
+- FacultyInsightService: at-risk, low-progress, and inactive student detection
+- Repeated failure detection with consecutive failure streaks
+- Student Academic Health Score (0-100 composite with risk level)
+- Faculty Insight Dashboard: unified at-risk monitoring endpoint
+- Student Detail Insight: full per-student view for faculty
+- 2 new controllers: IntelligenceController, FacultyInsightsController
+- 3 new services: WeakTopicDetectionService, AssessmentAnalyticsService, FacultyInsightService
+
+### Developer: Manan Panchal · Branch: feature/assessment-intelligence
+
+---
+
 ## [Sprint 5] — 2026-06-22
 
 ### Assessment Module Completion (Manan Panchal)
