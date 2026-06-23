@@ -7,7 +7,8 @@ import { AchievementsPageSkeleton } from '../components/achievement-skeleton';
 import { useAchievementsData } from '../hooks/useAchievements';
 import { useAchievementNotifications } from '../hooks/useAchievementNotifications';
 import { useRecentAchievements } from '../api/achievements-query.service';
-import { Trophy, ShieldCheck, Star, Clock, Sparkles } from 'lucide-react';
+import { Trophy, ShieldCheck, Star, Clock, Sparkles, TrendingUp } from 'lucide-react';
+import { XpGrowthChart } from '@/features/analytics/components/xp-growth-chart';
 
 export function AchievementsPage() {
   const { achievements, stats, isLoading, error } = useAchievementsData();
@@ -52,6 +53,15 @@ export function AchievementsPage() {
         <div className="lg:col-span-1 space-y-6">
           <LevelProgressCard xp={totalXp} />
 
+          {/* Sprint 6 — XP Growth & Achievement Analytics */}
+          <div className="card-elevation p-5 space-y-4">
+            <h3 className="text-sm font-semibold flex items-center gap-2 text-muted uppercase tracking-wider">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              XP Level Journey
+            </h3>
+            <XpGrowthChart xp={totalXp} />
+          </div>
+
           <div className="card-elevation p-5 space-y-4">
             <h3 className="text-sm font-semibold flex items-center gap-2 text-muted uppercase tracking-wider">
               <ShieldCheck className="h-4 w-4 text-success" />
@@ -94,7 +104,7 @@ export function AchievementsPage() {
                 Recent Unlocks
               </h3>
               <div className="space-y-2">
-                {recentUnlocks.map((a, i) => (
+                {recentUnlocks.map((a: any, i: number) => (
                   <div key={a.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-surface-low border border-border-light">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
                       <Sparkles className="h-4 w-4" />
