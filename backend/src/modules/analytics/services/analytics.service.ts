@@ -352,6 +352,7 @@ export class AnalyticsService {
           select: {
             id: true,
             title: true,
+            sampleSize: true,
             attempts: {
               select: {
                 passed: true,
@@ -372,7 +373,16 @@ export class AnalyticsService {
       for (const ass of mod.assessments) {
         totalAttempts += ass.attempts.length;
         passedAttempts += ass.attempts.filter((att) => att.passed).length;
-        totalScore += ass.attempts.reduce((sum, att) => sum + att.score, 0);
+        const pctSum = ass.attempts.reduce(
+          (sum, att) => {
+            const pct = att.score > ass.sampleSize
+              ? att.score
+              : Math.round((att.score / ass.sampleSize) * 100);
+            return sum + pct;
+          },
+          0,
+        );
+        totalScore += pctSum;
       }
 
       if (totalAttempts > 0) {
@@ -476,7 +486,7 @@ export class AnalyticsService {
         score: true,
         passed: true,
         user: { select: { name: true } },
-        assessment: { select: { title: true } },
+        assessment: { select: { title: true, sampleSize: true } },
       },
       orderBy: { startedAt: 'desc' },
       take: 15,
@@ -510,6 +520,8 @@ export class AnalyticsService {
     }
 
     for (const a of recentAttempts) {
+      const sampleSize = a.assessment.sampleSize || 10;
+      const pct = a.score > sampleSize ? a.score : Math.round((a.score / sampleSize) * 100);
       feed.push({
         id: `attempt-${a.id}`,
         type: 'SUBMISSION',
@@ -517,7 +529,7 @@ export class AnalyticsService {
         studentName: a.user.name || 'Unknown Student',
         programTitle: a.assessment.title,
         detail: a.completedAt
-          ? `Submitted assessment "${a.assessment.title}" — Score: ${a.score}% (${a.passed ? 'PASSED' : 'FAILED'})`
+          ? `Submitted assessment "${a.assessment.title}" — Score: ${pct}% (${a.passed ? 'PASSED' : 'FAILED'})`
           : `Started assessment "${a.assessment.title}"`,
       });
     }
@@ -901,6 +913,7 @@ export class AnalyticsService {
           select: {
             title: true,
             passingScore: true,
+            sampleSize: true,
           },
         },
         _count: {
@@ -910,16 +923,21 @@ export class AnalyticsService {
       orderBy: { startedAt: 'desc' },
     });
 
-    const formattedAttempts: AssessmentAttemptDto[] = attempts.map((att) => ({
-      id: att.id,
-      assessmentTitle: att.assessment.title,
-      score: att.score,
-      passingScore: att.assessment.passingScore,
-      passed: att.passed,
-      startedAt: att.startedAt,
-      completedAt: att.completedAt,
-      violationCount: att._count.violations,
-    }));
+    const formattedAttempts: AssessmentAttemptDto[] = attempts.map((att) => {
+      const scorePercentage = att.score > att.assessment.sampleSize
+        ? att.score
+        : Math.round((att.score / att.assessment.sampleSize) * 100);
+      return {
+        id: att.id,
+        assessmentTitle: att.assessment.title,
+        score: scorePercentage,
+        passingScore: att.assessment.passingScore,
+        passed: att.passed,
+        startedAt: att.startedAt,
+        completedAt: att.completedAt,
+        violationCount: att._count.violations,
+      };
+    });
 
     const violationLogs = await this.prisma.violationLog.findMany({
       where: {
