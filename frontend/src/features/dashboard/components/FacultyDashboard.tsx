@@ -1,27 +1,30 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  LayoutDashboard, 
-  BarChart3, 
-  Settings, 
-  Bell, 
-  BookOpen, 
-  Users, 
-  Award, 
-  Clock, 
-  PlusCircle, 
-  Trophy, 
-  AlertTriangle, 
-  FileText, 
-  CheckCircle2, 
-  X, 
-  User, 
+import {
+  LayoutDashboard,
+  BarChart3,
+  Settings,
+  Bell,
+  BookOpen,
+  Users,
+  Award,
+  Clock,
+  PlusCircle,
+  Trophy,
+  AlertTriangle,
+  FileText,
+  CheckCircle2,
+  X,
+  User,
   Building2,
   ChevronRight,
   TrendingUp,
   MapPin
 } from "lucide-react";
+import { ModuleCompletionChart } from "@/features/analytics/components/module-completion-chart";
+import { ProgramPerformanceChart } from "@/features/analytics/components/program-performance-chart";
+import { useProgramAnalytics } from "@/features/analytics/hooks/useProgramAnalytics";
 import { apiClient } from "@/core/api/client";
 import { useAuthStore } from "@/lib/stores/auth.store";
 import { toast } from "sonner";
@@ -140,9 +143,11 @@ export function FacultyDashboard() {
   const [editDesignation, setEditDesignation] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
-  // Auxiliary data for creation modals
+  // Auxiliary data for creation modals & analytics
   const [programsList, setProgramsList] = useState<any[]>([]);
   const [banksList, setBanksList] = useState<any[]>([]);
+  const [analyticsProgramId, setAnalyticsProgramId] = useState<string>("");
+  const { moduleStats, isLoading: moduleStatsLoading } = useProgramAnalytics(analyticsProgramId);
 
   // Fetch all dashboard data
   const fetchDashboardData = async () => {
@@ -183,6 +188,13 @@ export function FacultyDashboard() {
         setActivity(activityRes.data);
       }
 
+      // Fetch programs list for charts
+      const progRes = await apiClient.get<any>("/programs");
+      if (progRes?.programs) {
+        setProgramsList(progRes.programs);
+        if (progRes.programs.length > 0) setAnalyticsProgramId(progRes.programs[0].id);
+      }
+
       // Fetch notifications
       const notifRes = await apiClient.get<any>("/notifications");
       if (notifRes?.notifications) {
@@ -220,7 +232,7 @@ export function FacultyDashboard() {
   const handleMarkAsRead = async (id: string) => {
     try {
       await apiClient.patch(`/notifications/${id}/read`);
-      setNotifications(prev => 
+      setNotifications(prev =>
         prev.map(n => n.id === id ? { ...n, read: true } : n)
       );
       toast.success("Notification marked as read");
@@ -333,9 +345,9 @@ export function FacultyDashboard() {
         <div className="p-5">
           <div className="mb-6 flex items-center gap-3 px-2">
             {profile?.institution.logoUrl ? (
-              <img 
-                src={profile.institution.logoUrl} 
-                alt="Logo" 
+              <img
+                src={profile.institution.logoUrl}
+                alt="Logo"
                 className="h-8 w-8 rounded-lg object-contain border border-border-light"
               />
             ) : (
@@ -350,11 +362,10 @@ export function FacultyDashboard() {
           <nav className="space-y-1">
             <button
               onClick={() => setActiveTab("overview")}
-              className={`flex w-full items-center gap-3 px-3.5 py-3 text-sm font-semibold rounded-xl transition-all duration-200 ${
-                activeTab === "overview"
-                  ? "bg-primary text-white shadow-md shadow-primary/10"
-                  : "text-muted hover:bg-surface hover:text-on-surface"
-              }`}
+              className={`flex w-full items-center gap-3 px-3.5 py-3 text-sm font-semibold rounded-xl transition-all duration-200 ${activeTab === "overview"
+                ? "bg-primary text-white shadow-md shadow-primary/10"
+                : "text-muted hover:bg-surface hover:text-on-surface"
+                }`}
             >
               <LayoutDashboard className="h-4.5 w-4.5" />
               <span>Console Overview</span>
@@ -362,11 +373,10 @@ export function FacultyDashboard() {
 
             <button
               onClick={() => setActiveTab("analytics")}
-              className={`flex w-full items-center gap-3 px-3.5 py-3 text-sm font-semibold rounded-xl transition-all duration-200 ${
-                activeTab === "analytics"
-                  ? "bg-primary text-white shadow-md shadow-primary/10"
-                  : "text-muted hover:bg-surface hover:text-on-surface"
-              }`}
+              className={`flex w-full items-center gap-3 px-3.5 py-3 text-sm font-semibold rounded-xl transition-all duration-200 ${activeTab === "analytics"
+                ? "bg-primary text-white shadow-md shadow-primary/10"
+                : "text-muted hover:bg-surface hover:text-on-surface"
+                }`}
             >
               <BarChart3 className="h-4.5 w-4.5" />
               <span>Analytics & Metrics</span>
@@ -374,11 +384,10 @@ export function FacultyDashboard() {
 
             <button
               onClick={() => setActiveTab("profile")}
-              className={`flex w-full items-center gap-3 px-3.5 py-3 text-sm font-semibold rounded-xl transition-all duration-200 ${
-                activeTab === "profile"
-                  ? "bg-primary text-white shadow-md shadow-primary/10"
-                  : "text-muted hover:bg-surface hover:text-on-surface"
-              }`}
+              className={`flex w-full items-center gap-3 px-3.5 py-3 text-sm font-semibold rounded-xl transition-all duration-200 ${activeTab === "profile"
+                ? "bg-primary text-white shadow-md shadow-primary/10"
+                : "text-muted hover:bg-surface hover:text-on-surface"
+                }`}
             >
               <Settings className="h-4.5 w-4.5" />
               <span>Instructor Profile</span>
@@ -556,15 +565,14 @@ export function FacultyDashboard() {
                         </div>
                       ) : (
                         activity.map((event) => (
-                          <div 
+                          <div
                             key={event.id}
                             className="flex items-start gap-3 p-3 bg-neutral-50/50 border border-neutral-100 rounded-xl hover:bg-neutral-50 transition-all"
                           >
-                            <div className={`p-2 rounded-lg shrink-0 ${
-                              event.type === 'COMPLETION' ? 'bg-success/10 text-success' :
+                            <div className={`p-2 rounded-lg shrink-0 ${event.type === 'COMPLETION' ? 'bg-success/10 text-success' :
                               event.type === 'SUBMISSION' ? 'bg-warning/10 text-warning' :
-                              'bg-primary/10 text-primary'
-                            }`}>
+                                'bg-primary/10 text-primary'
+                              }`}>
                               {event.type === 'COMPLETION' && <Award className="h-4 w-4" />}
                               {event.type === 'SUBMISSION' && <FileText className="h-4 w-4" />}
                               {event.type === 'ENROLLMENT' && <Users className="h-4 w-4" />}
@@ -617,8 +625,51 @@ export function FacultyDashboard() {
               </div>
 
               {/* Grid Layout for Cohort Detail Cards */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Program Performance: Top vs Weak Student XP */}
+                <div className="bg-white border border-border-light rounded-2xl p-5 shadow-sm space-y-3">
+                  <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-primary" /> Student Performance (XP vs Progress)
+                  </h4>
+                  <ProgramPerformanceChart
+                    topStudents={analytics?.topStudents ?? []}
+                    weakStudents={analytics?.weakStudents ?? []}
+                    isLoading={loading}
+                  />
+                </div>
+
+                {/* Module Completion Chart */}
+                <div className="bg-white border border-border-light rounded-2xl p-5 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-2">
+                      <BookOpen className="h-4 w-4 text-info" /> Module Completion Rates
+                    </h4>
+                    <select
+                      value={analyticsProgramId}
+                      onChange={(e) => setAnalyticsProgramId(e.target.value)}
+                      className="rounded-lg border border-border-light bg-neutral-50 px-2 py-1 text-3xs font-bold outline-hidden focus:border-primary"
+                    >
+                      {programsList.map(p => (
+                        <option key={p.id} value={p.id}>{p.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {analyticsProgramId ? (
+                    <ModuleCompletionChart
+                      moduleStats={moduleStats}
+                      isLoading={moduleStatsLoading}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-10 text-muted gap-2">
+                      <BookOpen className="h-8 w-8 opacity-30" />
+                      <p className="text-xs font-semibold">Select a program to see module stats.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
+
                 {/* 1. Top Students Leaderboard */}
                 <div className="bg-white border border-border-light rounded-2xl p-5 shadow-sm space-y-4">
                   <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-2">
@@ -631,12 +682,11 @@ export function FacultyDashboard() {
                       analytics.topStudents.map((student, idx) => (
                         <div key={student.userId} className="flex items-center justify-between p-3 bg-neutral-50/50 border border-neutral-100 rounded-xl">
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <span className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                              idx === 0 ? 'bg-warning/20 text-warning border border-warning/30' :
+                            <span className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${idx === 0 ? 'bg-warning/20 text-warning border border-warning/30' :
                               idx === 1 ? 'bg-slate-200 text-slate-700' :
-                              idx === 2 ? 'bg-amber-100 text-amber-800' :
-                              'bg-neutral-100 text-muted'
-                            }`}>
+                                idx === 2 ? 'bg-amber-100 text-amber-800' :
+                                  'bg-neutral-100 text-muted'
+                              }`}>
                               {idx + 1}
                             </span>
                             <div className="truncate">
@@ -701,9 +751,8 @@ export function FacultyDashboard() {
                               <p className="text-xs font-bold text-on-surface truncate">{module.moduleTitle}</p>
                               <span className="text-3xs text-muted truncate block">{module.programTitle}</span>
                             </div>
-                            <span className={`px-2 py-0.5 rounded-full text-3xs font-extrabold ${
-                              module.passRate < 50 ? 'bg-danger/10 text-danger' : 'bg-warning/10 text-warning'
-                            }`}>
+                            <span className={`px-2 py-0.5 rounded-full text-3xs font-extrabold ${module.passRate < 50 ? 'bg-danger/10 text-danger' : 'bg-warning/10 text-warning'
+                              }`}>
                               {module.passRate}% Pass Rate
                             </span>
                           </div>
@@ -849,7 +898,7 @@ export function FacultyDashboard() {
       {showNotifications && (
         <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
           {/* Overlay backdrop */}
-          <div 
+          <div
             onClick={() => setShowNotifications(false)}
             className="absolute inset-0 bg-black/45 backdrop-blur-xs transition-opacity"
           />
@@ -867,7 +916,7 @@ export function FacultyDashboard() {
               </div>
               <div className="flex items-center gap-2">
                 {unreadCount > 0 && (
-                  <button 
+                  <button
                     onClick={handleMarkAllRead}
                     className="text-3xs font-bold text-primary hover:underline"
                   >
@@ -893,14 +942,13 @@ export function FacultyDashboard() {
                 </div>
               ) : (
                 notifications.map((n) => (
-                  <div 
-                    key={n.id} 
+                  <div
+                    key={n.id}
                     onClick={() => !n.read && handleMarkAsRead(n.id)}
-                    className={`p-3.5 border rounded-xl transition-all relative cursor-pointer ${
-                      n.read 
-                        ? 'bg-white border-border-light text-on-surface/80 hover:bg-neutral-50/50' 
-                        : 'bg-primary/5 border-primary/20 text-on-surface hover:bg-primary/10 shadow-xs'
-                    }`}
+                    className={`p-3.5 border rounded-xl transition-all relative cursor-pointer ${n.read
+                      ? 'bg-white border-border-light text-on-surface/80 hover:bg-neutral-50/50'
+                      : 'bg-primary/5 border-primary/20 text-on-surface hover:bg-primary/10 shadow-xs'
+                      }`}
                   >
                     {!n.read && (
                       <span className="absolute top-4 right-4 h-2 w-2 rounded-full bg-primary" />
