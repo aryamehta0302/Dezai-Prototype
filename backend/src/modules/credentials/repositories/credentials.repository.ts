@@ -1,45 +1,70 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class CredentialsRepository {
-    constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) { }
 
-    // DB query to create a new credential
-    async createCredential(data: any) {
-        return await this.prisma.credential.create({
-            data: data,
-        });
-    }
+  async createCredential(data: Prisma.CredentialCreateInput) {
+    return this.prisma.credential.create({ data });
+  }
 
-    // Future use: DB query to fetch credentials for faculty dashboard
-    async findAll() {
-        return await this.prisma.credential.findMany({
-            include: { user: true, program: true, credentialTemplate: true }
-        });
-    }
+  async findCredentials(params: {
+    where?: Prisma.CredentialWhereInput;
+    include?: Prisma.CredentialInclude;
+  }) {
+    return this.prisma.credential.findMany(params);
+  }
 
-    // For Verification fatching the verification code 
-    async findByVerificationCode(code: string) {
-        return await this.prisma.credential.findUnique({
-            where: { verificationCode: code },
-            include: { user: true, program: true, credentialTemplate: true, institution: true } // Also Fatching the extra details
-        });
-    }
+  async findCredential(where: Prisma.CredentialWhereInput, include?: Prisma.CredentialInclude) {
+    return this.prisma.credential.findFirst({ where, include });
+  }
 
-    // Faculty can update the verification status the base worker
-    async updateStatus(id: string, status: any) {
-        return await this.prisma.credential.update({
-            where: { id: id },
-            data: { verificationStatus: status },
-        });
-    }
+  async updateCredential(where: Prisma.CredentialWhereUniqueInput, data: Prisma.CredentialUpdateInput) {
+    return this.prisma.credential.update({ where, data });
+  }
 
-    // For the potal finding all student info
-    async findByUserId(userId: string) {
-        return await this.prisma.credential.findMany({
-            where: { userId: userId },
-            include: { program: true, credentialTemplate: true, institution: true } //Program with details
-        });
-    }
+  async deleteCredential(id: string) {
+    return this.prisma.credential.delete({ where: { id } });
+  }
+
+  async findUserById(id: string) {
+    return this.prisma.user.findUnique({ where: { id } });
+  }
+
+  async findEnrollment(userId: string, programId: string) {
+    return this.prisma.enrollment.findUnique({
+      where: { userId_programId: { userId, programId } }
+    });
+  }
+
+  async findAssessmentAttempt(userId: string, assessmentId: string) {
+    return this.prisma.assessmentAttempt.findFirst({
+      where: { userId, assessmentId, passed: true },
+      orderBy: { score: 'desc' }
+    });
+  }
+
+  async findCredentialLogs(credentialId: string) {
+    return this.prisma.credentialLog.findMany({
+      where: { credentialId },
+      orderBy: { createdAt: 'desc' },
+      include: { actor: { select: { id: true, name: true, role: true } } }
+    });
+  }
+
+  async findAllStudentsWithCredentials() {
+    return this.prisma.user.findMany({
+      where: { role: 'STUDENT' },
+      include: {
+        credentials: {
+          include: {
+            program: true,
+            institution: true
+          }
+        }
+      }
+    });
+  }
 }

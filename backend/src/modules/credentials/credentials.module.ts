@@ -1,15 +1,28 @@
 import { Module } from '@nestjs/common';
-import { CredentialsController } from './controllers/credentials.controller';
-import { CredentialsService } from './services/credentials.service';
+import { CredentialGenerationController } from './controllers/credential-generation.controller';
+import { CredentialVerificationController } from './controllers/credential-verification.controller';
+import { CredentialStateController } from './controllers/credential-state.controller';
+import { CredentialGenerationService } from './services/credential-generation.service';
+import { CredentialVerificationService } from './services/credential-verification.service';
+import { CredentialStateService } from './services/credential-state.service';
 import { CredentialsRepository } from './repositories/credentials.repository';
-import { TemplateService } from './services/template.service';
-
-import { DatabaseModule } from '../../database/database.module';
 
 @Module({
-  imports: [DatabaseModule],
-  controllers: [CredentialsController],
-  providers: [CredentialsService, CredentialsRepository, TemplateService],
-  exports: [CredentialsService, TemplateService],
+  controllers: [
+    CredentialGenerationController,
+    CredentialVerificationController,
+    CredentialStateController,
+  ],
+  providers: [
+    CredentialGenerationService,
+    CredentialVerificationService,
+    CredentialStateService,
+    CredentialsRepository,
+  ],
+  exports: [
+    CredentialGenerationService,
+    CredentialVerificationService,
+    CredentialStateService,
+  ],
 })
-export class CredentialsModule { }
+export class CredentialsModule {}
