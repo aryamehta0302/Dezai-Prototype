@@ -9,13 +9,13 @@ import { ChatRepository } from '../repositories/chat.repository';
 import { AIProviderService } from './ai-provider.service';
 import { AuditService } from '../../audit/services/audit.service';
 import { AuditAction } from '@prisma/client';
-import { CreateChatSessionDto, SendMessageDto, UpdateSessionContextDto } from '../dto/chat.dto';
+import {
+  CreateChatSessionDto,
+  SendMessageDto,
+  UpdateSessionContextDto,
+  UpdateSessionTitleDto,
+} from '../dto/chat.dto';
 
-/**
- * ChatService handles business logic for chat sessions and messaging.
- * Uses AIProviderService for generating mentor responses.
- * Injects lesson/module/program context into prompts.
- */
 @Injectable()
 export class ChatService {
   constructor(
@@ -25,22 +25,18 @@ export class ChatService {
     private auditService: AuditService,
   ) {}
 
-  /**
-   * Create a new chat session for the user
-   */
   async createSession(userId: string, dto: CreateChatSessionDto) {
     const session = await this.chatRepository.createSession(userId, dto);
+
     await this.auditService.logAction(
       userId,
       AuditAction.CHAT_SESSION_CREATED,
       `Chat session ${session.id} created`,
     );
+
     return session;
   }
 
-  /**
-   * Get a specific session by ID, ensuring the requesting user owns it
-   */
   async getSession(sessionId: string, userId: string) {
     const session = await this.chatRepository.getSessionById(sessionId);
 
@@ -55,18 +51,15 @@ export class ChatService {
     return session;
   }
 
-  /**
-   * Get all chat sessions for the authenticated user
-   */
   async getUserSessions(userId: string, limit: number = 50, offset: number = 0) {
     return this.chatRepository.getUserSessions(userId, limit, offset);
   }
 
-  /**
-   * Delete a chat session, ensuring the requesting user owns it
-   */
   async deleteSession(sessionId: string, userId: string) {
-    const isOwner = await this.chatRepository.verifySessionOwnership(sessionId, userId);
+    const isOwner = await this.chatRepository.verifySessionOwnership(
+      sessionId,
+      userId,
+    );
 
     if (!isOwner) {
       throw new ForbiddenException('You do not have access to this chat session');
@@ -83,12 +76,7 @@ export class ChatService {
     return { success: true, message: 'Chat session deleted successfully' };
   }
 
-  /**
-   * Send a message in a session and get an AI mentor response
-   * Returns both the user message and the mentor response
-   */
   async sendMessage(sessionId: string, userId: string, dto: SendMessageDto) {
-    // Verify session exists and belongs to user
     const session = await this.chatRepository.getSessionById(sessionId);
 
     if (!session) {
@@ -103,23 +91,19 @@ export class ChatService {
       throw new BadRequestException('Message content cannot be empty');
     }
 
-    // Save user message
     const userMessage = await this.chatRepository.addMessage(
       sessionId,
       'USER',
       dto.content,
     );
 
-    // Build system prompt with context injection
     const systemPrompt = await this.buildSystemPrompt(session);
 
-    // Generate AI mentor response using configured provider
     const mentorResponseContent = await this.aiProviderService.generateResponse(
       dto.content,
       systemPrompt,
     );
 
-    // Save mentor message
     const mentorMessage = await this.chatRepository.addMessage(
       sessionId,
       'MENTOR',
@@ -133,16 +117,15 @@ export class ChatService {
     };
   }
 
-  /**
-   * Update the active context for a session
-   * (useful when user navigates to a different lesson/module)
-   */
   async updateSessionContext(
     sessionId: string,
     userId: string,
     dto: UpdateSessionContextDto,
   ) {
-    const isOwner = await this.chatRepository.verifySessionOwnership(sessionId, userId);
+    const isOwner = await this.chatRepository.verifySessionOwnership(
+      sessionId,
+      userId,
+    );
 
     if (!isOwner) {
       throw new ForbiddenException('You do not have access to this chat session');
@@ -151,27 +134,42 @@ export class ChatService {
     return this.chatRepository.updateSessionContext(sessionId, dto);
   }
 
-  /**
-   * Build a system prompt with context injection and conversation history
-   * Includes lesson/module/program information for RAG
-   */
+  async updateSessionTitle(
+    sessionId: string,
+    userId: string,
+    dto: UpdateSessionTitleDto,
+  ) {
+    const isOwner = await this.chatRepository.verifySessionOwnership(
+      sessionId,
+      userId,
+    );
+
+    if (!isOwner) {
+      throw new ForbiddenException('You do not have access to this chat session');
+    }
+
+    return this.chatRepository.updateSessionTitle(sessionId, dto);
+  }
+
   private async buildSystemPrompt(session: any): Promise<string> {
     const contextParts: string[] = [];
 
-    // Include recent conversation history for context
     const recentMessages = await this.prisma.chatMessage.findMany({
       where: { sessionId: session.id },
       orderBy: { createdAt: 'asc' },
       take: 20,
     });
+
     if (recentMessages.length > 0) {
       const history = recentMessages
-        .map((m) => `${m.sender === 'USER' ? 'Student' : 'Mentor'}: ${m.content}`)
+        .map((message) =>
+          `${message.sender === 'USER' ? 'Student' : 'Mentor'}: ${message.content}`,
+        )
         .join('\n');
+
       contextParts.push(`Conversation History:\n${history}`);
     }
 
-    // Add lesson context
     if (session.activeLessonId) {
       try {
         const lesson = await this.prisma.lesson.findUnique({
@@ -190,27 +188,41 @@ export class ChatService {
         });
 
         if (lesson) {
-          contextParts.push(`Lesson: ${lesson.title}`);
+          if (lesson.module?.track?.program) {
+            contextParts.push(`Program: ${lesson.module.track.program.title}`);
+          }
+
           if (lesson.module) {
             contextParts.push(`Module: ${lesson.module.title}`);
-            if (lesson.module.track && lesson.module.track.program) {
-              contextParts.push(`Program: ${lesson.module.track.program.title}`);
-            }
           }
+
+          contextParts.push(`Lesson: ${lesson.title}`);
+
+          if ((lesson as any).objectives) {
+            contextParts.push(
+              `Learning Objectives: ${(lesson as any).objectives}`,
+            );
+          }
+
           if (lesson.content) {
-            // Include lesson content summary (first 500 chars as context)
-            const contentSummary = lesson.content.substring(0, 500);
-            contextParts.push(`Lesson Content Preview: ${contentSummary}...`);
+            const contentSummary = lesson.content.substring(0, 800);
+            contextParts.push(
+              `Lesson Content: ${contentSummary}${
+                lesson.content.length > 800 ? '...' : ''
+              }`,
+            );
+          }
+
+          if ((lesson as any).prerequisites) {
+            contextParts.push(`Prerequisites: ${(lesson as any).prerequisites}`);
           }
         }
       } catch (error) {
-        // Silently fail context injection, continue with user message
         console.warn('Error fetching lesson context:', error);
       }
     }
 
-    // Build final system prompt
-    const basePrompt = `You are an AI Mentor for the Dezai educational platform. 
+    const basePrompt = `You are an AI Mentor for the Dezai educational platform.
 Your role is to help students learn effectively through:
 - Explaining concepts clearly and concisely
 - Breaking down complex topics into manageable parts
@@ -220,7 +232,9 @@ Your role is to help students learn effectively through:
 
 ${
   contextParts.length > 0
-    ? `Current Learning Context:\n${contextParts.join('\n')}\n\nPlease tailor your responses to the student's current lesson, learning path, and conversation history.`
+    ? `Current Learning Context:\n${contextParts.join(
+        '\n',
+      )}\n\nPlease tailor your responses to the student's current lesson, learning path, and conversation history. Focus on the lesson content and objectives provided above.`
     : 'Help the student with any learning questions they have.'
 }
 
