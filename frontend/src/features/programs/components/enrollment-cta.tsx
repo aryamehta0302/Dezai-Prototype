@@ -22,7 +22,7 @@ export function EnrollmentCTA({ course }: EnrollmentCTAProps) {
   const enrollment = getEnrollment(course.id);
   const [showCheckout, setShowCheckout] = useState(false);
 
-  const allLessons = course.tracks.flatMap(t => t.modules.flatMap(m => m.lessons));
+  const allLessons = (course.tracks ?? []).flatMap(t => (t.modules ?? []).flatMap(m => m.lessons ?? []));
   const hasLessons = allLessons.length > 0;
 
   if (enrolled) {

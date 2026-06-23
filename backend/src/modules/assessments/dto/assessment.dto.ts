@@ -10,8 +10,10 @@ import {
   Min,
   Max,
   MaxLength,
+  IsEnum,
 } from "class-validator";
 import { Type } from "class-transformer";
+import { Difficulty } from "@prisma/client";
 
 // ─────────────────── QUESTION BANK DTOs ───────────────────
 
@@ -62,6 +64,14 @@ export class CreateQuestionDto {
   @IsOptional()
   category?: string;
 
+  @IsEnum(Difficulty)
+  @IsOptional()
+  difficulty?: Difficulty;
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  tags?: string[];
+
   @IsInt()
   @IsOptional()
   @Min(5)
@@ -83,6 +93,14 @@ export class UpdateQuestionDto {
   @IsString()
   @IsOptional()
   category?: string;
+
+  @IsEnum(Difficulty)
+  @IsOptional()
+  difficulty?: Difficulty;
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  tags?: string[];
 
   @IsInt()
   @IsOptional()
@@ -117,6 +135,11 @@ export class CreateAssessmentDto {
   @IsOptional()
   @Min(1)
   sampleSize?: number;
+
+  @IsInt()
+  @IsOptional()
+  @Min(60)
+  timeLimit?: number;
 }
 
 export class UpdateAssessmentDto {
@@ -135,4 +158,9 @@ export class UpdateAssessmentDto {
   @IsOptional()
   @Min(1)
   sampleSize?: number;
+
+  @IsInt()
+  @IsOptional()
+  @Min(60)
+  timeLimit?: number;
 }

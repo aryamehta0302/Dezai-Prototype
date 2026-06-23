@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { toast } from 'sonner';
-import { useChatSessions, useCreateSession, useDeleteSession, useSendMessage } from '../hooks/useChat';
+import { useChatSessions, useChatSession, useCreateSession, useDeleteSession, useSendMessage } from '../hooks/useChat';
 import { useChatStore } from '../store/chat-store';
 import { ChatWindow } from '../components/chat-window';
 import { MessageInput } from '../components/message-input';
@@ -34,8 +34,9 @@ export default function ChatPage() {
   // Local state
   const [messageInput, setMessageInput] = React.useState('');
 
-  // React Query mutations
+  // React Query hooks
   const sessionsQuery = useChatSessions();
+  const sessionQuery = useChatSession(currentSessionId);
   const createSessionMutation = useCreateSession();
   const deleteSessionMutation = useDeleteSession();
   const sendMessageMutation = useSendMessage();
@@ -47,15 +48,13 @@ export default function ChatPage() {
     }
   }, [sessionsQuery.data, setSessions]);
 
-  // Load session on selection
+  // Load session on selection (from API to get full messages)
   useEffect(() => {
-    if (currentSessionId) {
-      const session = sessions.find((s) => s.id === currentSessionId);
-      if (session) {
-        setCurrentSession(currentSessionId, session.messages || []);
-      }
+    if (currentSessionId && sessionQuery.data?.session) {
+      const messages = sessionQuery.data.session.messages || [];
+      setCurrentSession(currentSessionId, messages);
     }
-  }, [currentSessionId, sessions, setCurrentSession]);
+  }, [currentSessionId, sessionQuery.data, setCurrentSession]);
 
   // Handle create session
   const handleCreateSession = async () => {
@@ -106,15 +105,9 @@ export default function ChatPage() {
         content: userInput,
       });
 
-      // Add both messages to store
+      // Add both messages to store (also syncs to sessions array)
       addMessage(result.userMessage);
       addMessage(result.mentorMessage);
-
-      // Update session in store
-      const updatedSession = sessions.find((s) => s.id === currentSessionId);
-      if (updatedSession) {
-        updatedSession.messages = [...(updatedSession.messages || []), result.userMessage, result.mentorMessage];
-      }
 
       clearError();
     } catch (err) {

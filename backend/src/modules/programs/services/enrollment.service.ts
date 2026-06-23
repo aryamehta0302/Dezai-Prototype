@@ -1,9 +1,14 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
+import { AuditService } from '../../audit/services/audit.service';
+import { AuditAction } from '@prisma/client';
 
 @Injectable()
 export class EnrollmentService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private auditService: AuditService,
+  ) { }
 
   /**
    * Enroll a student in a program. If already enrolled, return existing enrollment.
@@ -27,13 +32,21 @@ export class EnrollmentService {
       return existing;
     }
 
-    return this.prisma.enrollment.create({
+    const enrollment = await this.prisma.enrollment.create({
       data: {
         userId,
         programId,
         progress: 0,
       },
     });
+
+    await this.auditService.logAction(
+      userId,
+      AuditAction.ENROLLMENT_CREATED,
+      `User ${userId} enrolled in program ${programId} (Enrollment ID: ${enrollment.id})`,
+    );
+
+    return enrollment;
   }
 
   /**

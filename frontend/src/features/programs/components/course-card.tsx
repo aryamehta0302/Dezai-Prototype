@@ -26,7 +26,7 @@ export function CourseCard({ course, className }: CourseCardProps) {
     >
       <div className={cn("relative h-40 flex items-center justify-center overflow-hidden bg-gradient-to-br", getCourseGradient(course.id))}>
         <img
-          src={getThumbnailUrl(course.id)}
+          src={course.thumbnail ?? getThumbnailUrl(course.id)}
           alt={course.title}
           className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}

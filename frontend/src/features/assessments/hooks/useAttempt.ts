@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, startTransition } from "react";
 import { assessmentAttemptService } from "../services/assessment-attempt.service";
 import { Attempt } from "../types/assessment.types";
 import { useTimer } from "../../quizzes/hooks/useTimer";
 import { toast } from "sonner";
 
-export function useAttempt(assessmentId: string, accessToken?: string) {
+export function useAttempt(assessmentId: string, accessToken?: string, slug?: string) {
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -32,28 +32,87 @@ export function useAttempt(assessmentId: string, accessToken?: string) {
     answersRef.current = answers;
   }, [answers]);
 
+  // Ref for timer to break circular dependency with handleTimeUp
+  const handleTimeUpRef = useRef(async () => {});
+  // Timer Setup (default 30 min = 1800s, overridden by attempt.timeLimit)
+  const timer = useTimer(1800, () => handleTimeUpRef.current());
+
+  // Submit attempt
+  const submit = async () => {
+    if (!attempt || !accessToken) return;
+
+    try {
+      // Perform a final autosave if needed
+      if (hasUnsavedChanges.current) {
+        await assessmentAttemptService.autoSaveAnswers(
+          attempt.attemptId,
+          answers,
+          accessToken
+        );
+        hasUnsavedChanges.current = false;
+      }
+
+      setSaveStatus("saving");
+      const res = await assessmentAttemptService.submitAttempt(attempt.attemptId, accessToken);
+      timer.pause();
+      return res;
+    } catch (err) {
+      console.error("Failed to submit assessment:", err);
+      const message = err instanceof Error ? err.message : "Failed to submit assessment";
+      toast.error(message);
+      throw err;
+    }
+  };
+
   // Handle Timeout Callback
   const handleTimeUp = useCallback(async () => {
     if (!attempt || isTerminated) return;
     toast.error("Time is up! Submitting your assessment...");
     await submit();
-  }, [attempt, isTerminated]);
+  }, [attempt, isTerminated, submit]);
 
-  // Timer Setup (30 minutes = 1800s default)
-  const timer = useTimer(1800, handleTimeUp);
+  useEffect(() => {
+    handleTimeUpRef.current = handleTimeUp;
+  }, [handleTimeUp]);
 
   // Load or Restore Attempt
   const initializeAttempt = useCallback(async () => {
     if (!accessToken) return;
 
+    let activeAttemptId: string | null = null;
+
     try {
       setSaveStatus("idle");
-      // 1. Try starting/getting an active attempt
-      const data = await assessmentAttemptService.startAttempt(assessmentId, accessToken);
+
+      let data: Attempt;
+
+      try {
+        data = await assessmentAttemptService.startAttempt(assessmentId, accessToken);
+      } catch (startErr) {
+        const msg = startErr instanceof Error ? startErr.message : "";
+        if (!msg.includes("active attempt already exists")) {
+          throw startErr;
+        }
+
+        // An active attempt exists — fetch its ID and resume
+        const status = await assessmentAttemptService.getAttemptStatus(assessmentId, accessToken);
+        activeAttemptId = status.activeAttemptId ?? null;
+
+        if (!status.hasActiveAttempt || !activeAttemptId) {
+          throw new Error("No active attempt found to resume");
+        }
+
+        data = await assessmentAttemptService.resumeAttempt(activeAttemptId, accessToken);
+      }
       
       setAttempt(data);
       setWarningsCount(data.warningsCount);
       setScoreDeduction(data.scoreDeduction);
+
+      // Use server-provided timeLimit if available
+      if (data.timeLimit) {
+        timer.reset(data.timeLimit);
+      }
 
       if (data.status === "TERMINATED") {
         setIsTerminated(true);
@@ -94,11 +153,22 @@ export function useAttempt(assessmentId: string, accessToken?: string) {
         timer.reset(data.remainingTime);
         timer.start();
       }
-    } catch (err: any) {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      if (message.includes("already completed")) {
+        toast.info("This attempt has already been submitted. Redirecting to results...");
+        if (slug && typeof window !== "undefined") {
+          const url = activeAttemptId
+            ? `/programs/${slug}/assessment/${assessmentId}/results?attemptId=${activeAttemptId}`
+            : `/programs/${slug}/assessment/${assessmentId}/results`;
+          window.location.href = url;
+        }
+        return;
+      }
       console.error("Failed to initialize attempt:", err);
-      toast.error(err.message || "Failed to load assessment");
+      toast.error(message || "Failed to load assessment");
     }
-  }, [assessmentId, accessToken]);
+  }, [assessmentId, accessToken, slug]);
 
   // Save Answers to Backend
   const saveCurrentAnswers = useCallback(async () => {
@@ -168,32 +238,6 @@ export function useAttempt(assessmentId: string, accessToken?: string) {
     });
   };
 
-  // Submit attempt
-  const submit = async () => {
-    if (!attempt || !accessToken) return;
-
-    try {
-      // Perform a final autosave if needed
-      if (hasUnsavedChanges.current) {
-        await assessmentAttemptService.autoSaveAnswers(
-          attempt.attemptId,
-          answers,
-          accessToken
-        );
-        hasUnsavedChanges.current = false;
-      }
-
-      setSaveStatus("saving");
-      const res = await assessmentAttemptService.submitAttempt(attempt.attemptId, accessToken);
-      timer.pause();
-      return res;
-    } catch (err: any) {
-      console.error("Failed to submit assessment:", err);
-      toast.error(err.message || "Failed to submit assessment");
-      throw err;
-    }
-  };
-
   // Log Proctoring Violation
   const handleViolation = useCallback(
     async (type: "TAB_SWITCH" | "FOCUS_LOSS" | "COPY_PASTE") => {
@@ -252,7 +296,9 @@ export function useAttempt(assessmentId: string, accessToken?: string) {
       }, 1000);
       return () => clearTimeout(t);
     } else if (lockoutCountdown === 0 && isScreenLocked) {
-      setIsScreenLocked(false);
+      startTransition(() => {
+        setIsScreenLocked(false);
+      });
       timer.start();
     }
   }, [lockoutCountdown, isScreenLocked, timer]);

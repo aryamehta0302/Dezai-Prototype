@@ -36,7 +36,7 @@ export const learningService = {
           courseId: program.id,
           courseTitle: program.title,
           courseSlug: slugify(program.title),
-          thumbnailUrl: getThumbnailUrl(program.id),
+          thumbnailUrl: program.thumbnail ?? getThumbnailUrl(program.id),
           universityName: program.institution?.name ?? "",
           instructorName: program.faculty?.user?.name ?? "",
           progress, // Locally calculated to match the count below
@@ -54,7 +54,7 @@ export const learningService = {
    */
   getDashboardStats: (
     userId: string,
-    enrollments: Record<string, any>,
+    enrollments: Record<string, { id: string; courseId: string; enrolledAt: string; progress: number; lessonsCompleted: { lessonId: string; completed: boolean; completedAt?: string }[]; lastAccessedLessonId?: string; notes: Record<string, string> }>,
     xpEarned: number
   ): DashboardStats => {
     const enrolledArr = Object.values(enrollments);
@@ -64,7 +64,7 @@ export const learningService = {
     return {
       enrolledCourses: enrolled,
       completedCourses: completed,
-      certificatesEarned: completed,
+      certificatesEarned: 0,
       xpEarned,
       learningStreak: 1,
       hoursLearned: Math.round(enrolled * 12.5),

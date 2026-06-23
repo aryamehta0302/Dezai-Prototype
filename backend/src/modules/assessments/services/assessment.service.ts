@@ -5,8 +5,14 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { PrismaService } from "../../../database/prisma.service";
-import { UserRole, AuditAction, ExamStatus, ViolationType } from "@prisma/client";
+import { UserRole, AuditAction, ExamStatus, ViolationType, Difficulty, AchievementCategory } from "@prisma/client";
 import { AuditService } from "../../audit/services/audit.service";
+import { PassFailEvaluationService } from './pass-fail-evaluation.service';
+import { AwardService } from '../../achievements/services/award.service';
+import type {
+  ResultAnalyticsResponseDto,
+  MissedQuestionsAnalyticsResponseDto,
+} from '../dto/result.dto';
 import {
   CreateQuestionBankDto,
   UpdateQuestionBankDto,
@@ -16,11 +22,24 @@ import {
   UpdateAssessmentDto,
 } from "../dto/assessment.dto";
 
+// ─────────────────── SHUFFLE UTILITY ───────────────────
+
+function shuffleArray<T>(array: T[]): T[] {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 @Injectable()
 export class AssessmentService {
   constructor(
     private prisma: PrismaService,
-    private auditService: AuditService
+    private auditService: AuditService,
+    private passFailEvaluationService: PassFailEvaluationService,
+    private awardService: AwardService,
   ) {}
 
   // ─────────────────── OWNERSHIP GUARD ───────────────────
@@ -194,6 +213,8 @@ export class AssessmentService {
         questionBankId: bankId,
         text: data.text,
         category: data.category,
+        difficulty: data.difficulty ?? Difficulty.MEDIUM,
+        tags: data.tags ?? [],
         timerSeconds: data.timerSeconds ?? 60,
         options: {
           create: data.options.map((opt) => ({
@@ -226,6 +247,8 @@ export class AssessmentService {
       data: {
         text: data.text,
         category: data.category,
+        difficulty: data.difficulty,
+        tags: data.tags,
         timerSeconds: data.timerSeconds,
       },
       include: { options: true },
@@ -272,6 +295,8 @@ export class AssessmentService {
         questionBankId: original.questionBankId,
         text: `${original.text} (Copy)`,
         category: original.category,
+        difficulty: original.difficulty,
+        tags: original.tags,
         timerSeconds: original.timerSeconds,
         options: {
           create: original.options.map((opt) => ({
@@ -359,6 +384,7 @@ export class AssessmentService {
         title: data.title,
         passingScore: data.passingScore ?? 80,
         sampleSize: data.sampleSize ?? 15,
+        timeLimit: data.timeLimit ?? 1800,
       },
     });
 
@@ -388,6 +414,7 @@ export class AssessmentService {
         title: data.title,
         passingScore: data.passingScore,
         sampleSize: data.sampleSize,
+        timeLimit: data.timeLimit,
       },
     });
 
@@ -500,15 +527,19 @@ export class AssessmentService {
     }
 
     const passedCount = attempts.filter((a) => a.passed).length;
-    const scores = attempts.map((a) => a.score);
-    const sum = scores.reduce((acc, s) => acc + s, 0);
+    const percentages = attempts.map((a) =>
+      a.score > assessment.sampleSize
+        ? a.score
+        : this.passFailEvaluationService.calculatePercentage(a.score, assessment.sampleSize)
+    );
+    const sum = percentages.reduce((acc, s) => acc + s, 0);
 
     return {
       total,
       passRate: Math.round((passedCount / total) * 100 * 100) / 100,
       averageScore: Math.round((sum / total) * 100) / 100,
-      highestScore: Math.max(...scores),
-      lowestScore: Math.min(...scores),
+      highestScore: Math.max(...percentages),
+      lowestScore: Math.min(...percentages),
     };
   }
 
@@ -631,12 +662,18 @@ export class AssessmentService {
 
       // 7. Seed questions for the mock quizzes
       const questionsData = this.getMockQuestionsData(assessmentId);
-      for (const q of questionsData) {
+      const categories = ['AI Strategy', 'Machine Learning', 'Data Science', 'Ethics', 'Governance'];
+      const difficulties = [Difficulty.EASY, Difficulty.MEDIUM, Difficulty.HARD];
+      
+      for (let j = 0; j < questionsData.length; j++) {
+        const q = questionsData[j];
         const question = await this.prisma.questionBankQuestion.create({
           data: {
             id: q.id,
             questionBankId: qBank.id,
             text: q.text,
+            category: categories[j % categories.length],
+            difficulty: difficulties[j % difficulties.length],
           },
         });
 
@@ -656,6 +693,56 @@ export class AssessmentService {
     return assessment;
   }
 
+  /**
+ * Samples `sampleSize` random questions from the assessment's question bank,
+ * shuffles question order and each question's option order, and returns
+ * a locked, JSON-serializable structure to store on the ExamSession.
+ */
+  private async generateQuestionSet(assessmentId: string) {
+    const assessment = await this.prisma.assessment.findUnique({
+      where: { id: assessmentId },
+      include: {
+        questionBank: {
+          include: {
+            questions: {
+              include: { options: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!assessment) {
+      throw new NotFoundException(`Assessment with ID ${assessmentId} not found`);
+    }
+
+    const allQuestions = assessment.questionBank.questions;
+
+    if (allQuestions.length < assessment.sampleSize) {
+      throw new BadRequestException(
+        `Question bank only has ${allQuestions.length} questions, but assessment requires ${assessment.sampleSize}.`
+      );
+    }
+
+    // 1. Randomly select `sampleSize` questions (no repeats)
+    const shuffledPool = shuffleArray(allQuestions);
+    const selected = shuffledPool.slice(0, assessment.sampleSize);
+
+    // 2. Shuffle each selected question's options too
+    const questionSet = selected.map((q) => ({
+      questionId: q.id,
+      text: q.text,
+      options: shuffleArray(
+        q.options.map((opt) => ({ optionId: opt.id, text: opt.text }))
+        // NOTE: deliberately NOT including isCorrect here —
+        // this object gets sent to the frontend, so the correct answer
+        // must never be exposed to the client.
+      ),
+    }));
+
+    return questionSet;
+  }
+
   async createSession(userId: string, assessmentId: string) {
     // Ensure the assessment exists (seeding if missing)
     await this.ensureAssessmentExists(assessmentId);
@@ -673,17 +760,10 @@ export class AssessmentService {
       return activeSession;
     }
 
-    // Check attempt count (max 3 free attempts)
-    const attemptsCount = await this.prisma.assessmentAttempt.count({
-      where: {
-        userId,
-        assessmentId,
-      },
-    });
+    // Attempt count check is deferred to startAttempt()
 
-    if (attemptsCount >= 3) {
-      throw new BadRequestException('Maximum attempts (3) exceeded for this assessment.');
-    }
+    // Generate this student's locked, shuffled question set
+    const questionSet = await this.generateQuestionSet(assessmentId);
 
     // Create new exam session
     return this.prisma.examSession.create({
@@ -693,6 +773,7 @@ export class AssessmentService {
         status: ExamStatus.ACTIVE,
         warningsCount: 0,
         scoreDeduction: 0,
+        questionSet,
       },
     });
   }
@@ -716,16 +797,11 @@ export class AssessmentService {
       include: {
         violations: true,
         assessment: {
-          include: {
-            questionBank: {
-              include: {
-                questions: {
-                  include: {
-                    options: true,
-                  },
-                },
-              },
-            },
+          select: {
+            id: true,
+            title: true,
+            passingScore: true,
+            timeLimit: true,
           },
         },
       },
@@ -735,7 +811,7 @@ export class AssessmentService {
       throw new NotFoundException('Exam session not found');
     }
 
-    return session;
+    return session; // session.questionSet has the locked, shuffled questions
   }
 
   async logViolation(userId: string, sessionId: string, type: ViolationType) {
@@ -798,51 +874,58 @@ export class AssessmentService {
           completedAt: new Date(),
         },
       });
+
+      await this.auditService.logAction(
+        userId,
+        AuditAction.ASSESSMENT_PUBLISHED,
+        `AttemptTerminated: sessionId=${sessionId}, userId=${userId}`,
+      );
+      await this.awardService.checkAndAward(userId, AchievementCategory.ASSESSMENT);
     }
 
     return updatedSession;
   }
 
-  async submitSession(userId: string, sessionId: string, selectedAnswers: Record<string, string | number>) {
+  async submitSession(userId: string, sessionId: string, selectedAnswers: Record<string, string>) {
     const session = await this.getSession(userId, sessionId);
 
     if (session.status !== ExamStatus.ACTIVE) {
       throw new BadRequestException('Exam session is not active or already submitted.');
     }
 
-    const questions = session.assessment.questionBank.questions;
+    // Use the LOCKED question set from session creation, not the live bank
+    const lockedQuestions = session.questionSet as Array<{
+      questionId: string;
+      text: string;
+      options: { optionId: string; text: string }[];
+    }>;
+
     let score = 0;
-    const totalQuestions = questions.length;
-
-    // Calculate score
+    const totalQuestions = lockedQuestions.length;
     const attemptAnswersToCreate = [];
-    for (const question of questions) {
-      const selectedVal = selectedAnswers[question.id];
-      let selectedOptionId: string | null = null;
 
-      if (selectedVal !== undefined && selectedVal !== null) {
-        // If it's a number (representing option index), map it to the deterministic ID
-        if (typeof selectedVal === 'number' || !isNaN(Number(selectedVal))) {
-          selectedOptionId = `${question.id}-opt-${selectedVal}`;
-        } else {
-          selectedOptionId = String(selectedVal);
-        }
-      }
+    for (const question of lockedQuestions) {
+      const selectedOptionId = selectedAnswers[question.questionId] ?? null;
 
-      const correctOption = question.options.find((o) => o.isCorrect);
-      const isCorrect = selectedOptionId === correctOption?.id;
+      if (!selectedOptionId) continue;
+
+      // Look up the real option from the DB to check isCorrect
+      // (isCorrect was deliberately stripped from questionSet so it's never sent to the client)
+      const realOption = await this.prisma.questionOption.findUnique({
+        where: { id: selectedOptionId },
+      });
+
+      const isCorrect = realOption?.isCorrect ?? false;
 
       if (isCorrect) {
         score += 1;
       }
 
-      if (selectedOptionId) {
-        attemptAnswersToCreate.push({
-          questionId: question.id,
-          selectedOptionId,
-          isCorrect,
-        });
-      }
+      attemptAnswersToCreate.push({
+        questionId: question.questionId,
+        selectedOptionId,
+        isCorrect,
+      });
     }
 
     // Apply percentage-based score calculation
@@ -852,6 +935,11 @@ export class AssessmentService {
     percentage = Math.max(0, percentage - session.scoreDeduction);
 
     const passed = percentage >= session.assessment.passingScore;
+
+    // Store correctCount (score) adjusted for proctoring deduction
+    const finalScore = session.scoreDeduction > 0
+      ? Math.max(0, Math.round((percentage / 100) * totalQuestions))
+      : score;
 
     // Update session status to SUBMITTED
     await this.prisma.examSession.update({
@@ -867,7 +955,7 @@ export class AssessmentService {
       data: {
         userId,
         assessmentId: session.assessmentId,
-        score: percentage,
+        score: finalScore,
         passed,
         completedAt: new Date(),
         attemptAnswers: {
@@ -884,8 +972,272 @@ export class AssessmentService {
 
     return {
       attemptId: attempt.id,
-      score: percentage,
+      score: finalScore,
       passed,
+    };
+  }
+
+  // ─────────────────── FACULTY OWNERSHIP VALIDATION (Sprint 5) ───────────────────
+
+  /**
+   * Validates that a faculty member owns the assessment through the
+   * Assessment → Module → Track → Program → Faculty chain.
+   * DEZAI_ADMIN and UNIVERSITY_ADMIN bypass with institution check.
+   */
+  async validateAssessmentFacultyOwnership(
+    assessmentId: string,
+    userId: string,
+  ): Promise<true> {
+    const assessment = await this.prisma.assessment.findUnique({
+      where: { id: assessmentId },
+      include: {
+        module: {
+          include: {
+            track: {
+              include: {
+                program: {
+                  include: {
+                    faculty: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!assessment) {
+      throw new NotFoundException(`Assessment with ID ${assessmentId} not found`);
+    }
+
+    const program = assessment.module.track.program;
+
+    // Check if the faculty member owns this program
+    const faculty = await this.prisma.facultyMember.findUnique({
+      where: { userId },
+    });
+
+    if (!faculty) {
+      throw new ForbiddenException('Faculty profile not found');
+    }
+
+    if (program.facultyId !== faculty.id && program.institutionId !== faculty.institutionId) {
+      throw new ForbiddenException(
+        'You do not have access to this assessment',
+      );
+    }
+
+    return true;
+  }
+
+  // ─────────────────── RESULT ANALYTICS (Sprint 5 Task 4) ───────────────────
+
+  /**
+   * Aggregates completed attempt data for faculty analytics:
+   * total attempts, unique students, average score/percentage,
+   * pass rate, and score distribution buckets.
+   */
+  async getResultAnalytics(
+    assessmentId: string,
+  ): Promise<ResultAnalyticsResponseDto> {
+    const assessment = await this.prisma.assessment.findUnique({
+      where: { id: assessmentId },
+    });
+
+    if (!assessment) {
+      throw new NotFoundException(`Assessment with ID ${assessmentId} not found`);
+    }
+
+    const attempts = await this.prisma.assessmentAttempt.findMany({
+      where: {
+        assessmentId,
+        completedAt: { not: null },
+      },
+      select: {
+        score: true,
+        passed: true,
+        userId: true,
+      },
+    });
+
+    const totalAttempts = attempts.length;
+
+    if (totalAttempts === 0) {
+      return {
+        assessmentId,
+        totalAttempts: 0,
+        uniqueStudents: 0,
+        averageScore: 0,
+        averagePercentage: 0,
+        passRate: 0,
+        passedAttempts: 0,
+        failedAttempts: 0,
+        scoreDistribution: [
+          { range: '0-20%', count: 0 },
+          { range: '21-40%', count: 0 },
+          { range: '41-60%', count: 0 },
+          { range: '61-80%', count: 0 },
+          { range: '81-100%', count: 0 },
+        ],
+      };
+    }
+
+    const uniqueStudents = new Set(attempts.map((a) => a.userId)).size;
+    const passedAttempts = attempts.filter((a) => a.passed).length;
+    const failedAttempts = totalAttempts - passedAttempts;
+    const passRate = this.passFailEvaluationService.calculatePercentage(
+      passedAttempts,
+      totalAttempts,
+    );
+
+    const scores = attempts.map((a) =>
+      a.score > assessment.sampleSize
+        ? Math.round((a.score / 100) * assessment.sampleSize)
+        : a.score
+    );
+    const scoreSum = scores.reduce((acc, s) => acc + s, 0);
+    const averageScore = Math.round((scoreSum / totalAttempts) * 100) / 100;
+
+    // Calculate percentages for each attempt
+    const percentages = attempts.map((a) =>
+      a.score > assessment.sampleSize
+        ? a.score
+        : this.passFailEvaluationService.calculatePercentage(
+            a.score,
+            assessment.sampleSize,
+          ),
+    );
+    const percentageSum = percentages.reduce((acc, p) => acc + p, 0);
+    const averagePercentage =
+      Math.round((percentageSum / totalAttempts) * 100) / 100;
+
+    // Score distribution buckets
+    const buckets = [
+      { range: '0-20%', min: 0, max: 20, count: 0 },
+      { range: '21-40%', min: 21, max: 40, count: 0 },
+      { range: '41-60%', min: 41, max: 60, count: 0 },
+      { range: '61-80%', min: 61, max: 80, count: 0 },
+      { range: '81-100%', min: 81, max: 100, count: 0 },
+    ];
+
+    for (const pct of percentages) {
+      for (const bucket of buckets) {
+        if (pct >= bucket.min && pct <= bucket.max) {
+          bucket.count += 1;
+          break;
+        }
+      }
+    }
+
+    return {
+      assessmentId,
+      totalAttempts,
+      uniqueStudents,
+      averageScore,
+      averagePercentage,
+      passRate,
+      passedAttempts,
+      failedAttempts,
+      scoreDistribution: buckets.map((b) => ({
+        range: b.range,
+        count: b.count,
+      })),
+    };
+  }
+
+  // ─────────────────── MISSED QUESTIONS ANALYTICS (Sprint 5 Task 4) ───────────────────
+
+  /**
+   * Aggregates per-question wrong-answer rates across all completed
+   * attempts for a given assessment. Sorted by wrongRate DESC
+   * (hardest questions first).
+   */
+  async getMissedQuestionsAnalytics(
+    assessmentId: string,
+  ): Promise<MissedQuestionsAnalyticsResponseDto> {
+    const assessment = await this.prisma.assessment.findUnique({
+      where: { id: assessmentId },
+      include: {
+        questionBank: {
+          include: {
+            questions: {
+              select: {
+                id: true,
+                text: true,
+                category: true,
+                difficulty: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!assessment) {
+      throw new NotFoundException(`Assessment with ID ${assessmentId} not found`);
+    }
+
+    // Get all attempt answers for completed attempts of this assessment
+    const answers = await this.prisma.attemptAnswer.findMany({
+      where: {
+        attempt: {
+          assessmentId,
+          completedAt: { not: null },
+        },
+      },
+      select: {
+        questionId: true,
+        isCorrect: true,
+      },
+    });
+
+    // Aggregate per question
+    const questionStatsMap = new Map<
+      string,
+      { totalAnswered: number; totalWrong: number }
+    >();
+
+    for (const ans of answers) {
+      const stats = questionStatsMap.get(ans.questionId) ?? {
+        totalAnswered: 0,
+        totalWrong: 0,
+      };
+      stats.totalAnswered += 1;
+      if (!ans.isCorrect) {
+        stats.totalWrong += 1;
+      }
+      questionStatsMap.set(ans.questionId, stats);
+    }
+
+    // Build response, joining with question metadata
+    const questionMap = new Map(
+      assessment.questionBank.questions.map((q) => [q.id, q]),
+    );
+
+    const questions = Array.from(questionStatsMap.entries())
+      .map(([questionId, stats]) => {
+        const qMeta = questionMap.get(questionId);
+        const wrongRate = this.passFailEvaluationService.calculatePercentage(
+          stats.totalWrong,
+          stats.totalAnswered,
+        );
+
+        return {
+          questionId,
+          questionText: qMeta?.text ?? 'Unknown question',
+          category: qMeta?.category ?? null,
+          difficulty: qMeta?.difficulty ?? null,
+          totalAnswered: stats.totalAnswered,
+          totalWrong: stats.totalWrong,
+          wrongRate,
+        };
+      })
+      .sort((a, b) => b.wrongRate - a.wrongRate);
+
+    return {
+      assessmentId,
+      questions,
     };
   }
 }

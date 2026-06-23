@@ -22,8 +22,8 @@ class ApiClient {
             return session?.accessToken || null;
         } else {
             const session = await getSession();
-            // @ts-ignore - accessToken exists in session type augmentation
-            return session?.accessToken || null;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            return (session as any)?.accessToken || null;
         }
     }
 
@@ -69,7 +69,7 @@ class ApiClient {
         return this.request<T>(endpoint, { ...options, method: "GET" });
     }
 
-    public post<T>(endpoint: string, body?: any, options?: ApiRequestOptions) {
+    public post<T>(endpoint: string, body?: unknown, options?: ApiRequestOptions) {
         return this.request<T>(endpoint, {
             ...options,
             method: "POST",
@@ -77,7 +77,7 @@ class ApiClient {
         });
     }
 
-    public put<T>(endpoint: string, body?: any, options?: ApiRequestOptions) {
+    public put<T>(endpoint: string, body?: unknown, options?: ApiRequestOptions) {
         return this.request<T>(endpoint, {
             ...options,
             method: "PUT",
@@ -85,7 +85,7 @@ class ApiClient {
         });
     }
 
-    public patch<T>(endpoint: string, body?: any, options?: ApiRequestOptions) {
+    public patch<T>(endpoint: string, body?: unknown, options?: ApiRequestOptions) {
         return this.request<T>(endpoint, {
             ...options,
             method: "PATCH",

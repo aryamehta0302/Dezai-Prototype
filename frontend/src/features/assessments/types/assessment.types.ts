@@ -23,24 +23,24 @@ export interface Attempt {
   assessmentId: string;
   assessmentTitle: string;
   passingScore: number;
+  timeLimit: number;
   sampleSize: number;
   totalAvailable: number;
   questions: AttemptQuestion[];
-  remainingTime?: number; // returned on resume
-  answers?: Record<string, string>; // returned on resume (questionId -> selectedOptionId)
+  remainingTime?: number;
+  answers?: Record<string, string>;
 }
 
-export interface AttemptResultBreakdownItem {
+export interface AttemptResultQuestionItem {
   questionId: string;
-  text: string;
-  category?: string;
-  options: AttemptQuestionOption[];
+  questionText: string;
   selectedOptionId: string | null;
   selectedOptionText: string | null;
+  isCorrect: boolean;
   correctOptionId: string;
   correctOptionText: string;
-  isCorrect: boolean;
-  explanation: string;
+  options: { id: string; text: string }[];
+  explanation?: string;
 }
 
 export interface AttemptResult {
@@ -48,18 +48,36 @@ export interface AttemptResult {
   attemptId: string;
   assessmentTitle: string;
   score: number;
+  percentage: number;
   passed: boolean;
+  passingScore: number;
+  totalQuestions: number;
+  timeTaken?: number;
   startedAt: string;
   completedAt: string;
-  breakdown: AttemptResultBreakdownItem[];
+  questions: AttemptResultQuestionItem[];
+  /** @deprecated Use `questions` instead */
+  breakdown?: AttemptResultQuestionItem[];
 }
 
 export interface AttemptHistoryItem {
-  id: string;
-  userId: string;
-  assessmentId: string;
+  attemptId: string;
   score: number;
+  percentage: number;
   passed: boolean;
   startedAt: string;
   completedAt: string;
+}
+
+export interface AttemptStatusResponse {
+  assessmentId: string;
+  attemptsUsed: number;
+  attemptsRemaining: number;
+  maxAttempts: number;
+  hasActiveAttempt: boolean;
+  activeAttemptId: string | null;
+  canAttempt: boolean;
+  bestScore: number | null;
+  bestPercentage: number | null;
+  everPassed: boolean;
 }
