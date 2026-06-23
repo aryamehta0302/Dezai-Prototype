@@ -1,21 +1,36 @@
 /**
  * @module features/analytics
  *
- * Analytics, charts & reporting feature.
+ * Analytics, charts & reporting feature — Sprint 6 Analytics Completion.
  *
- * Owns: bar charts, revenue charts, allocation breakdowns,
- *       sparkline trends, progress bars, financial summary cards,
- *       date range filters, export report functionality.
- *
- * Exports components, hooks, services, schemas, and types
- * related to analytics and data visualization.
+ * Exports all public components, hooks, services, and types
+ * for the Dezai analytics layer.
  */
 
-// Export public API from this feature
-// Example:
-// export { BarChart } from './components/bar-chart';
-// export { AllocationBreakdown } from './components/allocation-breakdown';
-// export { FinancialSummaryCard } from './components/financial-summary-card';
-// export { useAnalytics } from './hooks/useAnalytics';
-// export { analyticsService } from './services/analytics.service';
-// export type { RevenueData, AnalyticsFilter } from './types/analytics.types';
+// ─── Components ───────────────────────────────────────────────────────────────
+export { ModuleCompletionChart } from './components/module-completion-chart';
+export { ProgramPerformanceChart } from './components/program-performance-chart';
+export { XpGrowthChart } from './components/xp-growth-chart';
+
+// ─── Hooks ────────────────────────────────────────────────────────────────────
+export { useProgramAnalytics } from './hooks/useProgramAnalytics';
+
+// ─── Services ─────────────────────────────────────────────────────────────────
+export { analyticsService } from './services/analytics.service';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+export type {
+  ExtendedAnalytics,
+  StudentMetric,
+  DifficultModule,
+  ProgramAnalytics,
+  ModuleCompletionStat,
+  StudentLeaderboardEntry,
+  StudentLeaderboardResponse,
+  LeaderboardWidgetEntry,
+  StudentWidgetResponse,
+  UniversityLeaderboardEntry,
+  UniversityLeaderboardResponse,
+  XpMilestone,
+  LeaderboardRange,
+} from './types/analytics.types';
