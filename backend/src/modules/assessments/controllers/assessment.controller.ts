@@ -14,10 +14,11 @@ import {
 } from "@nestjs/common";
 import { AssessmentService } from "../services/assessment.service";
 import { QuestionSelectionService } from "../services/question-selection.service";
+import { RecommendationService } from "../services/recommendation.service";
 import { JwtAuthGuard } from "../../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../../common/guards/roles.guard";
 import { Roles } from "../../../common/decorators/roles.decorator";
-import { UserRole } from "@prisma/client";
+import { UserRole, ViolationType } from "@prisma/client";
 import {
   CreateQuestionBankDto,
   UpdateQuestionBankDto,
@@ -31,7 +32,8 @@ import {
 export class AssessmentController {
   constructor(
     private readonly assessmentService: AssessmentService,
-    private readonly questionSelectionService: QuestionSelectionService
+    private readonly questionSelectionService: QuestionSelectionService,
+    private readonly recommendationService: RecommendationService
   ) {}
 
   // ─────────────────── QUESTION BANKS ───────────────────
@@ -238,5 +240,85 @@ export class AssessmentController {
     const analytics =
       await this.assessmentService.getAssessmentAnalytics(id);
     return { success: true, analytics };
+  }
+
+  @Get(":id/results")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
+  async getAssessmentResults(@Param("id") id: string) {
+    const results = await this.assessmentService.getAssessmentResults(id);
+    return { success: true, results };
+  }
+
+  // ─────────────────── EXAM SESSIONS & PROCTORING ───────────────────
+
+  @Get("sessions/active")
+  @UseGuards(JwtAuthGuard)
+  async getActiveSession(@Req() req, @Query("assessmentId") assessmentId?: string) {
+    const session = await this.assessmentService.getActiveSession(req.user.id, assessmentId);
+    return { success: true, session };
+  }
+
+  @Post("sessions")
+  @UseGuards(JwtAuthGuard)
+  async createSession(@Req() req, @Body() body: { assessmentId: string }) {
+    const session = await this.assessmentService.createSession(req.user.id, body.assessmentId);
+    return { success: true, session };
+  }
+
+  @Get("sessions/:id")
+  @UseGuards(JwtAuthGuard)
+  async getSessionById(@Req() req, @Param("id") id: string) {
+    const session = await this.assessmentService.getSession(req.user.id, id);
+    return { success: true, session };
+  }
+
+  @Post("sessions/:id/violations")
+  @UseGuards(JwtAuthGuard)
+  async logViolation(
+    @Req() req,
+    @Param("id") id: string,
+    @Body() body: { type: ViolationType }
+  ) {
+    const session = await this.assessmentService.logViolation(req.user.id, id, body.type);
+    return { success: true, session };
+  }
+
+  @Post("sessions/:id/submit")
+  @UseGuards(JwtAuthGuard)
+  async submitSession(
+    @Req() req,
+    @Param("id") id: string,
+    @Body() body: { answers: Record<string, string> }
+  ) {
+    const result = await this.assessmentService.submitSession(req.user.id, id, body.answers);
+    return { success: true, ...result };
+  }
+
+  // ─────────────────── RECOMMENDATIONS ───────────────────
+
+  @Get("recommendations/next-module/:programId")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STUDENT)
+  async getNextModule(@Req() req, @Param("programId") programId: string) {
+    const result = await this.recommendationService.getNextModule(
+      req.user.id,
+      programId
+    );
+    return { success: true, nextModule: result };
+  }
+
+  @Get("recommendations/continue-learning")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STUDENT)
+  async getContinueLearning(@Req() req) {
+    return this.recommendationService.getContinueLearning(req.user.id);
+  }
+
+  @Get("recommendations/ready-assessments")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STUDENT)
+  async getRecommendedAssessments(@Req() req) {
+    return this.recommendationService.getRecommendedAssessments(req.user.id);
   }
 }

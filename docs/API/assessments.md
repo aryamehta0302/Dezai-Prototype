@@ -371,6 +371,285 @@ Get performance analytics for an assessment based on completed attempts.
 
 ---
 
+---
+
+## Assessment Attempt Lifecycle
+
+### `POST /api/assessments/attempts/start`
+
+Start a new assessment attempt. Checks attempt limits (maximum 3 free attempts), initializes an active proctoring session if one does not exist, and creates an in-progress attempt log.
+
+**Auth:** JWT + `STUDENT`  
+**Request Body:**
+```json
+{
+  "assessmentId": "uuid"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "attemptId": "uuid",
+  "sessionId": "uuid",
+  "startedAt": "2026-06-18T12:00:00.000Z",
+  "warningsCount": 0,
+  "scoreDeduction": 0,
+  "lockoutUntil": null,
+  "status": "ACTIVE",
+  "assessmentId": "uuid",
+  "assessmentTitle": "Strategic AI Leadership",
+  "passingScore": 80,
+  "sampleSize": 15,
+  "totalAvailable": 120,
+  "questions": [
+    {
+      "id": "uuid",
+      "text": "Question Text",
+      "category": "Ethics",
+      "options": [
+        { "id": "uuid", "text": "Option A" },
+        { "id": "uuid", "text": "Option B" }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+### `GET /api/assessments/attempts/:id/resume`
+
+Resume an in-progress assessment attempt. Returns the same question selection and option shuffles (seeded by the attempt ID) and recalculates the remaining time.
+
+**Auth:** JWT + `STUDENT`  
+**Response:** `200 OK`
+```json
+{
+  "success": true,
+  "attemptId": "uuid",
+  "sessionId": "uuid",
+  "startedAt": "2026-06-18T12:00:00.000Z",
+  "warningsCount": 1,
+  "scoreDeduction": 0,
+  "lockoutUntil": null,
+  "status": "ACTIVE",
+  "remainingTime": 1420,
+  "answers": {
+    "question-uuid": "option-uuid"
+  },
+  "questions": [...]
+}
+```
+
+---
+
+### `POST /api/assessments/attempts/:id/auto-save`
+
+Autosave the student's selected answers during the attempt. Updates or inserts option selections programmatically.
+
+**Auth:** JWT + `STUDENT`  
+**Request Body:**
+```json
+{
+  "answers": {
+    "question-uuid-1": "option-uuid-A",
+    "question-uuid-2": "option-uuid-D"
+  }
+}
+```
+
+**Response:**
+```json
+{ "success": true }
+```
+
+---
+
+### `POST /api/assessments/attempts/:id/submit`
+
+Grade and submit the attempt. Resolves the scores percentage, applies proctoring deductions from the warning history, completes the session, and awards 100 XP if it is the first passing attempt.
+
+**Auth:** JWT + `STUDENT`  
+**Response:**
+```json
+{
+  "success": true,
+  "attemptId": "uuid",
+  "score": 85,
+  "passed": true
+}
+```
+
+---
+
+### `GET /api/assessments/attempts/:id/result`
+
+Get a detailed completed attempt results breakdown with option selections, correct options, and category explanations.
+
+**Auth:** JWT + `STUDENT`  
+**Response:**
+```json
+{
+  "success": true,
+  "attemptId": "uuid",
+  "assessmentTitle": "Strategic AI Leadership",
+  "score": 85,
+  "passed": true,
+  "startedAt": "2026-06-18T12:00:00.000Z",
+  "completedAt": "2026-06-18T12:15:00.000Z",
+  "breakdown": [
+    {
+      "questionId": "uuid",
+      "text": "What is the primary advantage of transformer architecture?",
+      "category": "Deep Learning",
+      "options": [...],
+      "selectedOptionId": "opt-uuid-A",
+      "selectedOptionText": "Parallelization",
+      "correctOptionId": "opt-uuid-A",
+      "correctOptionText": "Parallelization",
+      "isCorrect": true,
+      "explanation": "Concept category: Deep Learning. Review this topic to master the question context."
+    }
+  ]
+}
+```
+
+---
+
+### `GET /api/assessments/attempts/history/:assessmentId`
+
+Get all of the student's completed attempts for an assessment.
+
+**Auth:** JWT + `STUDENT`  
+**Response:**
+```json
+{
+  "success": true,
+  "attempts": [
+    {
+      "id": "uuid",
+      "userId": "uuid",
+      "assessmentId": "uuid",
+      "score": 85,
+      "passed": true,
+      "startedAt": "2026-06-18T12:00:00.000Z",
+      "completedAt": "2026-06-18T12:15:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+## Faculty Result Management
+
+### `GET /api/assessments/:id/results`
+
+Retrieve all student attempts, scores, and proctoring violations for an assessment (Faculty tracking).
+
+**Auth:** JWT + `FACULTY` / `UNIVERSITY_ADMIN` / `DEZAI_ADMIN`  
+**Response:**
+```json
+{
+  "success": true,
+  "results": [
+    {
+      "id": "uuid",
+      "studentName": "John Doe",
+      "studentEmail": "john@university.edu",
+      "score": 85,
+      "passed": true,
+      "startedAt": "2026-06-18T12:00:00.000Z",
+      "completedAt": "2026-06-18T12:15:00.000Z",
+      "violationCount": 1
+    }
+  ]
+}
+```
+
+---
+
+## Recommendations Engine
+
+### `GET /api/assessments/recommendations/next-module/:programId`
+
+Get the next incomplete module and its first incomplete lesson in sequential order for a program.
+
+**Auth:** JWT + `STUDENT`  
+**Response:**
+```json
+{
+  "success": true,
+  "nextModule": {
+    "moduleId": "uuid",
+    "moduleTitle": "Core AI Frameworks",
+    "moduleOrder": 1,
+    "trackType": "ROOTS",
+    "firstIncompleteLesson": {
+      "id": "uuid",
+      "title": "Introduction to Transformers",
+      "order": 1
+    },
+    "completedLessonsCount": 0,
+    "totalLessonsCount": 5
+  }
+}
+```
+
+---
+
+### `GET /api/assessments/recommendations/continue-learning`
+
+Get the continue learning dashboard widget payload containing the user's most recently active module details.
+
+**Auth:** JWT + `STUDENT`  
+**Response:**
+```json
+{
+  "success": true,
+  "programId": "uuid",
+  "programTitle": "Strategic AI Leadership",
+  "moduleId": "uuid",
+  "moduleTitle": "Core AI Frameworks",
+  "moduleOrder": 1,
+  "trackType": "ROOTS",
+  "firstIncompleteLesson": {
+    "id": "uuid",
+    "title": "Introduction to Transformers"
+  },
+  "completedLessonsCount": 2,
+  "totalLessonsCount": 5,
+  "completed": false
+}
+```
+
+---
+
+### `GET /api/assessments/recommendations/ready-assessments`
+
+Get assessments linked to modules where the user has completed all lessons but has not passed the assessment yet.
+
+**Auth:** JWT + `STUDENT`  
+**Response:**
+```json
+{
+  "success": true,
+  "assessments": [
+    {
+      "assessmentId": "uuid",
+      "assessmentTitle": "Module 1 Assessment",
+      "moduleId": "uuid",
+      "moduleTitle": "Core AI Frameworks",
+      "passingScore": 80
+    }
+  ]
+}
+```
+
+---
+
 ## Ownership Rules
 
 | Role | Access Rule |

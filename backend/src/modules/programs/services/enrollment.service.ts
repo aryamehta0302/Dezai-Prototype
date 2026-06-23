@@ -1,9 +1,14 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
+import { AuditService } from '../../audit/services/audit.service';
+import { AuditAction } from '@prisma/client';
 
 @Injectable()
 export class EnrollmentService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private auditService: AuditService,
+  ) { }
 
   /**
    * Enroll a student in a program. If already enrolled, return existing enrollment.
@@ -27,28 +32,67 @@ export class EnrollmentService {
       return existing;
     }
 
-    return this.prisma.enrollment.create({
+    const enrollment = await this.prisma.enrollment.create({
       data: {
         userId,
         programId,
         progress: 0,
       },
     });
+
+    await this.auditService.logAction(
+      userId,
+      AuditAction.ENROLLMENT_CREATED,
+      `User ${userId} enrolled in program ${programId} (Enrollment ID: ${enrollment.id})`,
+    );
+
+    return enrollment;
   }
 
   /**
    * List all program enrollments for a given student user.
    */
   async getStudentEnrollments(userId: string) {
-    return this.prisma.enrollment.findMany({
+    const enrollments = await this.prisma.enrollment.findMany({
       where: { userId },
       include: {
         program: {
           include: {
             institution: { select: { name: true } },
+            tracks: {
+              include: {
+                modules: {
+                  include: { lessons: { select: { id: true } } }
+                }
+              }
+            }
           },
         },
       },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const completed = await this.prisma.progress.findMany({
+      where: { userId },
+      select: { lessonId: true },
+    });
+
+    const allCompletedIds = completed.map((c) => c.lessonId);
+
+    return enrollments.map((e) => {
+      // Filter the global completed list to only those in THIS program's lessons
+      const programLessonIds = new Set(
+        e.program.tracks.flatMap((t) =>
+          t.modules.flatMap((m) => m.lessons.map((l) => l.id))
+        )
+      );
+
+      const filteredIds = allCompletedIds.filter((id) => programLessonIds.has(id));
+
+      return {
+        ...e,
+        completedLessonIds: filteredIds,
+      };
     });
   }
 

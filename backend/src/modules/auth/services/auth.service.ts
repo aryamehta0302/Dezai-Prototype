@@ -222,7 +222,7 @@ export class AuthService {
     const { id, email, name } = data;
 
     // Look up by email
-    let user = await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { email },
     });
 

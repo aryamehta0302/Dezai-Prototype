@@ -1,9 +1,8 @@
-import type { MockUser } from "@/lib/mock-data/students";
 import type { ActivityItem } from "../types/user.types";
 
 export const userService = {
-  getRecentActivity: (userId: string): ActivityItem[] => {
-    // Mock activity data
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  getRecentActivity: (_userId: string): ActivityItem[] => {
     return [
       {
         id: "act-1",

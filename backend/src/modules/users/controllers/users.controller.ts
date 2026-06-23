@@ -1,10 +1,12 @@
-import { Controller, Get, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Patch, Body, UseGuards, Req } from '@nestjs/common';
 import { UsersService } from '../services/users.service';
 import { XpService } from '../services/xp.service';
+import { PrismaService } from '../../../database/prisma.service';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
+import { UpdateFacultyProfileDto } from '../dto/users.dto';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)
@@ -12,6 +14,7 @@ export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly xpService: XpService,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
@@ -48,5 +51,33 @@ export class UsersController {
   async getMyXp(@Req() req) {
     const details = await this.xpService.getUserXpDetails(req.user.id);
     return { success: true, ...details };
+  }
+
+  /**
+   * PATCH /api/users/faculty/profile
+   * Update the authenticated faculty member's profile details.
+   * Protected — FACULTY only.
+   */
+  @Patch('faculty/profile')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.FACULTY)
+  async updateFacultyProfile(@Req() req, @Body() body: UpdateFacultyProfileDto) {
+    const profile = await this.usersService.updateFacultyProfile(req.user.id, body);
+    return { success: true, profile };
+  }
+
+  /**
+   * PATCH /api/users/profile
+   * Update the authenticated user's profile details.
+   * Works for all authenticated users.
+   */
+  @Patch('profile')
+  async updateProfile(@Req() req, @Body() body: { name?: string }) {
+    const user = await this.prisma.user.update({
+      where: { id: req.user.id },
+      data: { name: body.name },
+      select: { id: true, name: true, email: true, role: true, onboarded: true },
+    });
+    return { success: true, user };
   }
 }

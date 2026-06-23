@@ -13,7 +13,9 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { AiModule } from './modules/ai/ai.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { LeaderboardsModule } from './modules/leaderboards/leaderboards.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { AchievementsModule } from './modules/achievements/achievements.module';
 
 @Module({
   imports: [
@@ -31,7 +33,9 @@ import { AuditModule } from './modules/audit/audit.module';
     AiModule,
     UploadsModule,
     NotificationsModule,
+    LeaderboardsModule,
     AuditModule,
+    AchievementsModule,
   ],
   controllers: [],
   providers: [],

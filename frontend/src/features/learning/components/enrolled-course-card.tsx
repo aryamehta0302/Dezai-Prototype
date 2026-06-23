@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { cn } from "@/shared/utils/cn";
 import { Progress } from "@/shared/ui/progress";
@@ -12,7 +13,10 @@ interface EnrolledCourseCardProps {
 }
 
 export function EnrolledCourseCard({ course, className }: EnrolledCourseCardProps) {
+  const [imgError, setImgError] = useState(false);
+  const [imgLoading, setImgLoading] = useState(true);
   const isCompleted = course.progress >= 100;
+  const showImage = course.thumbnailUrl && !imgError;
 
   return (
     <Link
@@ -23,10 +27,28 @@ export function EnrolledCourseCard({ course, className }: EnrolledCourseCardProp
       )}
     >
       {/* Thumbnail */}
-      <div className="relative h-36 bg-gradient-to-br from-primary/10 via-secondary-container/50 to-primary/5 flex items-center justify-center">
-        <BookOpen className="h-8 w-8 text-primary/40" />
+      <div className="relative h-36 flex items-center justify-center overflow-hidden">
+        {showImage ? (
+          <>
+            {imgLoading && (
+              <div className="absolute inset-0 skeleton-shimmer" />
+            )}
+            <img
+              src={course.thumbnailUrl}
+              alt={course.courseTitle}
+              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+              onError={() => setImgError(true)}
+              onLoad={() => setImgLoading(false)}
+              style={{ opacity: imgLoading ? 0 : 1 }}
+            />
+          </>
+        ) : (
+          <div className="h-full w-full bg-gradient-to-br from-primary/10 via-secondary-container/50 to-primary/5 flex items-center justify-center">
+            <BookOpen className="h-8 w-8 text-primary/40" />
+          </div>
+        )}
         {isCompleted && (
-          <div className="absolute top-3 right-3 rounded-full bg-success px-2.5 py-0.5 text-xs font-semibold text-white">
+          <div className="absolute top-3 right-3 rounded-full bg-success px-2.5 py-0.5 text-xs font-semibold text-white shadow-level-1">
             Completed
           </div>
         )}

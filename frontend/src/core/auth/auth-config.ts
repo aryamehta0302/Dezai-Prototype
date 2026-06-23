@@ -96,10 +96,11 @@ export const authConfig: NextAuthConfig = {
         }
       }
 
-      // Session update trigger (e.g., after onboarding completes)
+      // Session update trigger (e.g., after onboarding or profile update)
       if (trigger === "update" && session) {
         if (session.role) token.role = session.role as UserRole;
         if (session.onboarded !== undefined) token.onboarded = session.onboarded;
+        if (session.name) token.name = session.name;
       }
 
       // Sign the backend JWT token using the shared secret

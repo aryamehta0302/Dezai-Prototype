@@ -19,6 +19,8 @@ export interface AuthUser {
   image?: string;
   avatar?: string;
   onboarded: boolean;
+  xp?: number;
+  streakCount?: number;
 }
 
 export interface AuthState {
@@ -27,6 +29,7 @@ export interface AuthState {
   isLoading: boolean;
 
   syncSession: (user: AuthUser) => void;
+  setUser: (user: AuthUser) => void;
   clearSession: () => void;
   setLoading: (loading: boolean) => void;
 
@@ -51,6 +54,9 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: true,
           isLoading: false,
         }),
+
+      setUser: (user) =>
+        set({ user }),
 
       clearSession: () =>
         set({

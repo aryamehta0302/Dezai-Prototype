@@ -8,8 +8,6 @@
 
 ## Endpoints
 
----
-
 ### 1. `GET /api/analytics/faculty`
 
 **Description**: Returns aggregate analytics for the currently logged-in faculty member's programs.
@@ -160,59 +158,357 @@ Authorization: Bearer <your_jwt_token>
 }
 ```
 
-**Top-Level Response Fields**:
-| Field | Type | Description |
-|---|---|---|
-| `programId` | `string` | UUID of the program |
-| `programTitle` | `string` | Title of the program |
-| `institutionName` | `string` | Institution that owns this program (`"Unknown Institution"` if missing) |
-| `totalStudents` | `number` | Total number of enrolled students |
-| `students` | `StudentMetricDto[]` | Array of per-student metric objects |
+---
 
-**Student Object Fields**:
-| Field | Type | Description |
-|---|---|---|
-| `userId` | `string` | Student's unique user ID |
-| `name` | `string` | Student's name (`"Unknown"` if null) |
-| `email` | `string` | Student's email address |
-| `institution` | `string` | Institution name (same as `institutionName` above) |
-| `progress` | `number` | Completion progress 0–100 |
-| `xp` | `number` | Total XP earned by this student |
-| `lastActiveAt` | `string \| null` | ISO timestamp of last activity |
-| `enrolledAt` | `string` | ISO timestamp of enrollment |
-| `completedAt` | `string \| null` | ISO timestamp of completion, or `null` if not done |
+### 4. `GET /api/analytics/faculty/extended`
 
-**Edge Cases**:
-- If a program has zero enrollments, `students` will be an empty array `[]` and `totalStudents` will be `0`.
-- `name` will return `"Unknown"` if the user's name is null.
-- `institution` will return `"Unknown Institution"` if the institution data is missing.
+**Description**: Returns extended metrics and cohort diagnostics for the currently logged-in faculty member.
 
-**Error Responses**:
-| Status | Reason |
-|---|---|
-| `401 Unauthorized` | Missing or invalid JWT token |
-| `403 Forbidden` | User does not have the required role |
-| `404 Not Found` | Program with the given ID does not exist |
+**Auth Required**: Yes
+**Roles**: `FACULTY`, `UNIVERSITY_ADMIN`, `DEZAI_ADMIN`
+
+**Example Request**:
+```http
+GET /api/analytics/faculty/extended
+Authorization: Bearer <your_jwt_token>
+```
+
+**Success Response** `200 OK`:
+```json
+{
+  "success": true,
+  "data": {
+    "totalPrograms": 4,
+    "totalStudents": 25,
+    "activeStudents": 18,
+    "completionRate": 36,
+    "topStudents": [
+      {
+        "userId": "usr-8a9b...",
+        "name": "Jane Doe",
+        "email": "jane@university.edu",
+        "xp": 1250,
+        "progress": 85,
+        "programTitle": "Advanced Deep Learning"
+      }
+    ],
+    "weakStudents": [
+      {
+        "userId": "usr-3c4d...",
+        "name": "John Smith",
+        "email": "john@university.edu",
+        "xp": 50,
+        "progress": 12,
+        "programTitle": "Generative AI for Leaders"
+      }
+    ],
+    "difficultModules": [
+      {
+        "moduleId": "mod-9e8f...",
+        "moduleTitle": "Neural Architecture",
+        "programTitle": "Advanced Deep Learning",
+        "passRate": 45,
+        "averageScore": 62,
+        "totalAttempts": 15
+      }
+    ]
+  }
+}
+```
 
 ---
 
-## Data Sources
+### 5. `GET /api/analytics/faculty/activity`
 
-| Metric | Source Table | Key Fields |
-|---|---|---|
-| Total / Active Students | `enrollments`, `users` | `Enrollment.programId`, `User.lastActiveAt` |
-| Completion Rate / % | `enrollments` | `Enrollment.completedAt`, `Enrollment.progress` |
-| Total XP | `xp_transactions` | `XpTransaction.amount`, `XpTransaction.userId` |
-| Student Name | `users` | `User.name` |
-| Institution | `institutions` | `Institution.name` via `Program.institutionId` |
-| Progress % | `enrollments` | `Enrollment.progress` (0–100, stored integer) |
+**Description**: Returns a chronological activity feed of student events within programs taught by the faculty.
+
+**Auth Required**: Yes
+**Roles**: `FACULTY`, `UNIVERSITY_ADMIN`, `DEZAI_ADMIN`
+
+**Example Request**:
+```http
+GET /api/analytics/faculty/activity
+Authorization: Bearer <your_jwt_token>
+```
 
 ---
 
-## Backend Files
+### 6. `GET /api/analytics/faculty/programs`
 
-| Type | File Path |
-|---|---|
-| Service | `backend/src/modules/analytics/services/analytics.service.ts` |
-| Controller | `backend/src/modules/analytics/controllers/analytics.controller.ts` |
-| Module | `backend/src/modules/analytics/analytics.module.ts` |
+**Description**: Returns a simplified list of all micro-credential programs taught by the logged-in faculty member, along with institution name and enrollment counts.
+
+**Auth Required**: Yes
+**Roles**: `FACULTY`, `UNIVERSITY_ADMIN`, `DEZAI_ADMIN`
+
+**Example Request**:
+```http
+GET /api/analytics/faculty/programs
+Authorization: Bearer <your_jwt_token>
+```
+
+**Success Response** `200 OK`:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "prog-3f7a1c88-9b2e-...",
+      "title": "Machine Learning Fundamentals",
+      "institutionName": "IIT Bombay",
+      "totalStudents": 42
+    }
+  ]
+}
+```
+
+---
+
+### 7. `GET /api/analytics/programs/:id/modules/stats`
+
+**Description**: Calculates completion percentages for each module in a program (the percentage of enrolled students who finished all lessons within the module).
+
+**Auth Required**: Yes
+**Roles**: `FACULTY`, `UNIVERSITY_ADMIN`, `DEZAI_ADMIN`
+
+**URL Params**:
+| Param | Type | Description |
+|---|---|---|
+| `id` | `string (UUID)` | The Program's unique identifier |
+
+**Example Request**:
+```http
+GET /api/analytics/programs/prog-3f7a1c88-.../modules/stats
+Authorization: Bearer <your_jwt_token>
+```
+
+**Success Response** `200 OK`:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "moduleId": "mod-a8e3-...",
+      "title": "Supervised Learning",
+      "completionRate": 82
+    }
+  ]
+}
+```
+
+---
+
+### 8. `GET /api/analytics/programs/:programId/students/:userId`
+
+**Description**: Generates a deep learning audit log for a single student in a program. Includes lesson checklists grouped by syllabus tracks, quiz attempt history (with pass/fail states and proctoring violation counts), and detailed proctoring violation logs.
+
+**Auth Required**: Yes
+**Roles**: `FACULTY`, `UNIVERSITY_ADMIN`, `DEZAI_ADMIN`
+
+**URL Params**:
+| Param | Type | Description |
+|---|---|---|
+| `programId` | `string (UUID)` | The Program's unique identifier |
+| `userId` | `string (UUID)` | The Student's user identifier |
+
+**Example Request**:
+```http
+GET /api/analytics/programs/prog-3f7a1c88-.../students/student-9b2e-...
+Authorization: Bearer <your_jwt_token>
+```
+
+**Success Response** `200 OK`:
+```json
+{
+  "success": true,
+  "data": {
+    "userId": "student-9b2e-...",
+    "name": "Jane Doe",
+    "email": "jane@university.edu",
+    "xp": 1250,
+    "progress": 85,
+    "syllabus": [
+      {
+        "trackId": "track-7a8e...",
+        "trackTitle": "Core Track",
+        "modules": [
+          {
+            "moduleId": "mod-9c8d...",
+            "moduleTitle": "Neural Architecture",
+            "lessons": [
+              {
+                "lessonId": "les-1a2b...",
+                "title": "Forward Propagation Basics",
+                "completed": true
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "attempts": [
+      {
+        "id": "att-4f3e...",
+        "assessmentId": "asm-8b2c...",
+        "assessmentTitle": "Neural Architecture Quiz",
+        "score": 80,
+        "passed": true,
+        "createdAt": "2026-06-22T14:32:00.000Z",
+        "violationCount": 1
+      }
+    ],
+    "violations": [
+      {
+        "id": "violation-5g6h...",
+        "type": "TAB_SWITCH",
+        "timestamp": "2026-06-22T14:30:15.000Z",
+        "details": "User switched tabs to investigate other materials"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 9. `GET /api/analytics/programs/:id/insights`
+
+**Description**: Evaluates enrolled students and flags those meeting "At-Risk" criteria. Risk parameters:
+- **Inactive**: No login activity in the last 7 days (`lastActiveAt` > 7 days ago).
+- **Low Progress**: Overall syllabus progress is below 25%.
+- **Repeated Failures**: Student has failed the same assessment 2 or more times.
+
+Health status is calculated as:
+- `CRITICAL`: Multiple risk factors or 2+ failed attempts on any quiz.
+- `WARNING`: Exactly 1 risk factor.
+- `HEALTHY`: No risk factors (not included in the atRiskStudents list).
+
+**Auth Required**: Yes
+**Roles**: `FACULTY`, `UNIVERSITY_ADMIN`, `DEZAI_ADMIN`
+
+**URL Params**:
+| Param | Type | Description |
+|---|---|---|
+| `id` | `string (UUID)` | The Program's unique identifier |
+
+**Example Request**:
+```http
+GET /api/analytics/programs/prog-3f7a1c88-.../insights
+Authorization: Bearer <your_jwt_token>
+```
+
+**Success Response** `200 OK`:
+```json
+{
+  "success": true,
+  "data": {
+    "programId": "prog-3f7a1c88-...",
+    "programTitle": "Machine Learning Fundamentals",
+    "averageProgress": 42,
+    "totalStudents": 25,
+    "atRiskCount": 4,
+    "healthyCount": 18,
+    "warningCount": 3,
+    "atRiskStudents": [
+      {
+        "userId": "student-1a2b...",
+        "name": "Jane Doe",
+        "email": "jane@university.edu",
+        "progress": 15,
+        "xp": 120,
+        "lastActiveAt": "2026-06-12T10:00:00.000Z",
+        "healthStatus": "CRITICAL",
+        "riskReasons": [
+          "Inactive for 11 days",
+          "Low syllabus progress (15%)"
+        ]
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 10. `POST /api/analytics/programs/:id/interventions`
+
+**Description**: Sends a customized intervention/outreach reminder notification to an at-risk student. This creates a record of type `REMINDER` in the student's notification box and stores an action log in the database audit log.
+
+**Auth Required**: Yes
+**Roles**: `FACULTY`, `UNIVERSITY_ADMIN`, `DEZAI_ADMIN`
+
+**URL Params**:
+| Param | Type | Description |
+|---|---|---|
+| `id` | `string (UUID)` | The Program's unique identifier |
+
+**Body Parameters**:
+| Param | Type | Description |
+|---|---|---|
+| `userId` | `string (UUID)` | Target student's user ID |
+| `message` | `string` | Custom message text drafted by the faculty member |
+
+**Example Request**:
+```http
+POST /api/analytics/programs/prog-3f7a1c88-.../interventions
+Content-Type: application/json
+Authorization: Bearer <your_jwt_token>
+
+{
+  "userId": "student-1a2b-...",
+  "message": "Hey Jane, I noticed your syllabus progress is slightly behind the cohort schedule. Let me know if you would like to schedule a one-on-one session to clear up any doubts!"
+}
+```
+
+**Success Response** `200 OK`:
+```json
+{
+  "success": true,
+  "data": {
+    "id": "notif-uuid-...",
+    "userId": "student-1a2b-...",
+    "title": "[Intervention] Outreach from your Instructor",
+    "message": "Hey Jane, I noticed...",
+    "type": "REMINDER",
+    "read": false,
+    "archived": false,
+    "createdAt": "2026-06-23T10:45:00.000Z"
+  }
+}
+```
+
+---
+
+### 11. `GET /api/analytics/programs/:id/interventions`
+
+**Description**: Returns a timeline history of all sent outreach messages for students enrolled in the specified program.
+
+**Auth Required**: Yes
+**Roles**: `FACULTY`, `UNIVERSITY_ADMIN`, `DEZAI_ADMIN`
+
+**URL Params**:
+| Param | Type | Description |
+|---|---|---|
+| `id` | `string (UUID)` | The Program's unique identifier |
+
+**Example Request**:
+```http
+GET /api/analytics/programs/prog-3f7a1c88-.../interventions
+Authorization: Bearer <your_jwt_token>
+```
+
+**Success Response** `200 OK`:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "notif-uuid-...",
+      "studentId": "student-1a2b-...",
+      "studentName": "Jane Doe",
+      "studentEmail": "jane@university.edu",
+      "message": "Hey Jane, I noticed...",
+      "createdAt": "2026-06-23T10:45:00.000Z"
+    }
+  ]
+}
+```
