@@ -23,6 +23,7 @@ import { LearningPatternCard } from "../components/learning-pattern-card";
 import { WeakTopicsCard } from "../components/weak-topics-card";
 import { PredictionRulesCard } from "../components/prediction-rules-card";
 import { DifficultyAnalysisCard } from "../components/difficulty-analysis-card";
+import { apiClient } from "@/core/api/client";
 import {
   useMilestones,
   useStreakInfo,
@@ -69,11 +70,19 @@ export function StudentDashboardPage() {
 
   const [showAllMilestones, setShowAllMilestones] = useState(false);
   const [showAllRecs, setShowAllRecs] = useState(false);
+  const [weeklyRank, setWeeklyRank] = useState<number | null>(null);
 
   useEffect(() => {
     fetchEnrollments();
     fetchStats();
     fetchPrograms();
+
+    // Fetch weekly rank for Sprint 6 Leaderboard Analytics
+    apiClient.get<any>("/leaderboards/widgets/student")
+      .then(res => {
+        if (res?.rank) setWeeklyRank(res.rank);
+      })
+      .catch(() => {});
   }, [fetchEnrollments, fetchStats, fetchPrograms]);
 
   const programsMap = useMemo(() => {
@@ -407,6 +416,7 @@ export function StudentDashboardPage() {
           {!showSkeleton && globalRank !== null && globalRank > 0 && (
             <StudentRankingCard
               rank={globalRank}
+              weeklyRank={weeklyRank}
               xp={xpEarned}
               streakCount={progressStats.learningStreak}
             />
