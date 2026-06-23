@@ -34,6 +34,8 @@ export interface EnrollmentState {
 
   fetchEnrollments: () => Promise<void>;
   fetchStats: () => Promise<void>;
+  refreshEnrollments: () => Promise<void>;
+  refreshStats: () => Promise<void>;
   enroll: (programId: string) => Promise<boolean>;
   isEnrolled: (courseId: string) => boolean;
   getEnrollment: (courseId: string) => CourseEnrollment | undefined;
@@ -118,6 +120,16 @@ export const useEnrollmentStore = create<EnrollmentState>()(
         } catch { /* not critical */ }
       },
 
+      refreshEnrollments: async () => {
+        set({ hasFetched: false });
+        await get().fetchEnrollments();
+      },
+
+      refreshStats: async () => {
+        set({ statsFetched: false });
+        await get().fetchStats();
+      },
+
       enroll: async (programId) => {
         set({ isLoading: true });
         try {
@@ -176,7 +188,8 @@ export const useEnrollmentStore = create<EnrollmentState>()(
             if (response.xpResult?.currentXp) {
               get().setXp(response.xpResult.currentXp);
             }
-            get().fetchEnrollments();
+            get().refreshEnrollments();
+            get().refreshStats();
           }
         }).catch((error) => {
           console.error("Failed to save lesson completion:", error);

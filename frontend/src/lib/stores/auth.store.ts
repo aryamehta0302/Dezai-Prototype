@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { UserRole } from "@/shared/types/common.types";
+import { clearTokenCache } from "@/core/api/client";
 
 /**
  * Auth Store — Client-side auth state
@@ -58,12 +59,14 @@ export const useAuthStore = create<AuthState>()(
       setUser: (user) =>
         set({ user }),
 
-      clearSession: () =>
+      clearSession: () => {
+        clearTokenCache();
         set({
           user: null,
           isAuthenticated: false,
           isLoading: false,
-        }),
+        });
+      },
 
       setLoading: (loading) => set({ isLoading: loading }),
 

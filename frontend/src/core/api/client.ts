@@ -1,6 +1,10 @@
 import { auth } from "@/core/auth";
 import { getSession } from "next-auth/react";
 
+let cachedToken: string | null = null;
+let cachedTokenExpiry = 0;
+const TOKEN_TTL = 5 * 60 * 1000;
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:3001/api";
 
 type ApiRequestOptions = RequestInit & {
@@ -14,17 +18,26 @@ type ApiRequestOptions = RequestInit & {
  * Usage:
  * const data = await apiClient.get('/users/me');
  */
+export function clearTokenCache() {
+    cachedToken = null;
+    cachedTokenExpiry = 0;
+}
+
 class ApiClient {
     private async getAuthToken(): Promise<string | null> {
-        // Check if we are on server or client
         if (typeof window === "undefined") {
             const session = await auth();
             return session?.accessToken || null;
-        } else {
-            const session = await getSession();
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            return (session as any)?.accessToken || null;
         }
+        if (cachedToken && Date.now() < cachedTokenExpiry) {
+            return cachedToken;
+        }
+        const session = await getSession();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const token = (session as any)?.accessToken || null;
+        cachedToken = token;
+        cachedTokenExpiry = Date.now() + TOKEN_TTL;
+        return token;
     }
 
     private async request<T>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
