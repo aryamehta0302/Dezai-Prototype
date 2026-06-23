@@ -8,9 +8,9 @@
  */
 
 // ─── Components ───────────────────────────────────────────────────────────────
-export { ModuleCompletionChart } from './components/module-completion-chart';
-export { ProgramPerformanceChart } from './components/program-performance-chart';
-export { XpGrowthChart } from './components/xp-growth-chart';
+// export { ModuleCompletionChart } from './components/module-completion-chart';
+// export { ProgramPerformanceChart } from './components/program-performance-chart';
+// export { XpGrowthChart } from './components/xp-growth-chart';
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 export { useProgramAnalytics } from './hooks/useProgramAnalytics';
@@ -33,4 +33,4 @@ export type {
   UniversityLeaderboardResponse,
   XpMilestone,
   LeaderboardRange,
-} from './types/analytics.types';
+} from './types/analytics.types.ts';
