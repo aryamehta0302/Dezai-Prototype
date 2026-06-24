@@ -98,6 +98,16 @@ export class EnrollmentService {
         completedLessonIds: filteredIds,
       };
     });
+
+    const progresses = await this.prisma.progress.findMany({
+      where: { userId },
+      select: { lessonId: true, completedAt: true },
+    });
+
+    return enrollments.map(e => ({
+      ...e,
+      progresses
+    }));
   }
 
   /**

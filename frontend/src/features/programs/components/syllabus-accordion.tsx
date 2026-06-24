@@ -47,7 +47,7 @@ export function SyllabusAccordion({ tracks, programSlug, className }: SyllabusAc
                 <div>
                   <h4 className="font-medium text-sm text-on-surface">{mod.title}</h4>
                   <p className="text-xs text-muted mt-0.5">
-                    {mod.lessons.length} lessons
+                    {mod.lessons.length} lessons {mod.assessments && mod.assessments.length > 0 ? `\u00B7 ${mod.assessments.length} quiz(zes)` : ""}
                   </p>
                 </div>
               </div>
@@ -78,7 +78,7 @@ export function SyllabusAccordion({ tracks, programSlug, className }: SyllabusAc
                     )}
                   </div>
                 ))}
-                    {mod.assessments && mod.assessments.length > 0 && programSlug && (
+                {mod.assessments && mod.assessments.length > 0 && programSlug && (
                   <div className="border-t border-border-light px-4 py-3 space-y-2">
                     {mod.assessments.map((asm) => (
                       <Link

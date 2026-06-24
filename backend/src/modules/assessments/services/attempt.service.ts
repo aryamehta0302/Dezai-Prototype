@@ -574,7 +574,7 @@ export class AttemptService {
     const timeTaken = Math.floor(
       (new Date(attempt.completedAt).getTime() -
         new Date(attempt.startedAt).getTime()) /
-        1000,
+      1000,
     );
 
     const correctCount = attempt.attemptAnswers.filter((a) => a.isCorrect).length;

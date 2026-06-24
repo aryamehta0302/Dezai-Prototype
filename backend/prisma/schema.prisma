@@ -570,11 +570,24 @@ enum AuditAction {
   XP_AWARDED
   BOOKMARK_TOGGLED
   NOTE_CREATED
+  PROCTORING_VIOLATION
+  XP_TRANSACTION
+  XP_THRESHOLD_UNLOCKED
+  PAYMENT_RECEIVED
+  ACCESS_GRANTED
+  LEADERBOARD_FROZEN
+  VOUCHER_ISSUED
+  EXAM_LOCKOUT_TRIGGERED
+  QUESTION_BANK_CREATED
+  QUESTION_BANK_UPDATED
+  QUESTION_BANK_DELETED
 }
 
 model AuditLog {
   id        String      @id @default(uuid())
   userId    String?
+  userHash  String      @default("")
+  userRole  UserRole    @default(STUDENT)
   action    AuditAction
   details   String? // Description or JSON metadata
   ipAddress String?
