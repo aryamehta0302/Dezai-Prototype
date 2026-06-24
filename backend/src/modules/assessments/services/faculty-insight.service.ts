@@ -94,7 +94,7 @@ export class FacultyInsightService {
       },
       include: {
         user: { select: { name: true, email: true } },
-        assessment: { select: { id: true, title: true } },
+        assessment: { select: { id: true, title: true, sampleSize: true } },
       },
       orderBy: { completedAt: 'desc' },
     });
@@ -124,7 +124,9 @@ export class FacultyInsightService {
           assessmentTitle: attempt.assessment.title,
           failCount: 0,
           lastAttemptDate: attempt.completedAt!,
-          lastScore: attempt.score,
+          lastScore: attempt.score > attempt.assessment.sampleSize
+            ? attempt.score
+            : Math.round((attempt.score / attempt.assessment.sampleSize) * 100),
         });
       }
 
@@ -389,7 +391,7 @@ export class FacultyInsightService {
       where: whereClause,
       include: {
         user: { select: { name: true, email: true } },
-        assessment: { select: { id: true, title: true } },
+        assessment: { select: { id: true, title: true, sampleSize: true } },
       },
       orderBy: { completedAt: 'asc' },
     });
@@ -421,7 +423,9 @@ export class FacultyInsightService {
 
       groupMap.get(key)!.attempts.push({
         passed: attempt.passed,
-        score: attempt.score,
+        score: attempt.score > attempt.assessment.sampleSize
+          ? attempt.score
+          : Math.round((attempt.score / attempt.assessment.sampleSize) * 100),
         completedAt: attempt.completedAt!,
       });
     }
@@ -627,7 +631,11 @@ export class FacultyInsightService {
         },
         attempts: {
           where: { completedAt: { not: null } },
-          select: { passed: true, score: true },
+          select: {
+            passed: true,
+            score: true,
+            assessment: { select: { sampleSize: true } },
+          },
         },
       },
     });
@@ -647,10 +655,14 @@ export class FacultyInsightService {
     // Assessment stats
     const totalAttempts = student.attempts.length;
     const passedAttempts = student.attempts.filter((a) => a.passed).length;
+    let sumPercentage = 0;
+    for (const a of student.attempts) {
+      sumPercentage += a.score > a.assessment.sampleSize
+        ? a.score
+        : Math.round((a.score / a.assessment.sampleSize) * 100);
+    }
     const avgScore = totalAttempts > 0
-      ? this.round(
-          student.attempts.reduce((s, a) => s + a.score, 0) / totalAttempts,
-        )
+      ? this.round(sumPercentage / totalAttempts)
       : 0;
 
     // Weak topics (global)

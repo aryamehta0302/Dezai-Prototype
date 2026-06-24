@@ -127,6 +127,7 @@ export interface MissedQuestionAnalyticsDto {
   questionId: string;
   questionText: string;
   category: string | null;
+  difficulty: string | null;
   totalAnswered: number;
   totalWrong: number;
   wrongRate: number;

@@ -5,9 +5,10 @@ import {
   BadRequestException,
 } from "@nestjs/common";
 import { PrismaService } from "../../../database/prisma.service";
-import { UserRole, AuditAction, ExamStatus, ViolationType, Difficulty } from "@prisma/client";
+import { UserRole, AuditAction, ExamStatus, ViolationType, Difficulty, AchievementCategory } from "@prisma/client";
 import { AuditService } from "../../audit/services/audit.service";
 import { PassFailEvaluationService } from './pass-fail-evaluation.service';
+import { AwardService } from '../../achievements/services/award.service';
 import type {
   ResultAnalyticsResponseDto,
   MissedQuestionsAnalyticsResponseDto,
@@ -38,6 +39,7 @@ export class AssessmentService {
     private prisma: PrismaService,
     private auditService: AuditService,
     private passFailEvaluationService: PassFailEvaluationService,
+    private awardService: AwardService,
   ) { }
 
   // ─────────────────── OWNERSHIP GUARD ───────────────────
@@ -525,15 +527,19 @@ export class AssessmentService {
     }
 
     const passedCount = attempts.filter((a) => a.passed).length;
-    const scores = attempts.map((a) => a.score);
-    const sum = scores.reduce((acc, s) => acc + s, 0);
+    const percentages = attempts.map((a) =>
+      a.score > assessment.sampleSize
+        ? a.score
+        : this.passFailEvaluationService.calculatePercentage(a.score, assessment.sampleSize)
+    );
+    const sum = percentages.reduce((acc, s) => acc + s, 0);
 
     return {
       total,
       passRate: Math.round((passedCount / total) * 100 * 100) / 100,
       averageScore: Math.round((sum / total) * 100) / 100,
-      highestScore: Math.max(...scores),
-      lowestScore: Math.min(...scores),
+      highestScore: Math.max(...percentages),
+      lowestScore: Math.min(...percentages),
     };
   }
 
@@ -656,12 +662,18 @@ export class AssessmentService {
 
       // 7. Seed questions for the mock quizzes
       const questionsData = this.getMockQuestionsData(assessmentId);
-      for (const q of questionsData) {
+      const categories = ['AI Strategy', 'Machine Learning', 'Data Science', 'Ethics', 'Governance'];
+      const difficulties = [Difficulty.EASY, Difficulty.MEDIUM, Difficulty.HARD];
+      
+      for (let j = 0; j < questionsData.length; j++) {
+        const q = questionsData[j];
         const question = await this.prisma.questionBankQuestion.create({
           data: {
             id: q.id,
             questionBankId: qBank.id,
             text: q.text,
+            category: categories[j % categories.length],
+            difficulty: difficulties[j % difficulties.length],
           },
         });
 
@@ -748,17 +760,7 @@ export class AssessmentService {
       return activeSession;
     }
 
-    // Check attempt count (max 3 free attempts)
-    const attemptsCount = await this.prisma.assessmentAttempt.count({
-      where: {
-        userId,
-        assessmentId,
-      },
-    });
-
-    if (attemptsCount >= 3) {
-      throw new BadRequestException('Maximum attempts (3) exceeded for this assessment.');
-    }
+    // Attempt count check is deferred to startAttempt()
 
     // Generate this student's locked, shuffled question set
     const questionSet = await this.generateQuestionSet(assessmentId);
@@ -872,6 +874,13 @@ export class AssessmentService {
           completedAt: new Date(),
         },
       });
+
+      await this.auditService.logAction(
+        userId,
+        AuditAction.ASSESSMENT_PUBLISHED,
+        `AttemptTerminated: sessionId=${sessionId}, userId=${userId}`,
+      );
+      await this.awardService.checkAndAward(userId, AchievementCategory.ASSESSMENT);
     }
 
     return updatedSession;
@@ -927,6 +936,11 @@ export class AssessmentService {
 
     const passed = percentage >= session.assessment.passingScore;
 
+    // Store correctCount (score) adjusted for proctoring deduction
+    const finalScore = session.scoreDeduction > 0
+      ? Math.max(0, Math.round((percentage / 100) * totalQuestions))
+      : score;
+
     // Update session status to SUBMITTED
     await this.prisma.examSession.update({
       where: { id: sessionId },
@@ -941,7 +955,7 @@ export class AssessmentService {
       data: {
         userId,
         assessmentId: session.assessmentId,
-        score: percentage,
+        score: finalScore,
         passed,
         completedAt: new Date(),
         attemptAnswers: {
@@ -958,7 +972,7 @@ export class AssessmentService {
 
     return {
       attemptId: attempt.id,
-      score: percentage,
+      score: finalScore,
       passed,
     };
   }
@@ -1077,16 +1091,22 @@ export class AssessmentService {
       totalAttempts,
     );
 
-    const scores = attempts.map((a) => a.score);
+    const scores = attempts.map((a) =>
+      a.score > assessment.sampleSize
+        ? Math.round((a.score / 100) * assessment.sampleSize)
+        : a.score
+    );
     const scoreSum = scores.reduce((acc, s) => acc + s, 0);
     const averageScore = Math.round((scoreSum / totalAttempts) * 100) / 100;
 
     // Calculate percentages for each attempt
     const percentages = attempts.map((a) =>
-      this.passFailEvaluationService.calculatePercentage(
-        a.score,
-        assessment.sampleSize,
-      ),
+      a.score > assessment.sampleSize
+        ? a.score
+        : this.passFailEvaluationService.calculatePercentage(
+            a.score,
+            assessment.sampleSize,
+          ),
     );
     const percentageSum = percentages.reduce((acc, p) => acc + p, 0);
     const averagePercentage =
@@ -1146,6 +1166,7 @@ export class AssessmentService {
                 id: true,
                 text: true,
                 category: true,
+                difficulty: true,
               },
             },
           },
@@ -1206,6 +1227,7 @@ export class AssessmentService {
           questionId,
           questionText: qMeta?.text ?? 'Unknown question',
           category: qMeta?.category ?? null,
+          difficulty: qMeta?.difficulty ?? null,
           totalAnswered: stats.totalAnswered,
           totalWrong: stats.totalWrong,
           wrongRate,

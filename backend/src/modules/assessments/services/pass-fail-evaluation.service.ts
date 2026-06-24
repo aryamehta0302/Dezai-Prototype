@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Difficulty } from '@prisma/client';
 
 // ─────────────────── TYPE DEFINITIONS ───────────────────
 
@@ -9,8 +10,7 @@ export type AttemptStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'PASSED' | 'FAILED';
 
 /**
  * Represents a question the student answered incorrectly.
- * Uses `category` from QuestionBankQuestion as a proxy for difficulty
- * since the schema does not include a dedicated difficulty field.
+ * Sorted by difficulty (HARD -> MEDIUM -> EASY).
  */
 export interface MissedQuestion {
   questionId: string;
@@ -18,6 +18,7 @@ export interface MissedQuestion {
   selectedOptionText: string;
   correctOptionText: string;
   category: string | null;
+  difficulty: Difficulty;
 }
 
 /**
@@ -46,6 +47,7 @@ export interface AttemptAnswerWithRelations {
     id: string;
     text: string;
     category: string | null;
+    difficulty: Difficulty;
     options: { id: string; text: string; isCorrect: boolean }[];
   };
   selectedOption: {
@@ -149,9 +151,8 @@ export class PassFailEvaluationService {
   }
 
   /**
-   * Extracts all incorrectly answered questions, sorted by category
-   * alphabetically descending (as a proxy for difficulty sorting since
-   * the schema has no dedicated difficulty field).
+   * Extracts all incorrectly answered questions, sorted by difficulty
+   * descending (HARD -> MEDIUM -> EASY).
    */
   getMissedQuestions(answers: AttemptAnswerWithRelations[]): MissedQuestion[] {
     return answers
@@ -164,13 +165,12 @@ export class PassFailEvaluationService {
           selectedOptionText: a.selectedOption.text,
           correctOptionText: correctOption?.text ?? 'N/A',
           category: a.question.category,
+          difficulty: a.question.difficulty,
         };
       })
       .sort((a, b) => {
-        // Sort by category descending (nulls last)
-        const catA = a.category ?? '';
-        const catB = b.category ?? '';
-        return catB.localeCompare(catA);
+        const difficultyOrder = { HARD: 0, MEDIUM: 1, EASY: 2 };
+        return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
       });
   }
 }

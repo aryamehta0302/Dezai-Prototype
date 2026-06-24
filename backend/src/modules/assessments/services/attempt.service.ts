@@ -161,7 +161,7 @@ export class AttemptService {
     const elapsedSeconds = Math.floor(
       (Date.now() - new Date(session.startedAt).getTime()) / 1000,
     );
-    const durationSeconds = 1800; // 30 minutes
+    const durationSeconds = attempt.assessment.timeLimit;
     const remainingTime = Math.max(0, durationSeconds - elapsedSeconds);
 
     return {
@@ -333,6 +333,11 @@ export class AttemptService {
 
     const passed = percentage >= attempt.assessment.passingScore;
 
+    // Store correctCount adjusted for proctoring deduction
+    const finalScore = session && session.scoreDeduction > 0
+      ? Math.max(0, Math.round((percentage / 100) * totalQuestions))
+      : correctCount;
+
     // Update session status to SUBMITTED
     if (session) {
       await this.prisma.examSession.update({
@@ -354,7 +359,7 @@ export class AttemptService {
     const updatedAttempt = await this.prisma.assessmentAttempt.update({
       where: { id: attemptId },
       data: {
-        score: percentage,
+        score: finalScore,
         passed,
         completedAt: new Date(),
       },
@@ -381,7 +386,7 @@ export class AttemptService {
     await this.auditService.logAction(
       userId,
       AuditAction.ASSESSMENT_PUBLISHED,
-      `AttemptCompleted: attemptId=${attemptId}, score=${percentage}, passed=${passed}`,
+      `AttemptCompleted: attemptId=${attemptId}, score=${finalScore}, passed=${passed}`,
     );
 
     // Sprint 5 Task 5: Check credential eligibility if student passed
@@ -395,7 +400,7 @@ export class AttemptService {
     return {
       success: true,
       attemptId: updatedAttempt.id,
-      score: percentage,
+      score: finalScore,
       passed,
     };
   }
@@ -625,17 +630,22 @@ export class AttemptService {
       orderBy: { startedAt: 'desc' },
     });
 
-    const attemptDtos = attempts.map((a) => ({
-      attemptId: a.id,
-      score: a.score,
-      percentage: this.passFailEvaluationService.calculatePercentage(
-        a.score,
-        assessment.sampleSize,
-      ),
-      passed: a.passed,
-      startedAt: a.startedAt,
-      completedAt: a.completedAt,
-    }));
+    const attemptDtos = attempts.map((a) => {
+      const percentage = a.score > assessment.sampleSize
+        ? a.score
+        : this.passFailEvaluationService.calculatePercentage(
+            a.score,
+            assessment.sampleSize,
+          );
+      return {
+        attemptId: a.id,
+        score: a.score,
+        percentage,
+        passed: a.passed,
+        startedAt: a.startedAt,
+        completedAt: a.completedAt,
+      };
+    });
 
     return {
       assessmentId: assessment.id,
@@ -663,20 +673,25 @@ export class AttemptService {
       orderBy: { startedAt: 'desc' },
     });
 
-    const attemptDtos = attempts.map((a) => ({
-      attemptId: a.id,
-      assessmentId: a.assessmentId,
-      assessmentTitle: a.assessment.title,
-      moduleTitle: a.assessment.module.title,
-      score: a.score,
-      percentage: this.passFailEvaluationService.calculatePercentage(
-        a.score,
-        a.assessment.sampleSize,
-      ),
-      passed: a.passed,
-      startedAt: a.startedAt,
-      completedAt: a.completedAt,
-    }));
+    const attemptDtos = attempts.map((a) => {
+      const percentage = a.score > a.assessment.sampleSize
+        ? a.score
+        : this.passFailEvaluationService.calculatePercentage(
+            a.score,
+            a.assessment.sampleSize,
+          );
+      return {
+        attemptId: a.id,
+        assessmentId: a.assessmentId,
+        assessmentTitle: a.assessment.title,
+        moduleTitle: a.assessment.module.title,
+        score: a.score,
+        percentage,
+        passed: a.passed,
+        startedAt: a.startedAt,
+        completedAt: a.completedAt,
+      };
+    });
 
     return {
       userId,
@@ -718,10 +733,12 @@ export class AttemptService {
 
     if (completedAttempts.length > 0) {
       bestScore = Math.max(...completedAttempts.map((a) => a.score));
-      bestPercentage = this.passFailEvaluationService.calculatePercentage(
-        bestScore,
-        assessment.sampleSize,
-      );
+      bestPercentage = bestScore > assessment.sampleSize
+        ? bestScore
+        : this.passFailEvaluationService.calculatePercentage(
+            bestScore,
+            assessment.sampleSize,
+          );
       everPassed = completedAttempts.some((a) => a.passed);
     }
 
