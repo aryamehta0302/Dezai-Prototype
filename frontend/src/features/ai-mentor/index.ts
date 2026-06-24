@@ -17,6 +17,13 @@ export {
   useSendMessage,
   useUpdateContext,
 } from './hooks/useChat';
+export {
+  useMentorRecommendations,
+  useGenerateRemediation,
+  useGenerateLessonSummary,
+  useGenerateModuleSummary,
+  useGenerateStudyNotes,
+} from './hooks/useMentorIntelligence';
 
 // Services
 export { aiMentorApi } from './services/ai-mentor-api.service';
@@ -35,6 +42,16 @@ export type {
   ChatSessionResponse,
   SendMessageResponse,
   DeleteSessionResponse,
+  MentorRecommendation,
+  RemediationPlan,
+  LessonSummary,
+  ModuleSummary,
+  StudyNotes,
+  MentorRecommendationsResponse,
+  RemediationResponse,
+  LessonSummaryResponse,
+  ModuleSummaryResponse,
+  StudyNotesResponse,
 } from './types';
 
 // Pages
