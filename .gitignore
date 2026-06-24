@@ -61,3 +61,7 @@ env/
 .eslintcache
 .parcel-cache
 
+# Custom Dezai Ignore Paths
+dev-database-tools/
+dummy-json/
+mock-data/

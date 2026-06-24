@@ -4,12 +4,25 @@ import { CreateProgramCredentialDto } from '../dto/create-program-credential.dto
 import { CreateAssessmentCredentialDto } from '../dto/create-assessment-credential.dto';
 import * as crypto from 'crypto';
 
+/**
+ * Service responsible for generating, minting, and mathematically verifying credentials.
+ * Handles cryptographic signatures, unique ID generation, and business rules for issuance.
+ */
 @Injectable()
 export class CredentialGenerationService {
   private readonly SECRET_KEY = process.env.CREDENTIAL_SECRET_KEY || 'dezai-secret-key';
 
   constructor(private readonly credentialsRepository: CredentialsRepository) { }
 
+  /**
+   * Generates a cryptographic HMAC SHA-256 signature to mathematically prove 
+   * the authenticity of the credential data.
+   * 
+   * @param name - The name of the student.
+   * @param entityDetails - The title or details of the achievement.
+   * @param issueDate - The ISO string representation of the issue date.
+   * @returns A hex string representing the cryptographic signature.
+   */
   private generateHash(name: string, entityDetails: string, issueDate: string): string {
     const dataString = `${name}|${entityDetails}|${issueDate}`;
     return crypto.createHmac('sha256', this.SECRET_KEY).update(dataString).digest('hex');
@@ -18,6 +31,17 @@ export class CredentialGenerationService {
   // ==========================================
   // 1. PROGRAM Credential (Degree)
   // ==========================================
+
+  /**
+   * Automatically generates a programmatic credential for a student who has reached 100% completion.
+   * Prevents duplication and enforces the 100% progress rule.
+   * 
+   * @param dto - The data transfer object containing student ID and program ID.
+   * @param actorId - The ID of the user or system triggering the generation.
+   * @throws {NotFoundException} If the student does not exist.
+   * @throws {BadRequestException} If the credential was already generated or progress is < 100%.
+   * @returns The newly minted credential record.
+   */
   async generateProgramCredential(dto: CreateProgramCredentialDto, actorId: string) {
     const student = await this.credentialsRepository.findUserById(dto.studentId);
     if (!student) throw new NotFoundException('Student not found');
@@ -57,9 +81,10 @@ export class CredentialGenerationService {
       tier: dto.tier,
       verificationCode,
       verificationUrl,
-      approvalStatus: 'APPROVED', // Direct approval for simplicity
       hashSignature,
-      metadata: JSON.stringify({ type: 'PROGRAM' }),
+      // CRITICAL BUG FIX: studentName is stored immutably in metadata to prevent verification hashes
+      // from breaking if a user changes their name later in their profile. Do not remove.
+      metadata: JSON.stringify({ type: 'PROGRAM', studentName: student.name || 'Unknown' }),
       issuedAt: issueDate,
       logs: {
         create: {
@@ -75,6 +100,16 @@ export class CredentialGenerationService {
   // ==========================================
   // 2. ASSESSMENT Credential (Exam Pass)
   // ==========================================
+  /**
+   * Generates an assessment-based credential for a student who passes an exam.
+   * Requires a passing score (>= 70) fetched from the assessment attempt and prevents duplicate issuance.
+   * 
+   * @param dto - The data transfer object containing assessment details.
+   * @param actorId - The ID of the user or system triggering the generation.
+   * @throws {NotFoundException} If the student does not exist.
+   * @throws {BadRequestException} If already generated or if the score is below the passing threshold.
+   * @returns The newly minted credential record.
+   */
   async generateAssessmentCredential(dto: CreateAssessmentCredentialDto, actorId: string) {
     const student = await this.credentialsRepository.findUserById(dto.studentId);
     if (!student) throw new NotFoundException('Student not found');
@@ -115,9 +150,10 @@ export class CredentialGenerationService {
       tier: dto.tier,
       verificationCode,
       verificationUrl,
-      approvalStatus: 'APPROVED',
       hashSignature,
-      metadata: JSON.stringify({ type: 'ASSESSMENT', assessmentId: dto.assessmentId, score: attempt.score }),
+      // CRITICAL BUG FIX: studentName is stored immutably in metadata to prevent verification hashes
+      // from breaking if a user changes their name later in their profile. Do not remove.
+      metadata: JSON.stringify({ type: 'ASSESSMENT', assessmentId: dto.assessmentId, score: attempt.score, studentName: student.name || 'Unknown' }),
       issuedAt: issueDate,
       logs: {
         create: {

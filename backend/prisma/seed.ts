@@ -38,7 +38,7 @@ async function main() {
     create: {
       id: 'fac-1',
       email: 'faculty@dezai.com',
-      passwordHash: 'hashed_password', // Mock
+      passwordHash: '$2a$12$W9f.tXQZzXQ.W7r/xQy8p.W/tXQZzXQ.W7r/xQy8p.W/tXQZzXQ.', // Fake hash
       name: 'Dr. Sarah Connor',
       role: UserRole.FACULTY,
     },
@@ -50,12 +50,15 @@ async function main() {
     create: {
       id: 'stu-1',
       email: 'student@dezai.com',
-      passwordHash: 'hashed_password', // Mock
+      passwordHash: '56648cea69f03959b5a0556062bc01d0:caf87d09f73d07e6396f2da7321856730d553bf964fc544907a991912e5a9d7e3ae531d4e135f8a4ec608d4f1053d20fc30b1c4b1a03fbc019a174e993c2c4d6', // password123 (PBKDF2)
       name: 'Alex Johnson',
       role: UserRole.STUDENT,
     },
   });
   console.log('✅ Faculty & Student Created');
+  console.log('🧑‍🎓 STUDENT LOGIN INFO:');
+  console.log('Email: student@dezai.com');
+  console.log('Password: password123');
 
   // 3. Create Program & Enrollment (100% Progress for Program Credential)
   const program = await prisma.program.upsert({
@@ -147,6 +150,7 @@ async function main() {
       issuedAt: issueDate,
     },
   });
+  console.log(`🔑 Active Credential Code: ${code}`);
 
   // Pending Credential
   const codePending = crypto.randomBytes(4).toString('hex').toUpperCase();
@@ -168,6 +172,7 @@ async function main() {
       issuedAt: issueDate,
     }
   });
+  console.log(`⏳ Pending Credential Code: ${codePending}`);
 
   // Suspended Credential
   const codeSuspended = crypto.randomBytes(4).toString('hex').toUpperCase();
@@ -189,6 +194,7 @@ async function main() {
       issuedAt: issueDate,
     }
   });
+  console.log(`🛑 Suspended Credential Code: ${codeSuspended}`);
 
   console.log('✅ Mock Merit Credentials Created (Active, Pending, Suspended)');
 

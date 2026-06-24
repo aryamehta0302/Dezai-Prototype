@@ -33,6 +33,14 @@ export class CredentialsRepository {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
+  async findFirstUser() {
+    return this.prisma.user.findFirst({ where: { role: 'STUDENT' } });
+  }
+
+  async findFirstProgram() {
+    return this.prisma.program.findFirst();
+  }
+
   async findEnrollment(userId: string, programId: string) {
     return this.prisma.enrollment.findUnique({
       where: { userId_programId: { userId, programId } }

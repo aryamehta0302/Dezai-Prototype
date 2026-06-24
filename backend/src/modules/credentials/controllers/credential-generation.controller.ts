@@ -3,6 +3,9 @@ import { CredentialGenerationService } from '../services/credential-generation.s
 import { CreateProgramCredentialDto } from '../dto/create-program-credential.dto';
 import { CreateAssessmentCredentialDto } from '../dto/create-assessment-credential.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../common/guards/roles.guard';
+import { Roles } from '../../../common/decorators/roles.decorator';
+import { UserRole } from '@prisma/client';
 
 @Controller('credentials/generate')
 @UseGuards(JwtAuthGuard)
@@ -20,4 +23,5 @@ export class CredentialGenerationController {
     const actorId = req.user?.id || 'system';
     return this.credentialGenerationService.generateAssessmentCredential(dto, actorId);
   }
+
 }
