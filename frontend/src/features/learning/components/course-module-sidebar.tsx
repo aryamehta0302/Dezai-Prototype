@@ -2,11 +2,12 @@
 
 import { cn } from "@/shared/utils/cn";
 import { useEnrollmentStore } from "@/lib/stores/enrollment.store";
-import { PlayCircle, FileText, CheckCircle } from "lucide-react";
+import { PlayCircle, FileText, CheckCircle, HelpCircle } from "lucide-react";
 import type { ApiModule } from "@/features/programs/types/program.types";
 
 interface CourseModuleSidebarProps {
   courseId: string;
+  courseSlug: string;
   modules: ApiModule[];
   currentLessonId: string;
   onLessonSelect: (lessonId: string) => void;
@@ -15,6 +16,7 @@ interface CourseModuleSidebarProps {
 
 export function CourseModuleSidebar({
   courseId,
+  courseSlug,
   modules,
   currentLessonId,
   onLessonSelect,
@@ -25,7 +27,7 @@ export function CourseModuleSidebar({
   return (
     <div className={cn("space-y-1 custom-scrollbar overflow-y-auto", className)}>
       {modules.map((mod, modIndex) => (
-        <div key={mod.id} className="space-y-0.5">
+        <div key={mod.id} className="space-y-0.5 mb-4 last:mb-0">
           <div className="px-3 py-2.5">
             <p className="text-xs font-semibold text-muted uppercase tracking-wider">
               Module {modIndex + 1}
@@ -61,6 +63,24 @@ export function CourseModuleSidebar({
                   <span className="text-xs text-muted flex-shrink-0">video</span>
                 )}
               </button>
+            );
+          })}
+
+          {mod.assessments && mod.assessments.map((assessment) => {
+            const quizUrl = `/programs/${courseSlug}/quiz/${assessment.id}`;
+
+            return (
+              <a
+                key={assessment.id}
+                href={quizUrl}
+                className={cn(
+                  "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-colors text-sm text-on-surface-variant hover:bg-surface-low border border-dashed border-primary/20 bg-primary/5 mt-1"
+                )}
+              >
+                <HelpCircle className="h-4 w-4 text-primary flex-shrink-0" />
+                <span className="flex-1 font-medium text-primary line-clamp-1">{assessment.title}</span>
+                <span className="text-xs text-primary font-semibold flex-shrink-0 bg-primary/10 px-1.5 py-0.5 rounded">Quiz</span>
+              </a>
             );
           })}
         </div>

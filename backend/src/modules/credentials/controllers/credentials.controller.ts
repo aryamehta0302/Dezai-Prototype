@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Patch, Req, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { CredentialsService } from '../services/credentials.service';
 import { TemplateService } from '../services/template.service';
 import { CreateCredentialDto } from '../dto/CreateCredentialDto';
@@ -22,6 +22,14 @@ export class CredentialsController {
     async issueNewCredential(@Req() req, @Body() createData: CreateCredentialDto) {
         const credential = await this.credentialsService.issueCredential(createData);
         return { success: true, credential };
+    }
+
+    @Post('claim')
+    @UseGuards(JwtAuthGuard)
+    @HttpCode(HttpStatus.OK)
+    async claim(@Req() req, @Body('programId') programId: string) {
+        const cred = await this.credentialsService.issueStudentCredential(req.user.id, programId);
+        return { success: true, credential: cred };
     }
 
     @Get('verify/:code')
@@ -67,5 +75,12 @@ export class CredentialsController {
     async getTemplatesByType(@Param('type') type: CredentialType) {
         const templates = await this.templateService.getTemplatesByType(type);
         return { success: true, templates };
+    }
+
+    @Get(':id')
+    @UseGuards(JwtAuthGuard)
+    async getDetails(@Param('id') id: string) {
+        const credential = await this.credentialsService.getCredentialDetails(id);
+        return { success: true, credential };
     }
 }

@@ -175,6 +175,7 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
 
           <CourseModuleSidebar
             courseId={course.id}
+            courseSlug={slug}
             modules={allModules}
             currentLessonId={currentLessonId}
             onLessonSelect={(id) => goToLesson(id)}
