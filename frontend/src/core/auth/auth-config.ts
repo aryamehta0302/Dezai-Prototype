@@ -62,9 +62,6 @@ export const authConfig: NextAuthConfig = {
       // First sign-in: bootstrap token from the user object
       if (account && user) {
         token.id = user.id;
-        token.email = user.email;
-        token.name = user.name;
-        
         if (account.provider === "credentials") {
           token.role = user.role ?? UserRole.STUDENT;
           token.onboarded = user.onboarded ?? false;

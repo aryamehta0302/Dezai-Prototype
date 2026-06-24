@@ -3,15 +3,11 @@ import { PrismaService } from '../../../database/prisma.service';
 import { AuditService } from '../../audit/services/audit.service';
 import { AuditAction } from '@prisma/client';
 
-// IMPORTANT: CredentialGenerationService is used to automatically mint certificates when a student hits 100% progress. Do not remove.
-import { CredentialGenerationService } from '../../credentials/services/credential-generation.service';
-
 @Injectable()
 export class EnrollmentService {
   constructor(
     private prisma: PrismaService,
     private auditService: AuditService,
-    private credentialGenerationService: CredentialGenerationService,
   ) { }
 
   /**
@@ -149,7 +145,7 @@ export class EnrollmentService {
     const progressPercent = Math.round((completedCount / allLessons.length) * 100);
 
     // 4. Update enrollment progress
-    const enrollment = await this.prisma.enrollment.update({
+    return this.prisma.enrollment.update({
       where: {
         userId_programId: { userId, programId },
       },
@@ -158,24 +154,5 @@ export class EnrollmentService {
         completedAt: progressPercent >= 100 ? new Date() : null,
       },
     });
-
-    // 5. Auto-generate credential if completed
-    // CRITICAL: This block ensures students automatically receive a verifiable certificate
-    // immediately upon finishing a program without manual claiming. Do not remove or alter.
-    if (progressPercent >= 100) {
-      try {
-        await this.credentialGenerationService.generateProgramCredential(
-          { studentId: userId, programId, tier: 'FORGE' },
-          'system-auto'
-        );
-      } catch (e) {
-        // Ignore deduplication errors if already generated
-        if (e.status !== 400) {
-          console.error('Error auto-generating credential:', e);
-        }
-      }
-    }
-
-    return enrollment;
   }
 }

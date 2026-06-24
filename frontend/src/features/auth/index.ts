@@ -13,6 +13,8 @@ export { AuthGuard } from "./components/auth-guard";
 // Hooks
 export { useAuth } from "./hooks/useAuth";
 
+// Services
+export { authService } from "./services/auth.service";
 
 // Types
 export type { AuthUser, LoginCredentials, SignupData, AuthSession } from "./types/auth.types";

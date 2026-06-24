@@ -18,4 +18,3 @@ async function bootstrap() {
 
 bootstrap();
 
-// Trigger hot reload

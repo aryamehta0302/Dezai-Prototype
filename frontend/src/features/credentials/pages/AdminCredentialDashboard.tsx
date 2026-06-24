@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { CredentialService } from '../services/credential.service';
-import { VerifyStatus, type Credential, type SearchResult } from '../types/credential.types';
+import type { Credential, SearchResult, VerifyStatus } from '../types/credential.types';
 import { CredentialStatsPage } from './CredentialStatsPage';
 import { CredentialActivityFeed } from '../components/CredentialActivityFeed';
 import { FacultyCredentialTable } from '../components/FacultyCredentialTable';
@@ -90,9 +90,9 @@ export function AdminCredentialDashboard() {
 
     const credentials = searchResult?.data || [];
     const totalCount = searchResult?.total || 0;
-    const activeCount = credentials.filter(c => c.verificationStatus === VerifyStatus.ACTIVE).length;
-    const suspendedCount = credentials.filter(c => c.verificationStatus === VerifyStatus.SUSPENDED).length;
-    const revokedCount = credentials.filter(c => c.verificationStatus === VerifyStatus.REVOKED).length;
+    const activeCount = credentials.filter(c => c.verificationStatus === 'ACTIVE').length;
+    const suspendedCount = credentials.filter(c => c.verificationStatus === 'SUSPENDED').length;
+    const revokedCount = credentials.filter(c => c.verificationStatus === 'REVOKED').length;
 
     return (
         <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8">
@@ -201,7 +201,7 @@ export function AdminCredentialDashboard() {
                                         <div className="h-5 w-px bg-border-light" />
                                         <Button
                                             size="sm"
-                                            onClick={() => handleBatchStatus(VerifyStatus.ACTIVE)}
+                                            onClick={() => handleBatchStatus('ACTIVE')}
                                             disabled={batchLoading}
                                             className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white border-0"
                                         >
@@ -210,7 +210,7 @@ export function AdminCredentialDashboard() {
                                         </Button>
                                         <Button
                                             size="sm"
-                                            onClick={() => handleBatchStatus(VerifyStatus.SUSPENDED)}
+                                            onClick={() => handleBatchStatus('SUSPENDED')}
                                             disabled={batchLoading}
                                             className="text-xs h-8 bg-amber-500 hover:bg-amber-600 text-white border-0"
                                         >
@@ -219,7 +219,7 @@ export function AdminCredentialDashboard() {
                                         </Button>
                                         <Button
                                             size="sm"
-                                            onClick={() => handleBatchStatus(VerifyStatus.REVOKED)}
+                                            onClick={() => handleBatchStatus('REVOKED')}
                                             disabled={batchLoading}
                                             className="text-xs h-8 bg-red-600 hover:bg-red-700 text-white border-0"
                                         >
