@@ -1,53 +1,41 @@
-import { Credential, CreateCredentialDto, UpdateCredentialStatusDto, VerifyStatus, CredentialType, CredentialTemplate } from '../types/credential.types';
+import { Credential, CreateCredentialDto, UpdateCredentialStatusDto, VerifyStatus, CredentialType, CredentialTemplate, CredentialSearchParams, SearchResult, ActivityFeedResult, EnhancedAnalytics } from '../types/credential.types';
+import { apiClient } from '@/core/api/client';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL 
-    ? `${process.env.NEXT_PUBLIC_API_URL}/api/credentials` 
-    : 'http://localhost:3001/api/credentials';
+const BASE = '/api/credentials';
 
 export const CredentialService = {
-    
+
     verify: async (code: string): Promise<{ valid: boolean; data?: Credential; message?: string }> => {
-        const response = await fetch(`${API_BASE}/verify/${code}`);
-        if (!response.ok) {
+        try {
+            const res = await apiClient.get<any>(`${BASE}/verify/${code}`);
+            return res;
+        } catch {
             return { valid: false, message: 'Invalid verification code or server error' };
         }
-        return await response.json();
     },
 
     getStudentCredentials: async (userId: string): Promise<Credential[]> => {
-        const response = await fetch(`${API_BASE}/student/${userId}`);
-        if (!response.ok) throw new Error("Failed to fetch student credentials");
-        const json = await response.json();
-        return json.credentials ?? json;
+        const res = await apiClient.get<{ success: boolean; credentials: Credential[] }>(`${BASE}/student/${userId}`);
+        return res.credentials ?? [];
     },
 
     issueCredential: async (data: CreateCredentialDto): Promise<Credential> => {
-        const response = await fetch(`${API_BASE}/issue`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        if (!response.ok) throw new Error("Failed to issue credential");
-        const json = await response.json();
-        return json.credential ?? json;
+        const res = await apiClient.post<{ success: boolean; credential: Credential }>(`${BASE}/issue`, data);
+        return res.credential;
     },
 
-    updateCredentialStatus: async (id: string, status: VerifyStatus): Promise<Credential> => {
-        const response = await fetch(`${API_BASE}/${id}/status`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status })
-        });
-        if (!response.ok) throw new Error("Failed to update status");
-        const json = await response.json();
-        return json.credential ?? json;
+    updateCredentialStatus: async (id: string, status: VerifyStatus, reason?: string): Promise<Credential> => {
+        const res = await apiClient.patch<{ success: boolean; credential: Credential }>(`${BASE}/${id}/status`, { status, reason });
+        return res.credential;
     },
 
     getAllCredentials: async (): Promise<Credential[]> => {
-        const response = await fetch(`${API_BASE}/all`);
-        if (!response.ok) throw new Error("Failed to fetch all credentials");
-        const json = await response.json();
-        return json.credentials ?? json;
+        const res = await apiClient.get<{ success: boolean; credentials: Credential[] }>(`${BASE}/all`);
+        return res.credentials ?? [];
+    },
+
+    getCredentialAnalytics: async (): Promise<any> => {
+        return await apiClient.get<any>(`${BASE}/analytics`);
     },
 
     getDownloadUrl: (credentialId: string) => {
@@ -58,19 +46,73 @@ export const CredentialService = {
     },
 
     getTemplates: async (): Promise<CredentialTemplate[]> => {
-        const response = await fetch(`${API_BASE}/templates`);
-        if (!response.ok) throw new Error("Failed to fetch templates");
-        const json = await response.json();
-        return json.templates ?? json;
+        const res = await apiClient.get<{ success: boolean; templates: CredentialTemplate[] }>(`${BASE}/templates`);
+        return res.templates ?? [];
     },
 
     getTemplatesByType: async (type: CredentialType): Promise<CredentialTemplate[]> => {
-        const response = await fetch(`${API_BASE}/templates/${type}`);
-        if (!response.ok) throw new Error("Failed to fetch templates by type");
-        const json = await response.json();
-        return json.templates ?? json;
-    }
+        const res = await apiClient.get<{ success: boolean; templates: CredentialTemplate[] }>(`${BASE}/templates/${type}`);
+        return res.templates ?? [];
+    },
+
+    getAuditHistory: async (id: string): Promise<{
+        credentialId: string;
+        verificationCode: string;
+        currentStatus: string;
+        issuedAt: string;
+        statusHistory: Array<{ status: string; changedBy: string; reason: string; date: string }>;
+        statusReason: string | null;
+    }> => {
+        const res = await apiClient.get<any>(`${BASE}/${id}/audit`);
+        return res;
+    },
+
+    getStats: async (): Promise<{
+        total: number;
+        active: number;
+        revoked: number;
+        suspended: number;
+        monthlyTrend: Array<{ month: string; count: number }>;
+    }> => {
+        const res = await apiClient.get<any>(`${BASE}/stats`);
+        return res;
+    },
+
+    search: async (params: CredentialSearchParams): Promise<SearchResult> => {
+        const queryParams = new URLSearchParams();
+        if (params.query) queryParams.set('query', params.query);
+        if (params.status) queryParams.set('status', params.status);
+        if (params.tier) queryParams.set('tier', params.tier);
+        if (params.programId) queryParams.set('programId', params.programId);
+        if (params.issuerId) queryParams.set('issuerId', params.issuerId);
+        if (params.institutionId) queryParams.set('institutionId', params.institutionId);
+        if (params.dateFrom) queryParams.set('dateFrom', params.dateFrom);
+        if (params.dateTo) queryParams.set('dateTo', params.dateTo);
+        if (params.page) queryParams.set('page', params.page.toString());
+        if (params.limit) queryParams.set('limit', params.limit.toString());
+        const res = await apiClient.get<any>(`${BASE}/search?${queryParams.toString()}`);
+        return res;
+    },
+
+    batchStatusUpdate: async (ids: string[], status: VerifyStatus, reason?: string): Promise<{ updated: number; status: string }> => {
+        const res = await apiClient.post<any>(`${BASE}/batch-status`, { ids, status, reason });
+        return res;
+    },
+
+    getActivity: async (limit?: number, offset?: number): Promise<ActivityFeedResult> => {
+        const queryParams = new URLSearchParams();
+        if (limit) queryParams.set('limit', limit.toString());
+        if (offset) queryParams.set('offset', offset.toString());
+        const res = await apiClient.get<any>(`${BASE}/activity?${queryParams.toString()}`);
+        return res;
+    },
+
+    getEnhancedAnalytics: async (): Promise<EnhancedAnalytics> => {
+        const res = await apiClient.get<any>(`${BASE}/enhanced-analytics`);
+        return res;
+    },
 };
+
 
 export const credentialService = {
     ...CredentialService,

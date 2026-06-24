@@ -43,7 +43,7 @@ export class AttemptService {
     private assessmentService: AssessmentService,
     private questionSelectionService: QuestionSelectionService,
     private passFailEvaluationService: PassFailEvaluationService,
-  ) {}
+  ) { }
 
   // ─────────────────── START ATTEMPT ───────────────────
 
@@ -546,7 +546,7 @@ export class AttemptService {
     const timeTaken = Math.floor(
       (new Date(attempt.completedAt).getTime() -
         new Date(attempt.startedAt).getTime()) /
-        1000,
+      1000,
     );
 
     const correctCount = attempt.attemptAnswers.filter((a) => a.isCorrect).length;

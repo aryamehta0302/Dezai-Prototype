@@ -67,7 +67,7 @@ export function CourseModuleSidebar({
           })}
 
           {mod.assessments && mod.assessments.map((assessment) => {
-            const quizUrl = `/programs/${courseSlug}/quiz/${assessment.id}`;
+            const quizUrl = `/programs/${courseSlug}/assessment/${assessment.id}`;
 
             return (
               <a

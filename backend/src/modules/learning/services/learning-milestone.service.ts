@@ -26,7 +26,7 @@ export class LearningMilestoneService {
 
     const [progressDates, passedAssessmentDates, completedProgramDates] = await Promise.all([
       this.prisma.progress.findMany({
-        where: { userId, completedAt: { not: null } },
+        where: { userId },
         select: { completedAt: true },
         orderBy: { completedAt: 'asc' },
       }),
