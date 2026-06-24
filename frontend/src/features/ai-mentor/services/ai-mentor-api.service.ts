@@ -8,6 +8,11 @@ import type {
   SendMessageResponse,
   UpdateContextRequest,
   DeleteSessionResponse,
+  MentorRecommendationsResponse,
+  RemediationResponse,
+  LessonSummaryResponse,
+  ModuleSummaryResponse,
+  StudyNotesResponse,
 } from '../types';
 
 /**
@@ -63,5 +68,44 @@ export const aiMentorApi = {
     apiClient.patch<ChatSessionResponse>(
       `/ai-mentor/sessions/${sessionId}/title`,
       data,
+    ),
+
+  /**
+   * Get personalized mentor recommendations with rationale
+   */
+  getRecommendations: () =>
+    apiClient.get<MentorRecommendationsResponse>('/ai-mentor/recommendations'),
+
+  /**
+   * Generate a remediation plan for a completed assessment attempt
+   */
+  generateRemediation: (attemptId: string) =>
+    apiClient.post<RemediationResponse>(
+      `/ai-mentor/remediation/attempt/${attemptId}`,
+    ),
+
+  /**
+   * Generate a concise lesson summary
+   */
+  generateLessonSummary: (lessonId: string) =>
+    apiClient.post<LessonSummaryResponse>(
+      `/ai-mentor/lessons/${lessonId}/summary`,
+    ),
+
+  /**
+   * Generate a module overview and readiness summary
+   */
+  generateModuleSummary: (moduleId: string) =>
+    apiClient.post<ModuleSummaryResponse>(
+      `/ai-mentor/modules/${moduleId}/summary`,
+    ),
+
+  /**
+   * Generate structured study notes, optionally saving them to the lesson note
+   */
+  generateStudyNotes: (lessonId: string, saveToNotes = false) =>
+    apiClient.post<StudyNotesResponse>(
+      `/ai-mentor/lessons/${lessonId}/study-notes`,
+      { saveToNotes },
     ),
 };
