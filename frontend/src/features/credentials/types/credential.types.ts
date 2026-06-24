@@ -19,6 +19,7 @@ export enum ApprovalStatus {
 export interface InstitutionSnippet {
     id: string;
     name: string;
+    logoUrl?: string;
 }
 
 export interface UserSnippet {
@@ -63,6 +64,7 @@ export interface ICredential {
 export interface CredentialTemplate {
     id: string;
     name: string;
+    defaultTier?: CredentialTier;
 }
 
 export interface Credential {
@@ -93,6 +95,13 @@ export interface IGenerateProgramCredentialDto {
   tier: CredentialTier;
   issuedById?: string;
   metadata?: any;
+}
+
+export interface CreateCredentialDto {
+  userId: string;
+  programId: string;
+  tier?: CredentialTier;
+  templateId?: string;
 }
 
 export interface IGenerateAssessmentCredentialDto {
