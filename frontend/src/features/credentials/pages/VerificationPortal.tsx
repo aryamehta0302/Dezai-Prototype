@@ -1,18 +1,62 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useVerification } from '../hooks/useVerification';
-import { ShieldCheck, ShieldAlert, Loader2, GraduationCap, Award, ExternalLink } from 'lucide-react';
+import {
+    ShieldCheck, ShieldAlert, Loader2, GraduationCap, Award,
+    Copy, Check, Share2, Mail, AlertTriangle, User, Building2
+} from 'lucide-react';
+import { cn } from '@/shared/utils/cn';
 
-export function VerificationPortal() {
+interface VerificationPortalProps {
+    code?: string;
+}
+
+export function VerificationPortal({ code: propCode }: VerificationPortalProps) {
     const params = useParams();
-    const code = Array.isArray(params?.code) ? params.code[0] : params?.code;
+    const routeCode = Array.isArray(params?.id) ? params.id[0] : params?.id;
+    const code = propCode || routeCode;
     const { loading, result } = useVerification(code as string);
+    const [copied, setCopied] = useState(false);
+
+    const verifyUrl = typeof window !== 'undefined'
+        ? `${window.location.origin}/verify/${code}`
+        : `https://dezai.ai/verify/${code}`;
+
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(verifyUrl);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch { }
+    };
+
+    const handleShareLinkedIn = () => {
+        const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(verifyUrl)}`;
+        window.open(url, '_blank');
+    };
+
+    const handleShareEmail = () => {
+        const subject = encodeURIComponent(`Verified Credential — ${result?.data?.program?.title || 'Dezai.ai'}`);
+        const body = encodeURIComponent(`You can verify this credential at: ${verifyUrl}`);
+        window.open(`mailto:?subject=${subject}&body=${body}`);
+    };
+
+    // Parse revocation reason from metadata
+    const getStatusReason = (): string | null => {
+        if (!result?.data?.metadata) return null;
+        try {
+            const meta = JSON.parse(result.data.metadata as string);
+            return meta.statusReason || null;
+        } catch {
+            return null;
+        }
+    };
 
     return (
         <div className="flex w-full min-h-screen flex-col xl:flex-row">
-            {/* Left Panel — Premium Dezai Branding */}
+            {/* Left Panel — Dezai Branding */}
             <div className="hidden xl:flex xl:w-[48%] 2xl:w-[50%] relative bg-linear-to-br from-primary via-primary-container to-secondary overflow-hidden">
                 <div className="absolute inset-0 opacity-10">
                     <div className="absolute top-20 left-20 h-72 w-72 rounded-full bg-white/20 blur-3xl animate-float" />
@@ -31,12 +75,19 @@ export function VerificationPortal() {
                     <p className="text-base 2xl:text-lg text-white/80 leading-relaxed">
                         Dezai Credentials represent verified mastery and achievement. Instantly verifiable, tamper-proof, and universally recognized across our network of top universities and industry partners.
                     </p>
-                    <div className="mt-10 flex items-center gap-6">
-                        <div className="flex items-center gap-3 bg-white/10 px-4 py-2 rounded-xl backdrop-blur-md">
-                            <ShieldCheck className="h-6 w-6 text-white" />
+                    <div className="mt-10 flex flex-col gap-4">
+                        <div className="flex items-center gap-3 bg-white/10 px-4 py-3 rounded-xl backdrop-blur-md">
+                            <ShieldCheck className="h-6 w-6 text-white shrink-0" />
                             <div>
                                 <p className="text-sm font-bold">Cryptographically Secured</p>
                                 <p className="text-xs text-white/70">Anti-fraud ecosystem</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3 bg-white/10 px-4 py-3 rounded-xl backdrop-blur-md">
+                            <Award className="h-6 w-6 text-white shrink-0" />
+                            <div>
+                                <p className="text-sm font-bold">Industry Recognized</p>
+                                <p className="text-xs text-white/70">Accepted by top employers</p>
                             </div>
                         </div>
                     </div>
@@ -44,9 +95,8 @@ export function VerificationPortal() {
             </div>
 
             {/* Right Panel — Verification Data */}
-            <div className="flex flex-1 items-center justify-center overflow-y-auto px-6 sm:px-8 lg:px-12 py-8 sm:py-12 bg-background relative">
-                
-                {/* Mobile / Tablet Logo */}
+            <div className="flex flex-1 items-center justify-center overflow-y-auto px-6 sm:px-8 lg:px-12 py-12 bg-background relative">
+                {/* Mobile Logo */}
                 <div className="absolute top-8 left-8 flex xl:hidden items-center gap-2.5">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
                         <GraduationCap className="h-6 w-6 text-white" />
@@ -75,38 +125,75 @@ export function VerificationPortal() {
                                 <ShieldAlert className="h-10 w-10 text-red-500" />
                             </div>
                             <h2 className="text-3xl font-bold text-on-surface mb-3">Verification Failed</h2>
-                            <p className="text-muted mb-6">{result?.message}</p>
-                            <button onClick={() => window.location.href = '/'} className="px-6 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors">
+                            <p className="text-muted mb-2">{result?.message}</p>
+
+                            {/* Show revocation reason if credential data present */}
+                            {result?.data && getStatusReason() && (
+                                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-left">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <AlertTriangle className="h-4 w-4 text-red-500" />
+                                        <span className="text-xs font-bold text-red-700 uppercase tracking-wider">Revocation Reason</span>
+                                    </div>
+                                    <p className="text-sm text-red-700">{getStatusReason()}</p>
+                                </div>
+                            )}
+
+                            <button onClick={() => window.location.href = '/'} className="mt-6 px-6 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors">
                                 Return Home
                             </button>
                         </div>
                     ) : (
-                        <div className="rounded-2xl border border-border-light bg-white shadow-level-1 overflow-hidden relative group">
+                        <div className="rounded-2xl border border-border-light bg-white shadow-level-1 overflow-hidden">
                             {/* Success Banner */}
                             <div className="h-24 bg-gradient-to-r from-emerald-500 to-teal-500 relative overflow-hidden">
                                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20" />
                                 <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 h-20 w-20 rounded-full bg-white p-1 shadow-lg">
-                                    <div className="h-full w-full rounded-full bg-emerald-100 flex items-center justify-center">
-                                        <Award className="h-8 w-8 text-emerald-600" />
-                                    </div>
+                                    {result.data?.program?.institution?.logoUrl ? (
+                                        <img
+                                            src={result.data.program.institution.logoUrl}
+                                            alt="Institution logo"
+                                            className="h-full w-full rounded-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="h-full w-full rounded-full bg-emerald-100 flex items-center justify-center">
+                                            <Award className="h-8 w-8 text-emerald-600" />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                            
+
                             <div className="pt-14 px-8 pb-8 text-center">
                                 <span className="inline-block px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold tracking-widest uppercase rounded-full mb-4">
                                     {result.data?.verificationStatus} CREDENTIAL
                                 </span>
                                 <h2 className="text-2xl font-bold text-on-surface mb-1">{result.data?.program?.title || 'Certified Mastery'}</h2>
-                                <p className="text-muted text-sm mb-8">Issued to <span className="font-semibold text-on-surface">{result.data?.user?.name || result.data?.userId}</span></p>
+                                <p className="text-muted text-sm mb-6">
+                                    Issued to <span className="font-semibold text-on-surface">{result.data?.user?.name || result.data?.userId}</span>
+                                </p>
 
-                                <div className="grid grid-cols-2 gap-4 text-left border-y border-border-light py-6 mb-8">
+                                {/* Details Grid */}
+                                <div className="grid grid-cols-2 gap-4 text-left border-y border-border-light py-5 mb-5">
                                     <div>
                                         <p className="text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">Issue Date</p>
-                                        <p className="text-sm font-medium text-on-surface">{new Date(result.data?.issuedAt || '').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                                        <p className="text-sm font-medium text-on-surface">
+                                            {new Date(result.data?.issuedAt || '').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                                        </p>
                                     </div>
                                     <div>
                                         <p className="text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">Credential Tier</p>
                                         <p className="text-sm font-bold text-primary">{result.data?.tier}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">
+                                            <User className="inline h-3 w-3 mr-0.5" />Issued By
+                                        </p>
+                                        <p className="text-sm font-medium text-on-surface">{result.data?.issuer?.name || 'Dezai.ai'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">
+                                            <Building2 className="inline h-3 w-3 mr-0.5" />Institution
+                                        </p>
+                                        <p className="text-sm font-medium text-on-surface">{result.data?.program?.institution?.name || 'Dezai'}</p>
                                     </div>
                                     <div className="col-span-2">
                                         <p className="text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">Verification ID</p>
@@ -114,9 +201,42 @@ export function VerificationPortal() {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-3 justify-center text-sm">
+                                {/* Verified by line */}
+                                <div className="flex items-center gap-3 justify-center text-sm mb-6">
                                     <ShieldCheck className="h-5 w-5 text-emerald-500" />
-                                    <span className="text-muted">Verified by <span className="font-semibold text-on-surface">{result.data?.institution?.name || 'Dezai'}</span></span>
+                                    <span className="text-muted">
+                                        Verified by <span className="font-semibold text-on-surface">{result.data?.program?.institution?.name || 'Dezai'}</span>
+                                    </span>
+                                </div>
+
+                                {/* Share / Copy actions */}
+                                <div className="flex gap-3 flex-wrap justify-center">
+                                    <button
+                                        onClick={handleCopy}
+                                        className={cn(
+                                            'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-all',
+                                            copied
+                                                ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                                                : 'bg-white border-border-light hover:bg-neutral-50 text-on-surface'
+                                        )}
+                                    >
+                                        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                        {copied ? 'Copied!' : 'Copy Link'}
+                                    </button>
+                                    <button
+                                        onClick={handleShareLinkedIn}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border border-[#0077b5]/20 bg-[#0077b5]/5 text-[#0077b5] hover:bg-[#0077b5]/10 transition-all"
+                                    >
+                                        <Share2 className="h-4 w-4" />
+                                        Share
+                                    </button>
+                                    <button
+                                        onClick={handleShareEmail}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border border-border-light bg-white hover:bg-neutral-50 text-on-surface transition-all"
+                                    >
+                                        <Mail className="h-4 w-4" />
+                                        Email
+                                    </button>
                                 </div>
                             </div>
                         </div>

@@ -38,7 +38,7 @@ export class AssessmentService {
     private prisma: PrismaService,
     private auditService: AuditService,
     private passFailEvaluationService: PassFailEvaluationService,
-  ) {}
+  ) { }
 
   // ─────────────────── OWNERSHIP GUARD ───────────────────
 

@@ -25,7 +25,7 @@ interface QuizPageProps {
 export function QuizPage({ slug, quizId }: QuizPageProps) {
   const router = useRouter();
   const { session } = useAuth();
-  const quiz = quizService.getQuiz(quizId);
+  const quiz = quizService.getQuiz(quizId, slug);
 
   // Core Quiz States
   const [started, setStarted] = useState(false);
