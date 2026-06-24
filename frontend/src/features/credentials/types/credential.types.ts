@@ -1,16 +1,25 @@
-// types/credential.types.ts
+export enum CredentialTier {
+  FORGE = 'FORGE',
+  ARENA = 'ARENA',
+  CITADEL = 'CITADEL',
+}
 
-export type VerifyStatus = 'ACTIVE' | 'REVOKED' | 'SUSPENDED';
-export type CredentialTier = 'FORGE' | 'ARENA' | 'CITADEL';
-export type CredentialType = 'PROGRAM' | 'ASSESSMENT' | 'MERIT';
+export enum VerifyStatus {
+  ACTIVE = 'ACTIVE',
+  REVOKED = 'REVOKED',
+  SUSPENDED = 'SUSPENDED',
+}
 
-export interface CredentialTemplate {
+export enum ApprovalStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
+export interface InstitutionSnippet {
     id: string;
-    type: CredentialType;
     name: string;
-    description: string;
-    defaultTier: CredentialTier;
-    institutionId: string;
+    logoUrl?: string;
 }
 
 export interface UserSnippet {
@@ -25,10 +34,37 @@ export interface ProgramSnippet {
     institution?: InstitutionSnippet;
 }
 
-export interface InstitutionSnippet {
+export enum CredentialType {
+  PROGRAM = 'PROGRAM',
+  ASSESSMENT = 'ASSESSMENT',
+  MERIT = 'MERIT',
+}
+
+export interface ICredential {
+  id: string;
+  userId: string;
+  programId: string;
+  institutionId?: string;
+  issuedById?: string;
+  tier: CredentialTier;
+  verificationCode: string;
+  verificationUrl: string;
+  verificationStatus: VerifyStatus;
+  approvalStatus: ApprovalStatus;
+  metadata?: string;
+  hashSignature?: string;
+  issuedAt: string;
+  
+  // Relations
+  program?: any; // Replace with IProgram when available
+  institution?: any;
+  user?: any;
+}
+
+export interface CredentialTemplate {
     id: string;
     name: string;
-    logoUrl?: string; // Adding logoUrl for branding
+    defaultTier?: CredentialTier;
 }
 
 export interface Credential {
@@ -53,15 +89,28 @@ export interface Credential {
     credentialTemplate?: CredentialTemplate;
 }
 
+export interface IGenerateProgramCredentialDto {
+  userId: string;
+  programId: string;
+  tier: CredentialTier;
+  issuedById?: string;
+  metadata?: any;
+}
+
 export interface CreateCredentialDto {
-    userId: string;
-    programId: string;
-    institutionId: string;
-    issuedById: string;
-    tier?: CredentialTier; // Made optional so template default can be used
-    templateId: string;
-    credentialType: CredentialType;
-    metadata?: string;
+  userId: string;
+  programId: string;
+  tier?: CredentialTier;
+  templateId?: string;
+}
+
+export interface IGenerateAssessmentCredentialDto {
+  userId: string;
+  programId: string;
+  assessmentId: string;
+  tier: CredentialTier;
+  issuedById?: string;
+  metadata?: any;
 }
 
 export interface UpdateCredentialStatusDto {

@@ -23,20 +23,21 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  enrollments    Enrollment[]
-  attempts       AssessmentAttempt[]
-  notes          Note[]
-  bookmarks      Bookmark[]
-  progresses     Progress[]
-  credentials    Credential[]        @relation("EarnedCredentials")
-  issuedCerts    Credential[]        @relation("IssuedCredentials")
-  violations     ViolationLog[]
-  xpTransactions XpTransaction[]
-  chatSessions   ChatSession[]
-  notifications  Notification[]
-  uploads        Upload[]
-  auditLogs      AuditLog[]
-  examSessions   ExamSession[]
+  enrollments      Enrollment[]
+  attempts         AssessmentAttempt[]
+  notes            Note[]
+  bookmarks        Bookmark[]
+  progresses       Progress[]
+  credentials      Credential[]        @relation("EarnedCredentials")
+  issuedCerts      Credential[]        @relation("IssuedCredentials")
+  credentialLogs   CredentialLog[]
+  violations       ViolationLog[]
+  xpTransactions   XpTransaction[]
+  chatSessions     ChatSession[]
+  notifications    Notification[]
+  uploads          Upload[]
+  auditLogs        AuditLog[]
+  examSessions     ExamSession[]
   userAchievements UserAchievement[]
 
   facultyInfo   FacultyMember?
@@ -260,14 +261,14 @@ enum Difficulty {
 }
 
 model QuestionBankQuestion {
-  id             String             @id @default(uuid())
+  id             String     @id @default(uuid())
   questionBankId String
   text           String
   category       String?
-  difficulty     Difficulty         @default(MEDIUM)
-  tags           String[]           @default([])
-  timerSeconds   Int                @default(60) // countdown-per-question limit
-  createdAt      DateTime           @default(now())
+  difficulty     Difficulty @default(MEDIUM)
+  tags           String[]   @default([])
+  timerSeconds   Int        @default(60) // countdown-per-question limit
+  createdAt      DateTime   @default(now())
 
   questionBank   QuestionBank     @relation(fields: [questionBankId], references: [id], onDelete: Cascade)
   options        QuestionOption[]
@@ -411,12 +412,12 @@ enum AchievementRarity {
 }
 
 model UserAchievement {
-  id            String    @id @default(uuid())
+  id            String   @id @default(uuid())
   userId        String
   achievementId String
-  unlockedAt    DateTime  @default(now())
-  progress      Int       @default(0)
-  current       Int       @default(0)
+  unlockedAt    DateTime @default(now())
+  progress      Int      @default(0)
+  current       Int      @default(0)
 
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
@@ -425,39 +426,52 @@ model UserAchievement {
   @@map("user_achievements")
 }
 
+// Core credential assigned to a user
 model Credential {
   id                 String         @id @default(uuid())
-  userId             String
-  programId          String
-  institutionId      String
-  issuedById         String
-  tier               CredentialTier
-  verificationCode   String         @unique
-  verificationUrl    String
-  verificationStatus VerifyStatus   @default(ACTIVE)
-  metadata           String?
-  issuedAt           DateTime       @default(now())
+  userId             String // Student who earned it
+  programId          String // Associated program
+  institutionId      String? // Issuing institution (optional)
+  issuedById         String? // Admin/faculty issuer (optional)
+  tier               CredentialTier // Level of achievement
+  verificationCode   String         @unique // Public verification code
+  verificationUrl    String // URL to verify
+  verificationStatus VerifyStatus   @default(ACTIVE) // ACTIVE/REVOKED/SUSPENDED
+  approvalStatus     ApprovalStatus @default(APPROVED) // PENDING/APPROVED/REJECTED
+  metadata           String? // Extra info (score, limits, tags)
+  hashSignature      String?        @unique // Anti-tamper hash
+  issuedAt           DateTime       @default(now()) // Issue date
 
+  logs                 CredentialLog[]
   user                 User                @relation("EarnedCredentials", fields: [userId], references: [id], onDelete: Cascade)
   program              Program             @relation(fields: [programId], references: [id], onDelete: Cascade)
-  institution          Institution         @relation(fields: [institutionId], references: [id])
-  issuer               User                @relation("IssuedCredentials", fields: [issuedById], references: [id])
+  institution          Institution?        @relation(fields: [institutionId], references: [id])
+  issuer               User?               @relation("IssuedCredentials", fields: [issuedById], references: [id])
   credentialTemplate   CredentialTemplate? @relation(fields: [credentialTemplateId], references: [id])
   credentialTemplateId String?
 
   @@map("credentials")
 }
 
+// Level of credential
 enum CredentialTier {
-  FORGE
-  ARENA
-  CITADEL
+  FORGE // Basic
+  ARENA // Intermediate
+  CITADEL // Master
 }
 
+// Validity status
 enum VerifyStatus {
   ACTIVE
   REVOKED
   SUSPENDED
+}
+
+// Approval workflow status
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model Upload {
@@ -626,25 +640,25 @@ model Resource {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@map("resources")
 }
 
+// Credential category
 enum CredentialType {
   PROGRAM
   ASSESSMENT
   MERIT
 }
 
+// Visual template for credentials
 model CredentialTemplate {
   id            String         @id @default(uuid())
-  name          String
-  type          CredentialType
-  description   String?
-  defaultTier   CredentialTier @default(CITADEL)
-  institutionId String
-  designUrl     String?
+  name          String // Template name
+  type          CredentialType // Target credential type
+  institutionId String // Owner institution
+  designUrl     String? // Design background
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
@@ -652,4 +666,21 @@ model CredentialTemplate {
   credentials Credential[]
 
   @@map("credential_templates")
+}
+
+// Audit log for state changes
+model CredentialLog {
+  id           String   @id @default(uuid())
+  credentialId String
+  actorId      String // Admin who made change
+  action       String // e.g. "STATE_REVOKED"
+  statusFrom   String?
+  statusTo     String
+  notes        String? // Reason for change
+  createdAt    DateTime @default(now())
+
+  credential Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+  actor      User       @relation(fields: [actorId], references: [id])
+
+  @@map("credential_logs")
 }

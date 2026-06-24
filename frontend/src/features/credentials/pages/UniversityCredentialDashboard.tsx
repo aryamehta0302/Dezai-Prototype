@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { CredentialService } from '../services/credential.service';
-import type { Credential, SearchResult, EnhancedAnalytics } from '../types/credential.types';
+import { VerifyStatus, type Credential, type SearchResult, type EnhancedAnalytics } from '../types/credential.types';
 import { CredentialStatsPage } from './CredentialStatsPage';
 import { CredentialActivityFeed } from '../components/CredentialActivityFeed';
 import { FacultyCredentialTable } from '../components/FacultyCredentialTable';
@@ -49,9 +49,9 @@ export function UniversityCredentialDashboard() {
     const credentials = searchResult?.data || [];
 
     const totalCount = searchResult?.total || 0;
-    const activeCount = credentials.filter(c => c.verificationStatus === 'ACTIVE').length;
-    const suspendedCount = credentials.filter(c => c.verificationStatus === 'SUSPENDED').length;
-    const revokedCount = credentials.filter(c => c.verificationStatus === 'REVOKED').length;
+    const activeCount = credentials.filter(c => c.verificationStatus === VerifyStatus.ACTIVE).length;
+    const suspendedCount = credentials.filter(c => c.verificationStatus === VerifyStatus.SUSPENDED).length;
+    const revokedCount = credentials.filter(c => c.verificationStatus === VerifyStatus.REVOKED).length;
 
     return (
         <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8">

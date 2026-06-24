@@ -40,7 +40,7 @@ export function VerificationLookup({ isFaculty }: Props) {
         if (!result?.data?.id || !isFaculty) return;
         
         let reason = '';
-        if (newStatus !== 'ACTIVE') {
+        if (newStatus !== VerifyStatus.ACTIVE) {
             reason = window.prompt(`Enter the reason for marking this credential as ${newStatus}:`) || '';
             if (!reason.trim()) {
                 alert('A reason is required to change status.');
@@ -54,7 +54,7 @@ export function VerificationLookup({ isFaculty }: Props) {
         setActionLoading(true);
         try {
             const updated = await CredentialService.updateCredentialStatus(result.data.id, newStatus, reason);
-            setResult({ valid: newStatus === 'ACTIVE', data: updated, message: `Credential has been ${newStatus}.` });
+            setResult({ valid: newStatus === VerifyStatus.ACTIVE, data: updated, message: `Credential has been ${newStatus}.` });
             alert(`Successfully marked as ${newStatus}`);
         } catch (error) {
             alert("Failed to update status");
@@ -129,7 +129,7 @@ export function VerificationLookup({ isFaculty }: Props) {
                                             <h2 className="text-2xl font-bold text-on-surface">
                                                 {result.data!.credentialTemplate?.name || result.data!.program?.title}
                                             </h2>
-                                            <Badge variant={result.data!.verificationStatus === 'ACTIVE' ? 'default' : 'destructive'} className="uppercase">
+                                            <Badge variant={result.data!.verificationStatus === VerifyStatus.ACTIVE ? 'default' : 'destructive'} className="uppercase">
                                                 {result.data!.verificationStatus}
                                             </Badge>
                                         </div>
@@ -175,7 +175,7 @@ export function VerificationLookup({ isFaculty }: Props) {
                                                                         <div>
                                                                             <span className={cn(
                                                                                 "font-bold uppercase text-[9px] px-1.5 py-0.5 rounded mr-1.5",
-                                                                                h.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800' : h.status === 'SUSPENDED' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'
+                                                                                h.status === VerifyStatus.ACTIVE ? 'bg-emerald-100 text-emerald-800' : h.status === VerifyStatus.SUSPENDED ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'
                                                                             )}>
                                                                                 {h.status}
                                                                             </span>
@@ -210,24 +210,24 @@ export function VerificationLookup({ isFaculty }: Props) {
                                             
                                             <div className="flex flex-col sm:flex-row gap-3">
                                                 <Button 
-                                                    onClick={() => handleStatusChange('ACTIVE')}
-                                                    disabled={actionLoading || result.data!.verificationStatus === 'ACTIVE'}
+                                                    onClick={() => handleStatusChange(VerifyStatus.ACTIVE)}
+                                                    disabled={actionLoading || result.data!.verificationStatus === VerifyStatus.ACTIVE}
                                                     className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md border-0 h-11"
                                                 >
                                                     <ShieldCheck className="h-4 w-4 mr-2" /> Mark Active
                                                 </Button>
                                                 
                                                 <Button 
-                                                    onClick={() => handleStatusChange('SUSPENDED')}
-                                                    disabled={actionLoading || result.data!.verificationStatus === 'SUSPENDED'}
+                                                    onClick={() => handleStatusChange(VerifyStatus.SUSPENDED)}
+                                                    disabled={actionLoading || result.data!.verificationStatus === VerifyStatus.SUSPENDED}
                                                     className="bg-amber-500 hover:bg-amber-600 text-white rounded-xl shadow-md border-0 h-11"
                                                 >
                                                     <Ban className="h-4 w-4 mr-2" /> Suspend
                                                 </Button>
                                                 
                                                 <Button 
-                                                    onClick={() => handleStatusChange('REVOKED')}
-                                                    disabled={actionLoading || result.data!.verificationStatus === 'REVOKED'}
+                                                    onClick={() => handleStatusChange(VerifyStatus.REVOKED)}
+                                                    disabled={actionLoading || result.data!.verificationStatus === VerifyStatus.REVOKED}
                                                     variant="destructive"
                                                     className="rounded-xl shadow-md border-0 h-11"
                                                 >

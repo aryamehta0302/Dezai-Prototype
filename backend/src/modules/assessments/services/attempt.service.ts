@@ -23,6 +23,9 @@ import {
   PassFailEvaluationService,
   AttemptAnswerWithRelations,
 } from './pass-fail-evaluation.service';
+
+// IMPORTANT: CredentialGenerationService is used to automatically mint certificates when a student passes an assessment. Do not remove.
+import { CredentialGenerationService } from '../../credentials/services/credential-generation.service';
 import type {
   GetAttemptResultResponseDto,
   AttemptHistoryResponseDto,
@@ -43,7 +46,8 @@ export class AttemptService {
     private assessmentService: AssessmentService,
     private questionSelectionService: QuestionSelectionService,
     private passFailEvaluationService: PassFailEvaluationService,
-  ) { }
+    private credentialGenerationService: CredentialGenerationService,
+  ) {}
 
   // ─────────────────── START ATTEMPT ───────────────────
 
@@ -276,6 +280,9 @@ export class AttemptService {
                 },
               },
             },
+            module: {
+              include: { track: true },
+            },
           },
         },
         attemptAnswers: true,
@@ -396,6 +403,27 @@ export class AttemptService {
 
     // Check and award ASSESSMENT achievements
     await this.awardService.checkAndAward(userId, AchievementCategory.ASSESSMENT);
+
+    // Auto-generate Assessment Credential if passed
+    // CRITICAL: This block ensures students automatically receive a verifiable certificate
+    // immediately upon passing an assessment without manual claiming. Do not remove or alter.
+    if (passed && attempt.assessment.module?.track?.programId) {
+      try {
+        await this.credentialGenerationService.generateAssessmentCredential(
+          {
+            studentId: userId,
+            programId: attempt.assessment.module.track.programId,
+            assessmentId: attempt.assessmentId,
+            tier: 'FORGE',
+          },
+          'system-auto'
+        );
+      } catch (e) {
+        if (e.status !== 400) {
+          console.error('Error auto-generating assessment credential:', e);
+        }
+      }
+    }
 
     return {
       success: true,
