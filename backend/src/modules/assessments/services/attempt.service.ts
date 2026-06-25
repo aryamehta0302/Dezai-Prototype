@@ -44,7 +44,7 @@ export class AttemptService {
     private awardService: AwardService,
     private assessmentService: AssessmentService,
     private passFailEvaluationService: PassFailEvaluationService,
-  ) {}
+  ) { }
 
   async startAttempt(userId: string, assessmentId: string) {
     const assessment = await this.prisma.assessment.findUnique({
@@ -535,7 +535,7 @@ export class AttemptService {
     const timeTaken = Math.floor(
       (new Date(attempt.completedAt).getTime() -
         new Date(attempt.startedAt).getTime()) /
-        1000,
+      1000,
     );
 
     const questions = (questionSet.length > 0 ? questionSet.map((q) => ({

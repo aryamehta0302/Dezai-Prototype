@@ -181,6 +181,7 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
 
           <CourseModuleSidebar
             courseId={course.id}
+            courseSlug={slug}
             modules={allModules}
             currentLessonId={currentLessonId}
             onLessonSelect={(id) => goToLesson(id)}
@@ -259,16 +260,37 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
             onComplete={goNext}
           />
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={goNext}
-            disabled={currentIndex >= allLessons.length - 1}
-            className="gap-1.5"
-          >
-            Next
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+          {currentIndex < allLessons.length - 1 ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={goNext}
+              className="gap-1.5"
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          ) : allModules.flatMap(m => m.assessments || []).length > 0 ? (
+            <Link href={`/programs/${slug}/assessment/${allModules.flatMap(m => m.assessments || [])[0].id}`}>
+              <Button
+                size="sm"
+                className="gap-1.5 bg-primary text-white hover:bg-primary/90"
+              >
+                Go to Quiz
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled
+              className="gap-1.5"
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
     </div>

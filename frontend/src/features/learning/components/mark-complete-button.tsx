@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/shared/ui/button";
 import { useEnrollmentStore } from "@/lib/stores/enrollment.store";
 import { CheckCircle, Sparkles } from "lucide-react";
@@ -13,7 +14,9 @@ interface MarkCompleteButtonProps {
 
 export function MarkCompleteButton({ courseId, lessonId, onComplete }: MarkCompleteButtonProps) {
   const { markLessonComplete, isLessonCompleted } = useEnrollmentStore();
-  const isCompleted = isLessonCompleted(courseId, lessonId);
+  const [completing, setCompleting] = useState(false);
+  
+  const completed = isLessonCompleted(courseId, lessonId);
 
   const handleClick = async () => {
     if (isCompleted) return;
@@ -34,7 +37,7 @@ export function MarkCompleteButton({ courseId, lessonId, onComplete }: MarkCompl
     }
   };
 
-  if (isCompleted) {
+  if (completed) {
     return (
       <Button variant="outline" disabled className="gap-2 bg-success/10 text-success border-success/20">
         <CheckCircle className="h-4 w-4" />

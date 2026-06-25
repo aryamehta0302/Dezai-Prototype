@@ -74,15 +74,16 @@ export const useEnrollmentStore = create<EnrollmentState>()(
           const response = await learningApi.getEnrollments();
           if (response.success) {
             const enrollmentsMap: Record<string, CourseEnrollment> = {};
-            response.enrollments.forEach((e) => {
+            response.enrollments.forEach((e: any) => {
               enrollmentsMap[e.programId] = {
                 id: e.id,
                 courseId: e.programId,
                 enrolledAt: e.createdAt,
                 progress: e.progress,
-                lessonsCompleted: (e.completedLessonIds || []).map((id: string) => ({
-                  lessonId: id,
+                lessonsCompleted: (e.progresses || e.completedLessonIds || []).map((p: any) => ({
+                  lessonId: typeof p === 'string' ? p : p.lessonId,
                   completed: true,
+                  completedAt: typeof p === 'string' ? undefined : p.completedAt,
                 })),
                 notes: {},
               };

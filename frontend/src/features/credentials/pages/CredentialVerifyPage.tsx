@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from 'react';
 import { PageContainer } from '@/shared/components/page-container';
 import { EmptyState } from '@/shared/components/empty-state';
-import { ShieldCheck, ShieldX, Loader2, Award, GraduationCap } from 'lucide-react';
+import { ShieldCheck, ShieldX, Loader2, Award, GraduationCap, AlertTriangle, Copy, Check } from 'lucide-react';
 import { cn } from '@/shared/utils/cn';
 import { formatDate } from '@/shared/utils/format';
 import { useCredentialVerify } from '../hooks/useCredentialVerify';
@@ -15,6 +16,26 @@ interface CredentialVerifyPageProps {
 
 export function CredentialVerifyPage({ id }: CredentialVerifyPageProps) {
   const { credential, loading, error } = useCredentialVerify(id);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyCode = async () => {
+    if (!credential) return;
+    try {
+      await navigator.clipboard.writeText(credential.verificationCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
+
+  const getStatusReason = (): string | null => {
+    if (!credential?.metadata) return null;
+    try {
+      const meta = JSON.parse(credential.metadata as string);
+      return meta.statusReason || null;
+    } catch {
+      return null;
+    }
+  };
 
   if (loading) {
     return (
@@ -156,19 +177,53 @@ export function CredentialVerifyPage({ id }: CredentialVerifyPageProps) {
             </p>
             <p className="text-xs text-muted">Issued</p>
           </div>
+          {credential.issuer?.name && (
+            <>
+              <div className="h-8 w-px bg-border-light" />
+              <div className="text-center">
+                <p className="text-sm font-medium text-on-surface">{credential.issuer.name}</p>
+                <p className="text-xs text-muted">Issuer</p>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Verification Code */}
+        {/* Revocation / Suspension Reason */}
+        {!isActive && getStatusReason() && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-left">
+            <div className="flex items-center gap-2 mb-1">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">Reason</span>
+            </div>
+            <p className="text-sm text-amber-800">{getStatusReason()}</p>
+          </div>
+        )}
+
+        {/* Verification Code with Copy */}
         <div className="pt-4 border-t border-border-light">
-          <p className="text-xs text-muted">
-            Verification Code:{' '}
-            <span className="font-mono font-semibold">
-              {credential.verificationCode}
-            </span>
-          </p>
-          <p className="text-xs text-muted mt-1">
-            Verify at dezai.io/verify/{credential.verificationCode}
-          </p>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs text-muted">
+                Verification Code:{' '}
+                <span className="font-mono font-semibold">{credential.verificationCode}</span>
+              </p>
+              <p className="text-xs text-muted mt-1">
+                Verify at dezai.io/verify/{credential.verificationCode}
+              </p>
+            </div>
+            <button
+              onClick={handleCopyCode}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all shrink-0',
+                copied
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                  : 'bg-white border-border-light hover:bg-neutral-50 text-on-surface'
+              )}
+            >
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
         </div>
       </div>
     </PageContainer>

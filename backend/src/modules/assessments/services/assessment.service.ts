@@ -42,7 +42,7 @@ export class AssessmentService {
     private auditService: AuditService,
     private passFailEvaluationService: PassFailEvaluationService,
     private awardService: AwardService,
-  ) {}
+  ) { }
 
   // ─────────────────── OWNERSHIP GUARD ───────────────────
 

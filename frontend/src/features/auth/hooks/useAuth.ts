@@ -46,7 +46,17 @@ export function useAuth() {
     } else if (status === "unauthenticated") {
       clearSession();
     }
-  }, [session, status, syncSession, clearSession]);
+  }, [
+    session?.user?.id,
+    session?.user?.role,
+    session?.user?.email,
+    session?.user?.name,
+    session?.user?.image,
+    session?.user?.onboarded,
+    status,
+    syncSession,
+    clearSession
+  ]);
 
   /**
    * Sign in with a provider (provider-agnostic).

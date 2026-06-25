@@ -367,35 +367,33 @@ async function main() {
     for (const pid of enrollPrograms) {
       const program = await prisma.program.findUnique({ where: { id: pid } });
       if (!program) continue;
-      const existing = await prisma.enrollment.findUnique({ where: { userId_programId: { userId: studentUser.id, programId: pid } } });
-      if (existing) continue;
-
-      await prisma.enrollment.create({
-        data: { userId: studentUser.id, programId: pid, progress: pid === 'course-1' ? 45 : 10 },
+      await prisma.enrollment.upsert({
+        where: { userId_programId: { userId: studentUser.id, programId: pid } },
+        update: {
+          progress: pid === 'course-1' ? 100 : 10,
+          completedAt: pid === 'course-1' ? new Date() : null,
+        },
+        create: {
+          userId: studentUser.id,
+          programId: pid,
+          progress: pid === 'course-1' ? 100 : 10,
+          completedAt: pid === 'course-1' ? new Date() : null,
+        },
       });
 
-      // Mark first 2 ROOTS-track lessons as completed for course-1
+      // Mark all lessons as completed for course-1 to ensure actual 100% completion
       if (pid === 'course-1') {
-        const rootsTrack = await prisma.programTrack.findFirst({ where: { programId: pid, type: TrackType.ROOTS } });
-        if (rootsTrack) {
-          const mods = await prisma.module.findMany({ where: { trackId: rootsTrack.id }, orderBy: { order: 'asc' }, take: 2 });
+        const tracks = await prisma.programTrack.findMany({ where: { programId: pid } });
+        for (const track of tracks) {
+          const mods = await prisma.module.findMany({ where: { trackId: track.id } });
           for (const mod of mods) {
-            const lessons = await prisma.lesson.findMany({ where: { moduleId: mod.id }, orderBy: { order: 'asc' } });
-            if (lessons.length > 0) {
-              // Mark first lesson of each module as completed
+            const lessons = await prisma.lesson.findMany({ where: { moduleId: mod.id } });
+            for (const lesson of lessons) {
               await prisma.progress.upsert({
-                where: { userId_lessonId: { userId: studentUser.id, lessonId: lessons[0].id } },
+                where: { userId_lessonId: { userId: studentUser.id, lessonId: lesson.id } },
                 update: {},
-                create: { userId: studentUser.id, lessonId: lessons[0].id, completedAt: new Date(Date.now() - 86400000 * (mods.indexOf(mod) + 1)) },
+                create: { userId: studentUser.id, lessonId: lesson.id, completedAt: new Date() },
               });
-              // Mark second if available
-              if (lessons.length > 1) {
-                await prisma.progress.upsert({
-                  where: { userId_lessonId: { userId: studentUser.id, lessonId: lessons[1].id } },
-                  update: {},
-                  create: { userId: studentUser.id, lessonId: lessons[1].id, completedAt: new Date(Date.now() - 86400000 * mods.indexOf(mod)) },
-                });
-              }
             }
           }
         }
@@ -651,6 +649,30 @@ async function main() {
           },
         });
         console.log(`  ✓ Assessment "${mod.title}" (${prog.id}/${track.type === 'ROOTS' ? 'R' : 'E'}${mod.order}) — pass=${cfg.passingScore}%, attempts=${cfg.maxAttempts}, timed=${cfg.timeLimitEnabled}, resume=${cfg.allowResume}`);
+      }
+    }
+
+    // Seed passed assessment attempts for the student for course-1
+    if (studentUser) {
+      const course1Assessments = await prisma.assessment.findMany({
+        where: { module: { track: { programId: 'course-1' } } }
+      });
+      for (const assessment of course1Assessments) {
+        const existingAttempt = await prisma.assessmentAttempt.findFirst({
+          where: { userId: studentUser.id, assessmentId: assessment.id, passed: true }
+        });
+        if (!existingAttempt) {
+          await prisma.assessmentAttempt.create({
+            data: {
+              userId: studentUser.id,
+              assessmentId: assessment.id,
+              score: 90,
+              passed: true,
+              completedAt: new Date(),
+            }
+          });
+          console.log(`  ✓ Passed AssessmentAttempt seeded for "${assessment.title}"`);
+        }
       }
     }
   }

@@ -347,8 +347,9 @@ export function FacultyDashboard() {
   }
 
   return (
-    <div className="relative min-h-[calc(100vh-64px)] bg-neutral-50/50 flex">
-      {/* --- Sidebar Navigation --- */}
+    <>
+      <div className="relative min-h-[calc(100vh-64px)] bg-neutral-50/50 flex">
+        {/* --- Sidebar Navigation --- */}
       <aside className="w-64 border-r border-border-light bg-white flex flex-col justify-between shrink-0">
         <div className="p-5">
           <div className="mb-6 flex items-center gap-3 px-2">
@@ -901,6 +902,7 @@ export function FacultyDashboard() {
 
         </main>
       </div>
+      </div>
 
       {/* --- NOTIFICATIONS SIDEBAR DRAWER --- */}
       {showNotifications && (
@@ -1221,6 +1223,6 @@ export function FacultyDashboard() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
