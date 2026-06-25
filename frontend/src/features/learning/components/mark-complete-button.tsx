@@ -19,7 +19,7 @@ export function MarkCompleteButton({ courseId, lessonId, onComplete }: MarkCompl
   const completed = isLessonCompleted(courseId, lessonId);
 
   const handleClick = async () => {
-    if (isCompleted) return;
+    if (completed) return;
 
     // Navigate next immediately so the video starts transitioning
     onComplete?.();
