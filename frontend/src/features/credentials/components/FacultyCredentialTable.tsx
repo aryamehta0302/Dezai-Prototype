@@ -104,7 +104,7 @@ export function FacultyCredentialTable({ credentials, onStatusChange }: Props) {
                                     <td className="px-6 py-4">
                                         <div className="space-y-1">
                                             <Badge
-                                                variant={cred.verificationStatus === VerifyStatus.ACTIVE ? 'default' : cred.verificationStatus === VerifyStatus.SUSPENDED ? 'secondary' : 'destructive'}
+                                                variant={cred.verificationStatus === 'ACTIVE' ? 'default' : cred.verificationStatus === 'SUSPENDED' ? 'secondary' : 'destructive'}
                                                 className="text-[10px] tracking-wider"
                                             >
                                                 {cred.verificationStatus}
@@ -151,18 +151,18 @@ export function FacultyCredentialTable({ credentials, onStatusChange }: Props) {
                                                         <History className="h-3.5 w-3.5" />
                                                         <ChevronDown className={cn('h-3 w-3 transition-transform', expandedAuditId === cred.id && 'rotate-180')} />
                                                     </Button>
-                                                    {cred.verificationStatus !== VerifyStatus.ACTIVE && (
-                                                        <Button variant="outline" size="sm" onClick={() => handleRequestAction(cred, VerifyStatus.ACTIVE)} className="h-7 text-xs">
+                                                    {cred.verificationStatus !== 'ACTIVE' && (
+                                                        <Button variant="outline" size="sm" onClick={() => handleRequestAction(cred, 'ACTIVE')} className="h-7 text-xs">
                                                             Reissue
                                                         </Button>
                                                     )}
-                                                    {cred.verificationStatus === VerifyStatus.ACTIVE && (
-                                                        <Button variant="outline" size="sm" onClick={() => handleRequestAction(cred, VerifyStatus.SUSPENDED)} className="h-7 text-xs">
+                                                    {cred.verificationStatus === 'ACTIVE' && (
+                                                        <Button variant="outline" size="sm" onClick={() => handleRequestAction(cred, 'SUSPENDED')} className="h-7 text-xs">
                                                             Suspend
                                                         </Button>
                                                     )}
-                                                    {cred.verificationStatus !== VerifyStatus.REVOKED && (
-                                                        <Button variant="destructive" size="sm" onClick={() => handleRequestAction(cred, VerifyStatus.REVOKED)} className="h-7 text-xs">
+                                                    {cred.verificationStatus !== 'REVOKED' && (
+                                                        <Button variant="destructive" size="sm" onClick={() => handleRequestAction(cred, 'REVOKED')} className="h-7 text-xs">
                                                             Revoke
                                                         </Button>
                                                     )}

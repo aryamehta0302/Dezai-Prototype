@@ -17,11 +17,8 @@ import { DatabaseModule } from '../../database/database.module';
 import { UsersModule } from '../users/users.module';
 import { AchievementsModule } from '../achievements/achievements.module';
 
-// IMPORTANT: CredentialsModule is required for AttemptService to auto-generate credentials upon assessment pass. Do not remove.
-import { CredentialsModule } from '../credentials/credentials.module';
-
 @Module({
-  imports: [AuditModule, DatabaseModule, UsersModule, AchievementsModule, CredentialsModule],
+  imports: [AuditModule, DatabaseModule, UsersModule, AchievementsModule],
   controllers: [
     AssessmentController,
     AttemptController,

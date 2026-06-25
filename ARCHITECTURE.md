@@ -244,23 +244,6 @@ backend/src/
 
 ---
 
-## Backend Module Interactivity
-
-### Cross-Module Communication (Event-Driven vs Dependency Injection)
-
-When an action in one domain (e.g., passing an assessment) must automatically trigger a side-effect in another domain (e.g., minting a credential), the project follows these guidelines:
-
-1. **Direct Dependency Injection (Current Standard):**
-   - For simple, immediate side-effects, the target module (e.g., `CredentialsModule`) should be imported into the acting module (e.g., `AssessmentsModule`).
-   - The acting service (e.g., `AttemptService`) injects the target service (e.g., `CredentialGenerationService`) and triggers the logic securely.
-   - Example: Automatic generation of Program/Assessment Credentials happens by directly injecting `CredentialGenerationService` into `EnrollmentService` and `AttemptService` respectively.
-
-2. **Avoiding Circular Dependencies:**
-   - If injecting the module creates a circular dependency, you MUST use `forwardRef()` or shift to an asynchronous Event-Emitter architecture (`@nestjs/event-emitter`).
-   - Deep imports across module boundaries without exporting the module are strictly forbidden.
-
----
-
 ## Enforcement
 
 1. **Code Review**: Every PR must be checked against the Feature Boundary Checklist.
