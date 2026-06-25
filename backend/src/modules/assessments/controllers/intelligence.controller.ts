@@ -15,8 +15,6 @@ import { AssessmentAnalyticsService } from '../services/assessment-analytics.ser
 import { AssessmentService } from '../services/assessment.service';
 
 /**
- * IntelligenceController — Sprint 6 Task A endpoints
- *
  * Assessment Intelligence: weak topics, topic accuracy, difficulty analytics,
  * performance reports, and faculty/institution insight summaries.
  *

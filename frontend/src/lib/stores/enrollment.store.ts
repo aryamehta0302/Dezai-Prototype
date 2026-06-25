@@ -164,17 +164,18 @@ export const useEnrollmentStore = create<EnrollmentState>()(
           };
         });
 
-        // Fire API in background — don't block navigation
-        learningApi.completeLesson(lessonId).then((response) => {
+        try {
+          const response = await learningApi.completeLesson(lessonId);
           if (response.success) {
             if (response.xpResult?.currentXp) {
               get().setXp(response.xpResult.currentXp);
             }
             get().fetchEnrollments();
           }
-        }).catch((error) => {
+        } catch (error) {
           console.error("Failed to save lesson completion:", error);
-        });
+          throw error;
+        }
       },
 
       toggleBookmark: async (courseId, lessonId) => {

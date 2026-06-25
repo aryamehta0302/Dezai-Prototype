@@ -135,6 +135,10 @@ export function FacultyDashboard() {
   const [selectedBankId, setSelectedBankId] = useState("");
   const [passingScore, setPassingScore] = useState(80);
   const [sampleSize, setSampleSize] = useState(10);
+  const [timeLimit, setTimeLimit] = useState(1800);
+  const [timeLimitEnabled, setTimeLimitEnabled] = useState(true);
+  const [maxAttempts, setMaxAttempts] = useState(8);
+  const [allowResume, setAllowResume] = useState(true);
   const [isCreatingAssessment, setIsCreatingAssessment] = useState(false);
 
   // Form states for profile edit
@@ -289,6 +293,10 @@ export function FacultyDashboard() {
         questionBankId: selectedBankId,
         passingScore: Number(passingScore),
         sampleSize: Number(sampleSize),
+        timeLimit: Number(timeLimit),
+        timeLimitEnabled,
+        maxAttempts: Number(maxAttempts),
+        allowResume,
       });
       toast.success("Assessment published successfully!");
       setShowAssessmentModal(false);
@@ -1127,6 +1135,60 @@ export function FacultyDashboard() {
                     required
                     value={sampleSize}
                     onChange={(e) => setSampleSize(Number(e.target.value))}
+                    className="w-full rounded-xl border border-border-light bg-neutral-50 px-4 py-2.5 text-xs outline-hidden focus:border-primary focus:bg-white transition-all"
+                  />
+                </div>
+
+                {/* Time Limit */}
+                <div className="space-y-1.5">
+                  <label className="text-2xs font-bold text-on-surface/85">Time Limit (seconds)</label>
+                  <input
+                    type="number"
+                    min="60"
+                    value={timeLimit}
+                    onChange={(e) => setTimeLimit(Number(e.target.value))}
+                    disabled={!timeLimitEnabled}
+                    className="w-full rounded-xl border border-border-light bg-neutral-50 px-4 py-2.5 text-xs outline-hidden focus:border-primary focus:bg-white transition-all disabled:opacity-50"
+                  />
+                </div>
+              </div>
+
+              {/* Toggle row: Time Limit + Resume */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <label className="flex items-center gap-3 p-3 rounded-xl border border-border-light bg-neutral-50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={timeLimitEnabled}
+                    onChange={(e) => setTimeLimitEnabled(e.target.checked)}
+                    className="h-4 w-4 rounded border-border-light text-primary focus:ring-primary"
+                  />
+                  <div>
+                    <p className="text-2xs font-bold text-on-surface/85">Time Limit</p>
+                    <p className="text-3xs text-muted">Enforce duration</p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-3 rounded-xl border border-border-light bg-neutral-50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={allowResume}
+                    onChange={(e) => setAllowResume(e.target.checked)}
+                    className="h-4 w-4 rounded border-border-light text-primary focus:ring-primary"
+                  />
+                  <div>
+                    <p className="text-2xs font-bold text-on-surface/85">Allow Resume</p>
+                    <p className="text-3xs text-muted">Continue interrupted</p>
+                  </div>
+                </label>
+
+                {/* Max Attempts */}
+                <div className="space-y-1.5">
+                  <label className="text-2xs font-bold text-on-surface/85">Max Attempts</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={maxAttempts}
+                    onChange={(e) => setMaxAttempts(Number(e.target.value))}
                     className="w-full rounded-xl border border-border-light bg-neutral-50 px-4 py-2.5 text-xs outline-hidden focus:border-primary focus:bg-white transition-all"
                   />
                 </div>

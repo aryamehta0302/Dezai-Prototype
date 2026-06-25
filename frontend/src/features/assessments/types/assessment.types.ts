@@ -29,6 +29,9 @@ export interface Attempt {
   questions: AttemptQuestion[];
   remainingTime?: number;
   answers?: Record<string, string>;
+  maxAttempts?: number;
+  timeLimitEnabled?: boolean;
+  allowResume?: boolean;
 }
 
 export interface AttemptResultQuestionItem {

@@ -62,13 +62,16 @@ export const assessmentAttemptService = {
 
   async submitAttempt(
     attemptId: string,
-    token: string
+    token: string,
+    answers?: Record<string, string>
   ): Promise<{ success: boolean; attemptId: string; score: number; passed: boolean }> {
     const res = await fetch(`${getApiUrl()}/assessments/attempts/${attemptId}/submit`, {
       method: "POST",
       headers: {
+        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
+      body: JSON.stringify({ answers }),
     });
 
     if (!res.ok) {

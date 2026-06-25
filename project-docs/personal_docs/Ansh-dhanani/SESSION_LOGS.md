@@ -1,5 +1,112 @@
 # Session Logs — Student Experience Stabilization
 
+## Session: June 25, 2026 — Auth Fixes, DB Resilience, Performance + Seed Data Cleanup
+
+### 🫸 Context
+Ansh directed: Fix Auth.js ClientFetchError (Next.js 16 + NextAuth v5 incompatibility), DB connection drops from Neon auto-suspend, slow lesson completion/video/progress bar updates, and lingering seed data issues where question banks had fewer questions than assessments required.
+
+### Auth.js ClientFetchError (Next.js 16)
+- **Root cause**: `export const { GET, POST } = handlers;` on a catch-all dynamic route (`[...nextauth]/route.ts`) fails in Next.js 16 because the framework passes 2 args (request + params Promise) but NextAuth v5 handlers expect only 1.
+- **Fix**: Changed to explicit `export async function GET(request) { return handlers.GET(request); }` wrappers.
+- **AUTH_URL pattern**: `http://127.0.0.1:3000/api/auth` is correct — `parseUrl()` in next-auth client derives `basePath` from the path.
+
+### Neon Auto-Suspend (P1001 Errors)
+- **Root cause**: Neon free-tier DB kills TCP after ~5 min idle. Any Prisma query after sleep gets P1001.
+- **Fix**: Added `connect_timeout=15` to `DATABASE_URL`, removed non-standard `connection_lifetime=300`. Created `PrismaService.retryOnWakeup()` that catches P1001 at query time and retries 2x with 3s delay. Wrapped `authenticateUser`, `getNote`, `upsertNote`.
+
+### Lesson Completion Timing
+- **Problem**: `onComplete?.()` was called after the API call, making video transitions feel slow.
+- **Fix**: `onComplete?.()` fires first (immediate video transition), then `await markLessonComplete`, then toast only on success. Changed from `.then()` fire-and-forget to proper `await` + re-throw.
+
+### Video & Progress Bar Performance
+- **Video**: Reads `videoUrl` from `currentLesson` (pre-loaded course data) instead of `lessonDetail?.videoUrl`. Added `key={currentLessonId}` to force clean `<video>` remount on navigation. Content area shows skeleton during `lessonDetail` fetch.
+- **Progress bar**: Uses `completedCount / totalLessons` from local Zustand store (instant) instead of server-derived `enrollment?.progress` (needs POST + GET round-trip).
+
+### Question Set Mismatch Bug (Critical Fix)
+- **Discovery**: During scoring investigation, user showed "Unanswered" on Q2–Q5 despite having answered all 5 questions in the frontend. Backend diagnostic confirmed all 5 `attemptAnswers` were saved. The disconnect was that `startAttempt` calls both `createSession` (→ `generateQuestionSet`, stores set B in `session.questionSet`) and `selectQuestions` (returns set A to frontend). Both independently shuffle and sample from the same bank — producing DIFFERENT question sets.
+- **Root cause**: `attempt.service.ts:81-90` — `createSession` and `selectQuestions` had no coordination. They each call `fisherYatesShuffle` on the bank independently, so the frontend showed different questions than what the session stored.
+- **Fix**: Removed the `selectQuestions` call from `startAttempt`. Now reads `session.questionSet` (the set already stored during `createSession`) and formats it directly for the frontend response. This guarantees the frontend always displays the exact same questions that the session uses for scoring/review.
+- **Cleanup**: Removed unused `QuestionSelectionService` import and constructor injection from `AttemptService` (was previously used in `startAttempt` only). TypeScript compiles clean with zero errors.
+- **Lesson learned**: The `resumeAttempt` method already read from `session.questionSet` correctly — the bug was only in `startAttempt` which independently called `selectQuestions`.
+
+### Seed Data Fix
+- **Problem**: Diagnostic revealed `qb-genai-leaders` had only 8 questions (leftover from Sprint 5 seed) and `qb-product-design` had only 1 question (partial seed run). The seed's `if (!existingQb)` skip left stale underpopulated banks untouched — 11 out of 120 assessments had `sampleSize > bank question count`, causing "Assessment Unavailable" errors.
+- **Fix**: Replaced skip-if-exists with check-and-repopulate: banks with wrong question count get old questions deleted and fresh ones created from the pool. Added stale attempt/session cleanup first to avoid FK constraint violations (`attempt_answers` references `question_options`).
+- **Result**: All 12 banks now have 12 questions each. All 120 assessments verified OK (0 insufficient).
+
+### Files Changed
+```
+backend/prisma/seeders/seed.ts
+backend/prisma/scripts/fix-assessment-config.ts
+backend/.env
+backend/src/database/prisma.service.ts
+backend/src/modules/auth/services/auth.service.ts
+backend/src/modules/assessments/services/attempt.service.ts
+backend/src/modules/learning/services/learning.service.ts
+frontend/src/app/api/auth/[...nextauth]/route.ts
+frontend/src/features/learning/components/mark-complete-button.tsx
+frontend/src/lib/stores/enrollment.store.ts
+frontend/src/features/learning/pages/CoursePlayerPage.tsx
+```
+
+### Verification
+- Seed runs successfully: all 12 banks at 12 questions, 120 assessments with sufficient questions
+- Diagnostic confirms 0 assessments with insufficient questions
+
+## Session: June 24, 2026 — Assessment Settings, Seed Overhaul & Dashboard Progressive Loading
+
+### 🫸 Context
+Ansh directed: Make assessment settings per-assessment (not hardcoded), seed all modules with assessments, remove proctoring overlay (these are online course quizzes, not exams), make dashboard sections load independently.
+
+### Backend
+- **Prisma Schema** — Added `maxAttempts Int @default(8)`, `timeLimitEnabled Boolean @default(true)`, `allowResume Boolean @default(true)` to `Assessment` model. Pushed via `db push`.
+- **DTOs** — `CreateAssessmentDto` / `UpdateAssessmentDto` accept the 3 new fields with validation.
+- **Attempt Service** — `startAttempt` reads `assessment.maxAttempts` and `assessment.allowResume` instead of hardcoded `MAX_ATTEMPTS_DEFAULT=8`. `resumeAttempt` returns `maxAttempts`, `timeLimitEnabled`, `allowResume` in response. Added `ForbiddenException` when `allowResume=false` and resume attempted.
+- **Removed Redundant Queries** — `submitAttempt`, `getAttemptResult`, `resumeAttempt` now build question list from `session.questionSet` instead of re-querying `selectQuestions` (3 redundant DB queries eliminated).
+- **Seed Overhaul** — Replaced single question bank (course-1 only) with 12 banks (1 per program), each seeded from 3 themed pools (AI: 12 Qs, Business: 12 Qs, Design: 12 Qs). Created assessments for ALL 120 modules with 5 config tiers based on module order:
+  - Order 1-2: strict (pass=80, attempts=3, timed, no resume)
+  - Order 3-4: moderate (pass=70, attempts=5, timed, resume)
+  - Order 5-6: relaxed (pass=60, attempts=8, untimed, resume)
+  - Order 7-8: challenging (pass=85, attempts=2, timed 20min, no resume)
+  - Order 9-10: practice (pass=50, attempts=10, untimed, resume)
+- **Milestones Fix** — `NOT: { completedAt: null }` is invalid in Prisma 6. Removed NOT filter, filter nulls in JS via `.filter((d): d is Date => d !== null)`.
+
+### Frontend
+- **Proctoring Overlay Removed** — Deleted full-screen overlay ("Assessment In Progress") + sticky banner ("Exam in progress") + active session polling from `(student)/layout.tsx`. TopAppBar now shows consistently.
+- **Attempt Types** — Added `maxAttempts`, `timeLimitEnabled`, `allowResume` optional fields to `Attempt` interface.
+- **Pre-Take Screen** — Shows resume banner when `attempt.answers` has entries (remaining time + answer count). Button reads "Resume Assessment" vs "Acknowledge & Begin Assessment". Time limit row hidden when `timeLimitEnabled=false`.
+- **Progressive Dashboard** — Removed universal `showSkeleton` variable. Each section uses its own loading state:
+  - Greeting: renders instantly (uses `user` from auth store)
+  - Subtitle, Continue Learning, Enrolled Courses, Stats: skeleton until both enrollment + program stores fetch
+  - Milestones, Recommendations, Insights, Timeline: skeleton on their own loading state only
+  - Achievements: skeleton on `achievementsLoading` (not `achievements.length === 0`)
+  - Learning Analytics cards: each independently handles loading/empty/content
+- **Empty State Fix** — "No courses in progress" / "No enrollments yet" now only appear after BOTH stores confirm no data (was flashing due to programs loading after enrollments).
+- **CORS** — Backend `main.ts` allows both `localhost:3000` and `127.0.0.1:3000`.
+
+### Files Changed (24)
+```
+backend/prisma/schema.prisma
+backend/prisma/seeders/seed.ts
+backend/src/main.ts
+backend/src/modules/assessments/dto/assessment.dto.ts
+backend/src/modules/assessments/services/attempt.service.ts
+backend/src/modules/assessments/services/assessment.service.ts
+backend/src/modules/learning/services/learning-milestone.service.ts
+frontend/src/app/(student)/layout.tsx
+frontend/src/features/assessments/hooks/useAttempt.ts
+frontend/src/features/assessments/pages/AssessmentPlayer.tsx
+frontend/src/features/assessments/types/assessment.types.ts
+frontend/src/features/dashboard/components/FacultyDashboard.tsx
+frontend/src/features/learning/pages/StudentDashboardPage.tsx
+frontend/src/features/results/pages/AssessmentResult.tsx
+```
+
+### Verification
+- `npx nest build` — zero errors
+- `npx next build` — zero errors
+- Seed creates 12 banks × 12 Qs = 144 questions, 120 assessments with varied settings
+
 ## Session: June 22, 2026 — Sprint 5 Full Audit & Fix
 
 ### 🔍 Audit Scope

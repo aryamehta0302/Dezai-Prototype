@@ -15,17 +15,23 @@ export function MarkCompleteButton({ courseId, lessonId, onComplete }: MarkCompl
   const { markLessonComplete, isLessonCompleted } = useEnrollmentStore();
   const isCompleted = isLessonCompleted(courseId, lessonId);
 
-  const handleClick = () => {
+  const handleClick = async () => {
     if (isCompleted) return;
-    markLessonComplete(courseId, lessonId);
 
-    toast.success(
-      <div className="flex items-center gap-2">
-        <Sparkles className="h-4 w-4 text-warning" />
-        <span>Lesson completed! XP updated.</span>
-      </div>
-    );
+    // Navigate next immediately so the video starts transitioning
     onComplete?.();
+
+    try {
+      await markLessonComplete(courseId, lessonId);
+      toast.success(
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-warning" />
+          <span>Lesson completed! XP updated.</span>
+        </div>
+      );
+    } catch {
+      // API failure already logged in store — no misleading toast
+    }
   };
 
   if (isCompleted) {

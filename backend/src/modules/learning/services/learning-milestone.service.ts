@@ -24,27 +24,27 @@ export class LearningMilestoneService {
       select: { xp: true, streakCount: true },
     });
 
-    const [progressDates, passedAssessmentDates, completedProgramDates] = await Promise.all([
+    const [allProgress, allPassedAssessments, allEnrollments] = await Promise.all([
       this.prisma.progress.findMany({
-        where: { userId, completedAt: { not: null } },
+        where: { userId },
         select: { completedAt: true },
         orderBy: { completedAt: 'asc' },
       }),
       this.prisma.assessmentAttempt.findMany({
-        where: { userId, passed: true, completedAt: { not: null } },
+        where: { userId, passed: true },
         select: { completedAt: true },
         orderBy: { completedAt: 'asc' },
       }),
       this.prisma.enrollment.findMany({
-        where: { userId, completedAt: { not: null } },
+        where: { userId },
         select: { completedAt: true },
         orderBy: { completedAt: 'asc' },
       }),
     ]);
 
-    const sortedLessonDates = progressDates.map((p) => p.completedAt).filter(Boolean) as Date[];
-    const sortedAssessmentDates = passedAssessmentDates.map((a) => a.completedAt).filter(Boolean) as Date[];
-    const sortedProgramDates = completedProgramDates.map((e) => e.completedAt).filter(Boolean) as Date[];
+    const sortedLessonDates = allProgress.map((p) => p.completedAt).filter((d): d is Date => d !== null);
+    const sortedAssessmentDates = allPassedAssessments.map((a) => a.completedAt).filter((d): d is Date => d !== null);
+    const sortedProgramDates = allEnrollments.map((e) => e.completedAt).filter((d): d is Date => d !== null);
 
     const progressCount = sortedLessonDates.length;
     const passedAssessments = sortedAssessmentDates.length;

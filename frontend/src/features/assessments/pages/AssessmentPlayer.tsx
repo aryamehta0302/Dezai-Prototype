@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useAttempt } from "../hooks/useAttempt";
-import { assessmentAttemptService } from "../services/assessment-attempt.service";
+import { AssessmentPlayerSkeleton } from "../components/AssessmentSkeleton";
 import { SecurityToast } from "../../quizzes/components/security-toast";
 import { Button } from "@/shared/ui/button";
 import { Badge } from "@/shared/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/shared/ui/dialog";
-import { HelpCircle, AlertTriangle, Shield, Lock, XOctagon, Clock, CheckCircle, Flag, ChevronLeft, ChevronRight, Layers } from "lucide-react";
+import { HelpCircle, AlertTriangle, Shield, Lock, XOctagon, Clock, CheckCircle, Flag, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -20,6 +21,7 @@ interface AssessmentPlayerProps {
 
 export function AssessmentPlayer({ slug, assessmentId }: AssessmentPlayerProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { session } = useAuth();
   const token = session?.accessToken;
 
@@ -34,6 +36,9 @@ export function AssessmentPlayer({ slug, assessmentId }: AssessmentPlayerProps) 
     timer,
     saveStatus,
     submit,
+    error,
+    errorType,
+    attemptStatus,
     
     // Proctoring
     warningsCount,
@@ -52,19 +57,21 @@ export function AssessmentPlayer({ slug, assessmentId }: AssessmentPlayerProps) 
   const [started, setStarted] = useState(false);
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [attemptStatus, setAttemptStatus] = useState<{
-    attemptsRemaining: number;
-    maxAttempts: number;
-    everPassed: boolean;
-  } | null>(null);
+  const isSubmittingRef = useRef(false);
 
   // Initialize assessment attempt once token is loaded
   useEffect(() => {
     if (token) {
       initializeAttempt();
-      assessmentAttemptService.getAttemptStatus(assessmentId, token).then(setAttemptStatus).catch(() => {});
     }
-  }, [token, initializeAttempt, assessmentId]);
+  }, [token, initializeAttempt]);
+
+  // Redirect to results page if already passed or max attempts reached
+  useEffect(() => {
+    if (errorType === "already_completed" || errorType === "max_attempts") {
+      router.replace(`/programs/${slug}/assessment/${assessmentId}/results`);
+    }
+  }, [errorType, slug, assessmentId, router]);
 
   // Request fullscreen when entering the assessment
   const handleStart = async () => {
@@ -95,7 +102,7 @@ export function AssessmentPlayer({ slug, assessmentId }: AssessmentPlayerProps) 
       const isCurrentlyFullscreen = !!document.fullscreenElement;
       setIsFullscreenActive(isCurrentlyFullscreen);
 
-      if (!isCurrentlyFullscreen && !showWarningModal && !isScreenLocked) {
+      if (!isCurrentlyFullscreen && !showWarningModal && !isScreenLocked && !isSubmittingRef.current) {
         handleViolation("FOCUS_LOSS");
         toast.warning("Exiting fullscreen is a proctoring violation!");
       }
@@ -123,51 +130,80 @@ export function AssessmentPlayer({ slug, assessmentId }: AssessmentPlayerProps) 
 
   // Submission handler
   const handleSubmitClick = async () => {
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
       const res = await submit();
       if (res && res.success) {
+        // Invalidate cached queries so the results page fetches fresh data
+        queryClient.invalidateQueries({ queryKey: ["assessments", "attempt-status", assessmentId] });
+        queryClient.invalidateQueries({ queryKey: ["assessments", "history", assessmentId] });
         if (document.fullscreenElement && document.exitFullscreen) {
           await document.exitFullscreen().catch(() => {});
         }
         toast.success("Assessment submitted successfully!");
         router.push(`/programs/${slug}/assessment/${assessmentId}/results?attemptId=${res.attemptId}`);
+        // Don't reset isSubmittingRef — component will unmount, keep guard active
+        return;
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to submit assessment";
       toast.error(message);
-    } finally {
-      setIsSubmitting(false);
-      setShowConfirmSubmit(false);
     }
+    isSubmittingRef.current = false;
+    setIsSubmitting(false);
+    setShowConfirmSubmit(false);
   };
 
-  if (!attempt) {
+  if (error) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
-          <p className="text-muted">Loading assessment configurations...</p>
+      <div className="max-w-md mx-auto py-20 px-6 text-center space-y-4">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10 mx-auto text-destructive">
+          <AlertTriangle className="h-8 w-8" />
+        </div>
+        <h2 className="text-xl font-bold">{errorType === "max_attempts" ? "Maximum Attempts Reached" : "Assessment Unavailable"}</h2>
+        <p className="text-muted text-sm">{error}</p>
+        <div className="pt-2 flex flex-col gap-2">
+          <Link href={`/programs/${slug}/assessment/${assessmentId}/results`}>
+            <Button className="w-full rounded-xl">View Results & History</Button>
+          </Link>
+          <Link href={`/programs/${slug}`}>
+            <Button variant="outline" className="w-full rounded-xl">Back to Program</Button>
+          </Link>
         </div>
       </div>
     );
   }
 
+  if (!attempt) {
+    return <AssessmentPlayerSkeleton />;
+  }
+
   const questions = attempt.questions || [];
   const currentQuestion = questions[currentIndex];
   const answeredCount = Object.keys(answers).length;
+  const isResume = Object.keys(attempt.answers ?? {}).length > 0;
 
   // 1. Pre-take Instruction Screen
   if (!started && attempt.status !== "TERMINATED") {
     return (
       <div className="max-w-2xl mx-auto py-16 px-6 space-y-8">
+        {isResume && (
+          <div className="p-4 rounded-2xl bg-warning/5 border border-warning/20 flex items-center gap-3 text-sm">
+            <Clock className="h-5 w-5 text-warning shrink-0" />
+            <span className="text-on-surface">
+              You have an active session with {Object.keys(attempt.answers ?? {}).length} answer(s) saved.
+              Remaining time: <strong>{timer.formatted}</strong>
+            </span>
+          </div>
+        )}
         <div className="text-center space-y-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mx-auto">
             <HelpCircle className="h-8 w-8 text-primary" />
           </div>
           <h1 className="text-2xl font-bold text-on-surface">{attempt.assessmentTitle}</h1>
           <p className="text-muted max-w-md mx-auto">
-            Welcome to the assessment player. Please read the guidelines below before beginning.
+            {isResume ? "You have an incomplete attempt. Review the guidelines and resume." : "Welcome to the assessment player. Please read the guidelines below before beginning."}
           </p>
         </div>
 
@@ -178,10 +214,12 @@ export function AssessmentPlayer({ slug, assessmentId }: AssessmentPlayerProps) 
               <p className="text-muted">Questions to Solve</p>
               <p className="font-medium text-on-surface">{attempt.sampleSize}</p>
             </div>
-            <div>
-              <p className="text-muted">Total Time Limit</p>
-              <p className="font-medium text-on-surface">{Math.floor((attempt.timeLimit || 1800) / 60)} minutes</p>
-            </div>
+            {attempt.timeLimitEnabled !== false && (
+              <div>
+                <p className="text-muted">Total Time Limit</p>
+                <p className="font-medium text-on-surface">{Math.floor((attempt.timeLimit || 1800) / 60)} minutes</p>
+              </div>
+            )}
             {attemptStatus && (
               <div>
                 <p className="text-muted">Attempts Remaining</p>
@@ -221,7 +259,7 @@ export function AssessmentPlayer({ slug, assessmentId }: AssessmentPlayerProps) 
         </div>
 
         <Button onClick={handleStart} className="w-full py-6 text-base font-bold bg-primary text-primary-foreground hover:bg-primary/95 transition-all duration-300 rounded-xl shadow-lg">
-          Acknowledge & Begin Assessment
+          {isResume ? "Resume Assessment" : "Acknowledge & Begin Assessment"}
         </Button>
       </div>
     );

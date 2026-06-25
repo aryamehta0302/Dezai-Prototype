@@ -294,15 +294,19 @@ export class LearningService {
    * Upsert notes for a lesson.
    */
   async upsertNote(userId: string, lessonId: string, content: string) {
-    const existing = await this.prisma.note.findUnique({
-      where: { userId_lessonId: { userId, lessonId } },
-    });
+    const existing = await this.prisma.retryOnWakeup(() =>
+      this.prisma.note.findUnique({
+        where: { userId_lessonId: { userId, lessonId } },
+      }),
+    );
 
-    const note = await this.prisma.note.upsert({
-      where: { userId_lessonId: { userId, lessonId } },
-      update: { content },
-      create: { userId, lessonId, content },
-    });
+    const note = await this.prisma.retryOnWakeup(() =>
+      this.prisma.note.upsert({
+        where: { userId_lessonId: { userId, lessonId } },
+        update: { content },
+        create: { userId, lessonId, content },
+      }),
+    );
 
     if (!existing) {
       this.awardService.checkAndAward(userId, AchievementCategory.ENGAGEMENT);
@@ -316,11 +320,13 @@ export class LearningService {
    * Retrieve notes for a lesson.
    */
   async getNote(userId: string, lessonId: string) {
-    return this.prisma.note.findUnique({
-      where: {
-        userId_lessonId: { userId, lessonId },
-      },
-    });
+    return this.prisma.retryOnWakeup(() =>
+      this.prisma.note.findUnique({
+        where: {
+          userId_lessonId: { userId, lessonId },
+        },
+      }),
+    );
   }
 
   /**

@@ -41,8 +41,6 @@ interface CompletedAttemptForTrend {
 // ─────────────────── SERVICE ───────────────────
 
 /**
- * AssessmentAnalyticsService — Sprint 6 Tasks A3 + A4
- *
  * Provides difficulty-based performance breakdowns, daily trend analysis,
  * comprehensive performance reports, and faculty/institution-level summaries.
  */
