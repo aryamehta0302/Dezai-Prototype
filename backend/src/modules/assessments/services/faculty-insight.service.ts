@@ -52,8 +52,6 @@ interface FacultyStudentInfo {
 // ─────────────────── SERVICE ───────────────────
 
 /**
- * FacultyInsightService — Sprint 6 Tasks B1 + B2 + B3
- *
  * Provides at-risk student detection, low-progress monitoring, inactive
  * student alerts, academic health scoring, repeated failure analysis,
  * and detailed per-student insight views for faculty dashboards.

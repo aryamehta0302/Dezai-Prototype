@@ -2,10 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../../database/prisma.service";
 
 /**
- * QuestionSelectionService — Implements the 100:15 Dynamic Question Selection Engine.
- *
- * This is a dedicated injectable service (not a method on AssessmentService)
- * as explicitly required by the Sprint 3 allocation.
+ * Implements the 100:15 Dynamic Question Selection Engine.
  *
  * Algorithm:
  * 1. Fetch all questions + options from the assessment's linked QuestionBank

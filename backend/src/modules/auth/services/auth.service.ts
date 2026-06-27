@@ -188,10 +188,10 @@ export class AuthService {
   async authenticateUser(data: { email: string; password: string }) {
     const { email, password } = data;
 
-    // 1. Find user by email
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-    });
+    // 1. Find user by email (retry on Neon wake-up)
+    const user = await this.prisma.retryOnWakeup(() =>
+      this.prisma.user.findUnique({ where: { email } }),
+    );
 
     if (!user || !user.passwordHash) {
       throw new UnauthorizedException('Invalid email or password.');

@@ -48,8 +48,6 @@ interface CategoryBucket {
 // ─────────────────── SERVICE ───────────────────
 
 /**
- * WeakTopicDetectionService — Sprint 6 Tasks A1 + A2
- *
  * Analyses AttemptAnswer data to identify categories where students
  * perform below threshold, tracks accuracy over time, and provides
  * incorrect-question analysis with distractor identification.

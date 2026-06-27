@@ -28,8 +28,6 @@ export class AttemptController {
   }
 
   /**
-   * GET /api/assessments/attempts/my-history
-   * Sprint 5 Task 1: Cross-assessment history for the current student.
    * Registered before :id routes to prevent 'my-history' being captured as a param.
    */
   @Get('my-history')
@@ -76,12 +74,11 @@ export class AttemptController {
     @Param('id') id: string,
     @Body() body: SubmitAttemptDto,
   ) {
-    return this.attemptService.submitAttempt(req.user.id, id);
+    return this.attemptService.submitAttempt(req.user.id, id, body.answers);
   }
 
   /**
    * GET /api/assessments/attempts/:id/result
-   * Sprint 5: Enhanced to support faculty access via role parameter.
    */
   @Get(':id/result')
   @Roles(UserRole.STUDENT, UserRole.FACULTY)

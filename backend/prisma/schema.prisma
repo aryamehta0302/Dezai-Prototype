@@ -289,15 +289,18 @@ model QuestionOption {
 }
 
 model Assessment {
-  id             String   @id @default(uuid())
-  moduleId       String
-  questionBankId String
-  title          String
-  passingScore   Int      @default(80) // Passing percentage
-  sampleSize     Int      @default(15) // Dynamic question pull count
-  timeLimit      Int      @default(1800) // Total exam duration in seconds (default 30 min)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id               String   @id @default(uuid())
+  moduleId         String
+  questionBankId   String
+  title            String
+  passingScore     Int      @default(80) // Passing percentage
+  sampleSize       Int      @default(15) // Dynamic question pull count
+  timeLimit        Int      @default(1800) // Total exam duration in seconds (default 30 min)
+  timeLimitEnabled Boolean  @default(true) // Whether time limit is enforced
+  maxAttempts      Int      @default(8) // Max attempts allowed (faculty configurable)
+  allowResume      Boolean  @default(true) // Whether students can resume interrupted attempts
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   module       Module              @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   questionBank QuestionBank        @relation(fields: [questionBankId], references: [id])

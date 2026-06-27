@@ -26,11 +26,15 @@ export function useAttempt(assessmentId: string, accessToken?: string, slug?: st
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const hasUnsavedChanges = useRef(false);
   const answersRef = useRef(answers);
+  const isSubmittingRef = useRef(false);
 
   // Sync answers ref
   useEffect(() => {
     answersRef.current = answers;
   }, [answers]);
+
+  // Guard to prevent initializeAttempt from running twice (React Strict Mode)
+  const initializedRef = useRef(false);
 
   // Ref for timer to break circular dependency with handleTimeUp
   const handleTimeUpRef = useRef(async () => {});
@@ -46,14 +50,14 @@ export function useAttempt(assessmentId: string, accessToken?: string, slug?: st
       if (hasUnsavedChanges.current) {
         await assessmentAttemptService.autoSaveAnswers(
           attempt.attemptId,
-          answers,
+          answersRef.current,
           accessToken
         );
         hasUnsavedChanges.current = false;
       }
 
       setSaveStatus("saving");
-      const res = await assessmentAttemptService.submitAttempt(attempt.attemptId, accessToken);
+      const res = await assessmentAttemptService.submitAttempt(attempt.attemptId, accessToken, answersRef.current);
       timer.pause();
       return res;
     } catch (err) {
@@ -75,14 +79,59 @@ export function useAttempt(assessmentId: string, accessToken?: string, slug?: st
     handleTimeUpRef.current = handleTimeUp;
   }, [handleTimeUp]);
 
+  const [error, setError] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<"max_attempts" | "already_completed" | "generic" | null>(null);
+  const [attemptStatus, setAttemptStatus] = useState<{
+    attemptsRemaining: number;
+    maxAttempts: number;
+    everPassed: boolean;
+    canAttempt: boolean;
+    bestScore: number | null;
+    bestPercentage: number | null;
+  } | null>(null);
+
   // Load or Restore Attempt
   const initializeAttempt = useCallback(async () => {
     if (!accessToken) return;
+    if (initializedRef.current) return;
+    initializedRef.current = true;
 
     let activeAttemptId: string | null = null;
+    setError(null);
+
+    let completedAttemptId: string | null = null;
 
     try {
       setSaveStatus("idle");
+
+      // Check attempt status first
+      const status = await assessmentAttemptService.getAttemptStatus(assessmentId, accessToken);
+      setAttemptStatus({
+        attemptsRemaining: status.attemptsRemaining,
+        maxAttempts: status.maxAttempts,
+        everPassed: status.everPassed,
+        canAttempt: status.canAttempt,
+        bestScore: status.bestScore,
+        bestPercentage: status.bestPercentage,
+      });
+
+      if (!status.canAttempt) {
+        if (status.hasActiveAttempt && status.activeAttemptId) {
+          // Active attempt exists — let the resume flow handle it below
+        } else if (status.attemptsRemaining === 0) {
+          setError("Maximum attempts reached for this assessment.");
+          setErrorType("max_attempts");
+          return;
+        } else if (status.everPassed) {
+          setError("You have already passed this assessment.");
+          setErrorType("already_completed");
+          return;
+        } else {
+          setError("You cannot start a new attempt at this time.");
+          setErrorType("generic");
+          return;
+        }
+      }
 
       let data: Attempt;
 
@@ -91,15 +140,22 @@ export function useAttempt(assessmentId: string, accessToken?: string, slug?: st
       } catch (startErr) {
         const msg = startErr instanceof Error ? startErr.message : "";
         if (!msg.includes("active attempt already exists")) {
-          throw startErr;
+          setError(msg || "Failed to start assessment attempt");
+          setErrorType("generic");
+          return;
         }
 
-        // An active attempt exists — fetch its ID and resume
-        const status = await assessmentAttemptService.getAttemptStatus(assessmentId, accessToken);
         activeAttemptId = status.activeAttemptId ?? null;
 
+        // Stale status — re-fetch to get the real activeAttemptId
         if (!status.hasActiveAttempt || !activeAttemptId) {
-          throw new Error("No active attempt found to resume");
+          const freshStatus = await assessmentAttemptService.getAttemptStatus(assessmentId, accessToken);
+          activeAttemptId = freshStatus.activeAttemptId ?? null;
+          if (!activeAttemptId) {
+            setError("No active attempt found to resume");
+            setErrorType("generic");
+            return;
+          }
         }
 
         data = await assessmentAttemptService.resumeAttempt(activeAttemptId, accessToken);
@@ -109,7 +165,6 @@ export function useAttempt(assessmentId: string, accessToken?: string, slug?: st
       setWarningsCount(data.warningsCount);
       setScoreDeduction(data.scoreDeduction);
 
-      // Use server-provided timeLimit if available
       if (data.timeLimit) {
         timer.reset(data.timeLimit);
       }
@@ -120,12 +175,10 @@ export function useAttempt(assessmentId: string, accessToken?: string, slug?: st
         return;
       }
 
-      // If there are pre-saved answers (e.g. from a resumed attempt)
       if (data.answers) {
         setAnswers(data.answers);
       }
 
-      // Restore warning modal / lockout if active on the server
       const ackCount = typeof window !== "undefined"
         ? parseInt(localStorage.getItem(`ack_warnings_${data.sessionId}`) || "0", 10)
         : 0;
@@ -148,7 +201,6 @@ export function useAttempt(assessmentId: string, accessToken?: string, slug?: st
         timer.start();
       }
 
-      // Adjust timer if remainingTime was returned
       if (data.remainingTime !== undefined) {
         timer.reset(data.remainingTime);
         timer.start();
@@ -156,17 +208,13 @@ export function useAttempt(assessmentId: string, accessToken?: string, slug?: st
     } catch (err) {
       const message = err instanceof Error ? err.message : "";
       if (message.includes("already completed")) {
-        toast.info("This attempt has already been submitted. Redirecting to results...");
-        if (slug && typeof window !== "undefined") {
-          const url = activeAttemptId
-            ? `/programs/${slug}/assessment/${assessmentId}/results?attemptId=${activeAttemptId}`
-            : `/programs/${slug}/assessment/${assessmentId}/results`;
-          window.location.href = url;
-        }
+        setError("This attempt has already been submitted. You can review it below.");
+        setErrorType("already_completed");
         return;
       }
       console.error("Failed to initialize attempt:", err);
-      toast.error(message || "Failed to load assessment");
+      setError(message || "Failed to load assessment");
+      setErrorType("generic");
     }
   }, [assessmentId, accessToken, slug]);
 
@@ -190,14 +238,18 @@ export function useAttempt(assessmentId: string, accessToken?: string, slug?: st
     }
   }, [attempt, accessToken]);
 
-  // Periodic Auto-Save interval (every 30s)
+  // Debounced Auto-Save (2s after last change)
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    const interval = setInterval(() => {
+    if (!hasUnsavedChanges.current) return;
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
       saveCurrentAnswers();
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [saveCurrentAnswers]);
+    }, 2000);
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, [answers, saveCurrentAnswers]);
 
   // Save on beforeunload / exit
   useEffect(() => {
@@ -241,7 +293,7 @@ export function useAttempt(assessmentId: string, accessToken?: string, slug?: st
   // Log Proctoring Violation
   const handleViolation = useCallback(
     async (type: "TAB_SWITCH" | "FOCUS_LOSS" | "COPY_PASTE") => {
-      if (!attempt || isTerminated || !accessToken) return;
+      if (!attempt || isTerminated || !accessToken || isSubmittingRef.current) return;
 
       // Ignore FOCUS_LOSS while warning or lockout screen is active
       if ((showWarningModal || isScreenLocked) && type === "FOCUS_LOSS") return;
@@ -315,6 +367,9 @@ export function useAttempt(assessmentId: string, accessToken?: string, slug?: st
     saveStatus,
     saveCurrentAnswers,
     submit,
+    error,
+    errorType,
+    attemptStatus,
     
     // Proctoring states/handlers
     warningsCount,
@@ -329,5 +384,6 @@ export function useAttempt(assessmentId: string, accessToken?: string, slug?: st
     setIsFullscreenActive,
     handleViolation,
     initializeAttempt,
+    isSubmittingRef,
   };
 }

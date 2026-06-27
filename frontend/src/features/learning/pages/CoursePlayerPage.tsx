@@ -115,8 +115,14 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
   const allModules: ApiModule[] = course.tracks.flatMap(t => t.modules);
   const allLessons = allModules.flatMap(m => m.lessons);
   const currentIndex = allLessons.findIndex((l) => l.id === currentLessonId);
+  const currentLesson = currentIndex >= 0 ? allLessons[currentIndex] : null;
   const currentModule = allModules.find(m => m.lessons.some(l => l.id === currentLessonId));
   const enrollment = getEnrollment(course.id);
+
+  // Derive progress from optimistically-updated local state (instant, no server round-trip)
+  const completedCount = enrollment?.lessonsCompleted.length ?? 0;
+  const totalLessons = allLessons.length;
+  const localProgress = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
 
   const goPrev = () => {
     if (currentIndex > 0) goToLesson(allLessons[currentIndex - 1].id);
@@ -167,9 +173,9 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
             <div className="space-y-1">
               <div className="flex justify-between text-xs text-muted">
                 <span>Progress</span>
-                <span>{enrollment?.progress || 0}%</span>
+                <span>{localProgress}%</span>
               </div>
-              <Progress value={enrollment?.progress || 0} className="h-1.5" />
+              <Progress value={localProgress} className="h-1.5" />
             </div>
           </div>
 
@@ -205,17 +211,29 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
               </h1>
             </div>
 
-            {lessonDetail?.videoUrl && (
+            {(currentLesson?.videoUrl || lessonDetail?.videoUrl) && (
               <LessonVideoPlayer
-                title={lessonDetail.title}
-                videoUrl={lessonDetail.videoUrl}
+                key={currentLessonId}
+                title={currentLesson?.title ?? lessonDetail?.title ?? ""}
+                videoUrl={currentLesson?.videoUrl ?? lessonDetail?.videoUrl ?? ""}
               />
             )}
 
-            {lessonDetail?.content && <LessonMarkdownRenderer content={lessonDetail.content} />}
-
-            {lessonDetail?.resources && lessonDetail.resources.length > 0 && (
-              <LessonResourceList resources={lessonDetail.resources} className="mt-6" />
+            {lessonDetail ? (
+              <>
+                {lessonDetail.content && <LessonMarkdownRenderer content={lessonDetail.content} />}
+                {lessonDetail.resources && lessonDetail.resources.length > 0 && (
+                  <LessonResourceList resources={lessonDetail.resources} className="mt-6" />
+                )}
+              </>
+            ) : (
+              <div className="space-y-3 animate-pulse">
+                <div className="h-3 bg-border-light rounded w-3/4" />
+                <div className="h-3 bg-border-light rounded w-full" />
+                <div className="h-3 bg-border-light rounded w-5/6" />
+                <div className="h-3 bg-border-light rounded w-2/3" />
+                <div className="h-3 bg-border-light rounded w-4/5" />
+              </div>
             )}
 
             <div className="border-t border-border-light pt-6">

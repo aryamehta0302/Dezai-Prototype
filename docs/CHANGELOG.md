@@ -4,6 +4,51 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Sprint 6.6] — 2026-06-25
+
+### Auth, DB Resilience & Performance Stabilization + Seed Fixes (Ansh Dhanani)
+
+#### Fixed
+- **Auth.js ClientFetchError** — Changed `[...nextauth]/route.ts` from `export const { GET, POST } = handlers;` to explicit `export async function GET(request)` wrappers. Next.js 16 serves HTML for catch-all dynamic routes with the destructured export pattern because it passes 2 args (request + params Promise) but NextAuth v5 handlers expect only 1. Explicit wrappers fix `"<!DOCTYPE html>"` errors from `/api/auth/session`.
+- **Neon DB Auto-Suspend (P1001)** — Added `connect_timeout=15` to `DATABASE_URL`, removed non-standard `connection_lifetime=300`. Added `retryOnWakeup()` method to `PrismaService` that catches P1001 at query time and retries 2x with 3s delay. Wrapped `authenticateUser`, `getNote`, `upsertNote` with retry.
+- **Seed Data Underpopulated Banks** — `qb-genai-leaders` had only 8 questions (from old Sprint 5 seed), `qb-product-design` had only 1 (partial run). The seed's `if (!existingQb)` skip left stale banks untouched. Rewrote to check actual question count vs pool size — existing banks with wrong counts are automatically repopulated with fresh questions. Added stale attempt/session cleanup before bank repopulation to avoid FK constraint violations.
+
+#### Changed
+- **Lesson Completion Timing** — Reordered `handleClick` in `mark-complete-button.tsx`: `onComplete?.()` fires first (immediate video transition), toast shows only after API succeeds. `markLessonComplete` changed from `.then()` fire-and-forget to `await` + re-throw so error suppresses toast.
+- **Video Player Performance** — Video reads `videoUrl` from `currentLesson` (course data, pre-loaded) instead of waiting for `lessonDetail?.videoUrl`. Added `key={currentLessonId}` to force `<video>` remount on navigation. Content area shows `animate-pulse` skeleton while `lessonDetail` loads.
+- **Progress Bar Speed** — Derived from `enrollment.lessonsCompleted.length / allLessons.length` (Zustand local state, optimistically updated) instead of server-provided `enrollment?.progress` which required POST → response → `fetchEnrollments()` chain.
+
+#### Added
+- **AGENTS.md** — Documented Next.js 16 + Auth.js patterns for future sessions.
+
+#### Fixed
+- **Question Set Mismatch Bug** — `startAttempt` was calling both `createSession` (stores `generateQuestionSet` output as set B) and `selectQuestions` (returns independent set A to the frontend). Both methods independently shuffle and sample from the same bank, producing different question sets. The user answered questions from set A, but the review/result page scored against set B — causing `"Unanswered"` for Q2–Q5 when the IDs didn't overlap. Removed the `selectQuestions` call entirely; `startAttempt` now reads `session.questionSet` directly and formats it for the frontend response. Also removed the unused `QuestionSelectionService` injection from `AttemptService`.
+
+---
+
+## [Sprint 6.5] — 2026-06-24
+
+### Assessment Settings + Progressive Dashboard + Seed Overhaul (Ansh Dhanani)
+
+#### Added
+- **Per-Assessment Settings** — `maxAttempts`, `timeLimitEnabled`, `allowResume` fields on Assessment model (Prisma schema + DTOs + service enforcement). Faculty can now configure attempt limits, timed/untimed mode, and resume policy per assessment.
+- **Seed Overhaul** — 12 question banks (1 per program, 12 questions each from AI/Business/Design pools) + assessments for ALL 120 modules with varied settings (strict/moderate/relaxed/challenging/practice configs based on module order).
+- **Resume Attempt Enhancements** — Pre-take screen shows active session banner with answer count + remaining time; button text changes to "Resume Assessment". Backend returns `maxAttempts`, `timeLimitEnabled`, `allowResume` in attempt responses.
+- **Faculty Publish Modal** — New fields: max attempts input, time limit toggle + seconds input, allow resume checkbox.
+
+#### Changed
+- **Proctoring Overlay Removed** — Stripped full-screen "Assessment In Progress" overlay + sticky "Exam in progress" banner from student layout. Assessments are online course quizzes, not formal exams.
+- **Progressive Dashboard Rendering** — Replaced single `showSkeleton` gate with per-section loading states. Greeting renders instantly, enrollment-dependent sections wait for both stores, independent sections use their own loading states.
+- **Empty State Logic** — Empty states only show after BOTH enrollment and program stores confirm no data (fixes race where "No enrollments" flashed before programs loaded).
+- **Milestone Service** — Fixed Prisma 6 `NOT: { completedAt: null }` error by removing NOT filter and filtering in JS.
+
+#### Fixed
+- `PrismaClientValidationError` in `LearningMilestoneService.getMilestones` — Argument `completedAt` must not be null.
+- `getAttemptResult` re-queried `selectQuestions` 3 redundant times (now uses `session.questionSet`).
+- CORS — Backend now allows both `http://localhost:3000` and `http://127.0.0.1:3000`.
+
+---
+
 ## [Sprint 6] — 2026-06-23
 
 ### Assessment Intelligence + Faculty Insights & Intervention System (Manan Panchal)
