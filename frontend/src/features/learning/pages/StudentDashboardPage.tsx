@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/lib/stores/auth.store";
 import { useEnrollmentStore } from "@/lib/stores/enrollment.store";
@@ -26,7 +26,6 @@ import { DifficultyAnalysisCard } from "../components/difficulty-analysis-card";
 import { apiClient } from "@/core/api/client";
 import {
   useMilestones,
-  useStreakInfo,
   useInsights,
   useRecommendations,
   useActivityTimeline,
@@ -53,13 +52,12 @@ import {
 
 export function StudentDashboardPage() {
   const { user } = useAuthStore();
-  const { fetchEnrollments, fetchStats, xpEarned, enrollments, globalRank, isLoading, hasFetched } = useEnrollmentStore();
-  const { fetchPrograms, programs, hasFetched: programsHasFetched } = useProgramsStore();
+  const { fetchEnrollments, fetchStats, xpEarned, globalRank, hasFetched } = useEnrollmentStore();
+  const { fetchPrograms, hasFetched: programsHasFetched } = useProgramsStore();
   const { enrolledCourses, inProgressCourses, stats: progressStats } = useProgress();
   const { achievements, unlockedCount, isLoading: achievementsLoading } = useAchievements();
 
   const { data: milestones, unlocked: unlockedMilestones, total: totalMCount, loading: loadingMilestones } = useMilestones();
-  const { data: streakInfo, loading: loadingStreak } = useStreakInfo();
   const { data: insights, loading: loadingInsights } = useInsights();
   const { data: recommendations, loading: loadingRecs } = useRecommendations();
   const { data: timelineEvents, loading: loadingTimeline } = useActivityTimeline(5);
@@ -77,17 +75,12 @@ export function StudentDashboardPage() {
     fetchStats();
     fetchPrograms();
 
-    // Fetch weekly rank for Sprint 6 Leaderboard Analytics
-    apiClient.get<any>("/leaderboards/widgets/student")
+    apiClient.get<{ rank: number }>("/leaderboards/widgets/student")
       .then(res => {
         if (res?.rank) setWeeklyRank(res.rank);
       })
       .catch(() => {});
   }, [fetchEnrollments, fetchStats, fetchPrograms]);
-
-  const programsMap = useMemo(() => {
-    return programs.reduce((acc, p) => ({ ...acc, [p.id]: p }), {} as Record<string, { title: string }>);
-  }, [programs]);
 
   const greeting = () => {
     const hour = new Date().getHours();
@@ -237,7 +230,11 @@ export function StudentDashboardPage() {
                   </button>
                 )}
               </>
-            ) : null}
+            ) : (
+              <div className="card-elevation py-10 text-center space-y-2">
+                <p className="text-sm text-secondary">No milestones yet — keep learning to unlock your first one!</p>
+              </div>
+            )}
           </section>
 
           {/* Recommendations */}
@@ -274,7 +271,11 @@ export function StudentDashboardPage() {
                   </button>
                 )}
               </>
-            ) : null}
+            ) : (
+              <div className="card-elevation py-10 text-center space-y-2">
+                <p className="text-sm text-secondary">No recommendations yet — keep learning to get personalized suggestions.</p>
+              </div>
+            )}
           </section>
 
           {/* Achievements */}
@@ -302,28 +303,22 @@ export function StudentDashboardPage() {
               <BarChart3 className="h-5 w-5 text-primary" />
               Learning Analytics
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                {!loadingWeak && weakTopics.length > 0 ? (
-                  <WeakTopicsCard topics={weakTopics} />
-                ) : loadingWeak ? (
-                  <LoadingSkeleton className="h-44 rounded-xl" />
-                ) : null}
-              </div>
-              <div>
-                {!loadingDifficulty && difficultyAnalysis.length > 0 ? (
-                  <DifficultyAnalysisCard analysis={difficultyAnalysis} />
-                ) : loadingDifficulty ? (
-                  <LoadingSkeleton className="h-44 rounded-xl" />
-                ) : null}
-              </div>
-              <div>
-                {!loadingPrediction && predictionRules && predictionRules.length > 0 ? (
-                  <PredictionRulesCard rules={predictionRules} />
-                ) : loadingPrediction ? (
-                  <LoadingSkeleton className="h-44 rounded-xl" />
-                ) : null}
-              </div>
+            <div className="flex flex-wrap gap-4">
+              {loadingWeak ? (
+                <LoadingSkeleton className="h-44 rounded-xl w-[calc(33%-8px)] min-w-[250px]" />
+              ) : weakTopics.length > 0 ? (
+                <div className="w-[calc(33%-8px)] min-w-[250px]"><WeakTopicsCard topics={weakTopics} /></div>
+              ) : null}
+              {loadingDifficulty ? (
+                <LoadingSkeleton className="h-44 rounded-xl w-[calc(33%-8px)] min-w-[250px]" />
+              ) : difficultyAnalysis.length > 0 ? (
+                <div className="w-[calc(33%-8px)] min-w-[250px]"><DifficultyAnalysisCard analysis={difficultyAnalysis} /></div>
+              ) : null}
+              {loadingPrediction ? (
+                <LoadingSkeleton className="h-44 rounded-xl w-[calc(33%-8px)] min-w-[250px]" />
+              ) : predictionRules && predictionRules.length > 0 ? (
+                <div className="w-[calc(33%-8px)] min-w-[250px]"><PredictionRulesCard rules={predictionRules} /></div>
+              ) : null}
             </div>
           </section>
         </div>
@@ -394,22 +389,35 @@ export function StudentDashboardPage() {
                   <InsightCard key={insight.id} insight={insight} />
                 ))}
               </div>
-            ) : null}
+            ) : (
+              <p className="text-sm text-secondary card-elevation py-6 text-center">No insights yet. Complete more lessons to get learning insights.</p>
+            )}
           </section>
 
           {/* Learning Patterns */}
-          {!loadingPatterns && patterns && (
+          {loadingPatterns ? (
+            <LoadingSkeleton className="h-44 rounded-xl" />
+          ) : patterns ? (
             <LearningPatternCard pattern={patterns} />
+          ) : (
+            <div className="card-elevation p-5 text-center">
+              <p className="text-sm text-secondary">Not enough data to detect learning patterns yet.</p>
+            </div>
           )}
 
           {/* Ranking Card */}
-          {globalRank !== null && globalRank > 0 && (
+          {globalRank !== null && globalRank > 0 ? (
             <StudentRankingCard
               rank={globalRank}
               weeklyRank={weeklyRank}
               xp={xpEarned}
               streakCount={progressStats.learningStreak}
             />
+          ) : (
+            <div className="card-elevation p-5 text-center space-y-2">
+              <p className="text-sm font-medium text-on-surface">Ranking unavailable</p>
+              <p className="text-xs text-secondary">Complete lessons and earn XP to appear on the leaderboard.</p>
+            </div>
           )}
 
           {/* Activity Timeline */}

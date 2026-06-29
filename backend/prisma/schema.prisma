@@ -144,12 +144,19 @@ enum TrackType {
   EDGE
 }
 
+enum EnrollmentStatus {
+  ACTIVE
+  DROPPED
+  COMPLETED
+}
+
 model Enrollment {
-  id          String    @id @default(uuid())
+  id          String            @id @default(uuid())
   userId      String
   programId   String
-  createdAt   DateTime  @default(now())
-  progress    Int       @default(0)
+  createdAt   DateTime          @default(now())
+  progress    Int               @default(0)
+  status      EnrollmentStatus  @default(ACTIVE)
   completedAt DateTime?
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -550,6 +557,7 @@ enum AuditAction {
   INSTITUTION_UPDATED
   FACULTY_VERIFIED
   ENROLLMENT_CREATED
+  ENROLLMENT_DROPPED
   LESSON_CREATED
   LESSON_UPDATED
   LESSON_COMPLETED

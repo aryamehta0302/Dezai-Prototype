@@ -18,6 +18,7 @@ import { LearningPatternService } from '../services/learning-pattern.service';
 import { LearningInsightService } from '../services/learning-insight.service';
 import { LearningRecommendationService } from '../services/learning-recommendation.service';
 import { ProgramsService } from '../../programs/services/programs.service';
+import { LearningCleanupService } from '../services/learning-cleanup.service';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
@@ -51,6 +52,7 @@ export class LearningController {
     private readonly patternService: LearningPatternService,
     private readonly insightService: LearningInsightService,
     private readonly recommendationService: LearningRecommendationService,
+    private readonly cleanupService: LearningCleanupService,
   ) { }
 
   // ─── LESSONS ────────────────────────────────────────────────
@@ -184,13 +186,15 @@ export class LearningController {
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
     @Query('types') types?: string,
+    @Query('cursor') cursor?: string,
   ) {
-    const data = await this.activityService.getActivityTimeline(req.user.id, {
+    const { events, nextCursor } = await this.activityService.getActivityTimeline(req.user.id, {
       limit: limit ? parseInt(limit, 10) : 20,
       offset: offset ? parseInt(offset, 10) : 0,
       types: types ? (types.split(',') as any) : undefined,
+      cursor: cursor,
     });
-    return { success: true, data };
+    return { success: true, data: events, nextCursor };
   }
 
   // ─── MILESTONES ─────────────────────────────────────────────
@@ -255,5 +259,15 @@ export class LearningController {
   async getPredictionRules(@Req() req) {
     const data = await this.recommendationService.getPredictionRules(req.user.id);
     return { success: true, data };
+  }
+
+  // ─── CLEANUP (Admin only) ─────────────────────────────────────
+
+  @Post('cleanup')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.DEZAI_ADMIN)
+  async runCleanup() {
+    const result = await this.cleanupService.runFullCleanup();
+    return { success: true, cleaned: result };
   }
 }
