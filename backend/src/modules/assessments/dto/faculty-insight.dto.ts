@@ -1,9 +1,8 @@
-// ─────────────────── SPRINT 6 RESPONSE DTOs — FACULTY INSIGHTS & INTERVENTION ───────────────────
+// ─────────────────── FACULTY INSIGHTS & INTERVENTION ───────────────────
 //
-// Response-shape interfaces for Task B endpoints (At-Risk, Failure Patterns, Academic Health).
-// Follows the Sprint 5 pattern: pure interfaces, not class-validator DTOs.
+// Response-shape interfaces for at-risk detection, failure patterns, and academic health.
 
-// ─────────────────── TASK B1: AT-RISK / LOW PROGRESS / INACTIVE ───────────────────
+// ─────────────────── AT-RISK / LOW PROGRESS / INACTIVE ───────────────────
 
 export interface AtRiskStudent {
   userId: string;
@@ -62,7 +61,7 @@ export interface FacultyInsightDashboard {
   summary: FacultyInsightDashboardSummary;
 }
 
-// ─────────────────── TASK B2: REPEATED FAILURE DETECTION ───────────────────
+// ─────────────────── REPEATED FAILURE DETECTION ───────────────────
 
 export interface RepeatedFailureResult {
   userId: string;
@@ -92,7 +91,9 @@ export interface AssessmentFailurePattern {
   failureConcentrationByDifficulty: FailureConcentrationByDifficulty;
 }
 
-// ─────────────────── TASK B3: STUDENT DETAIL INSIGHT ───────────────────
+import { AssessmentPerformanceReport } from './intelligence.dto';
+
+// ─────────────────── STUDENT DETAIL INSIGHT ───────────────────
 
 export interface StudentEnrolledProgram {
   programId: string;
@@ -116,6 +117,7 @@ export interface StudentDetailInsight {
   enrolledPrograms: StudentEnrolledProgram[];
   assessmentStats: StudentAssessmentStats;
   academicHealth: AcademicHealthResult;
+  assessmentPerformance: AssessmentPerformanceReport[];
   xp: number;
   streakCount: number;
   lastActiveAt: Date | null;

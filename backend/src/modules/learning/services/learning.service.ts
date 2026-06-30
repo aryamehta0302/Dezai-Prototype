@@ -6,6 +6,8 @@ import { AwardService } from '../../achievements/services/award.service';
 import { AuditService } from '../../audit/services/audit.service';
 import { XpType, AchievementCategory, AuditAction } from '@prisma/client';
 
+type TxClient = Omit<PrismaService, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
+
 @Injectable()
 export class LearningService {
   constructor(
@@ -100,65 +102,74 @@ export class LearningService {
 
   /**
    * Mark a lesson as completed by the student.
+   * Wraps critical path in Prisma $transaction for race-condition safety.
    * If all lessons in the module are completed, awards MODULE_COMPLETION XP.
    * Also updates daily streak and lastActiveAt.
    */
   async completeLesson(userId: string, lessonId: string) {
+    // Early exit if already completed (outside transaction for fast path)
     const existing = await this.prisma.progress.findUnique({
-      where: {
-        userId_lessonId: { userId, lessonId },
-      },
+      where: { userId_lessonId: { userId, lessonId } },
     });
-
     if (existing) {
       return { success: true, alreadyCompleted: true };
     }
 
-    const progress = await this.prisma.progress.create({
-      data: {
-        userId,
-        lessonId,
-      },
-    });
+    // Wrap critical operations in a transaction for serialised isolation
+    const { progress, xpResult: xpAwarded, programId, _conflict } = await this.prisma.$transaction(async (tx) => {
+      const txExisting = await tx.progress.findUnique({
+        where: { userId_lessonId: { userId, lessonId } },
+      });
+      if (txExisting) {
+        return { progress: null, xpResult: null, programId: null, _conflict: true };
+      }
 
-    await this.updateStreak(userId);
+      const p = await tx.progress.create({
+        data: { userId, lessonId },
+      });
 
-    // Resolve the program ID to update the enrollment progress percentages
-    const lesson = await this.prisma.lesson.findUnique({
-      where: { id: lessonId },
-      include: {
-        module: {
-          include: {
-            lessons: { select: { id: true } },
-            track: { select: { programId: true } },
+      await this.updateStreakTx(tx as any as TxClient, userId);
+
+      const lesson = await tx.lesson.findUnique({
+        where: { id: lessonId },
+        include: {
+          module: {
+            include: {
+              lessons: { select: { id: true } },
+              track: { select: { programId: true } },
+            },
           },
         },
-      },
+      });
+
+      if (!lesson) {
+        return { progress: p, xpResult: null, programId: null, _conflict: false };
+      }
+
+      const pid = lesson.module.track.programId;
+
+      await this.enrollmentService.updateEnrollmentProgress(
+        userId, pid, tx as any as TxClient,
+      );
+
+      const allLessonIds = lesson.module.lessons.map((l) => l.id);
+      const completedCount = await tx.progress.count({
+        where: { userId, lessonId: { in: allLessonIds } },
+      });
+
+      let xp = null;
+      if (completedCount === allLessonIds.length) {
+        xp = await this.awardXpInTx(tx as any as TxClient, userId, XpType.MODULE_COMPLETION);
+      }
+
+      return { progress: p, xpResult: xp, programId: pid, _conflict: false };
     });
 
-    if (!lesson) {
-      return { success: true, progress };
+    if (_conflict) {
+      return { success: true, alreadyCompleted: true };
     }
 
-    const programId = lesson.module.track.programId;
-
-    // Trigger update progress recalculation
-    await this.enrollmentService.updateEnrollmentProgress(userId, programId);
-
-    // Centralized XP Logic: Check if all lessons in the module are completed
-    const allLessonIds = lesson.module.lessons.map((l) => l.id);
-    const completedCount = await this.prisma.progress.count({
-      where: {
-        userId,
-        lessonId: { in: allLessonIds },
-      },
-    });
-
-    let xpResult = null;
-    if (completedCount === allLessonIds.length) {
-      xpResult = await this.xpService.awardXp(userId, XpType.MODULE_COMPLETION);
-    }
-
+    // Side-effects outside transaction
     await this.awardService.checkAndAward(userId, AchievementCategory.STREAK);
     await this.awardService.checkAndAward(userId, AchievementCategory.COMPLETION);
     await this.awardService.checkAndAward(userId, AchievementCategory.XP);
@@ -169,20 +180,40 @@ export class LearningService {
       `Lesson ${lessonId} completed by user ${userId} in program ${programId}`,
     );
 
-    return {
-      success: true,
-      progress,
-      xpResult,
-    };
+    return { success: true, progress, xpResult: xpAwarded };
   }
 
   /**
-   * Update daily streak for a user.
-   * If the last active date was yesterday, increment the streak.
-   * If it's a new day and streak wasn't yesterday, reset to 1.
+   * Award XP within a transaction, using tx client directly.
    */
-  private async updateStreak(userId: string) {
-    const user = await this.prisma.user.findUnique({
+  private async awardXpInTx(tx: TxClient, userId: string, type: XpType, customAmount?: number) {
+    const amount = customAmount ?? this.XP_VALUES[type] ?? 0;
+    if (amount <= 0) return null;
+
+    const user = await tx.user.update({
+      where: { id: userId },
+      data: { xp: { increment: amount } },
+    });
+
+    await tx.xpTransaction.create({
+      data: { userId, amount, type },
+    });
+
+    return { success: true, currentXp: user.xp, amountAwarded: amount };
+  }
+
+  private readonly XP_VALUES: Record<XpType, number> = {
+    [XpType.DAILY_STREAK]: 10,
+    [XpType.MODULE_COMPLETION]: 50,
+    [XpType.ASSESSMENT_PASS]: 100,
+    [XpType.ACHIEVEMENT_REWARD]: 0,
+  };
+
+  /**
+   * Update daily streak within a transaction.
+   */
+  private async updateStreakTx(tx: TxClient, userId: string) {
+    const user = await tx.user.findUnique({
       where: { id: userId },
       select: { streakCount: true, lastActiveAt: true },
     });
@@ -193,9 +224,7 @@ export class LearningService {
     today.setHours(0, 0, 0, 0);
 
     const lastActive = user.lastActiveAt ? new Date(user.lastActiveAt) : null;
-    if (lastActive) {
-      lastActive.setHours(0, 0, 0, 0);
-    }
+    if (lastActive) lastActive.setHours(0, 0, 0, 0);
 
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
@@ -203,29 +232,21 @@ export class LearningService {
     let newStreak = user.streakCount;
     let shouldAwardXp = false;
 
-    if (!lastActive || lastActive.getTime() === today.getTime()) {
-      // Already active today, update timestamp but keep streak
-    } else if (lastActive.getTime() === yesterday.getTime()) {
-      // Consecutive day — increment
+    if (lastActive && lastActive.getTime() === yesterday.getTime()) {
       newStreak += 1;
       shouldAwardXp = true;
-    } else {
-      // Gap — reset to 1
+    } else if (!lastActive || lastActive.getTime() < yesterday.getTime()) {
       newStreak = 1;
       shouldAwardXp = true;
     }
 
-    await this.prisma.user.update({
+    await tx.user.update({
       where: { id: userId },
-      data: {
-        lastActiveAt: new Date(),
-        streakCount: newStreak,
-      },
+      data: { lastActiveAt: new Date(), streakCount: newStreak },
     });
 
     if (shouldAwardXp) {
-      await this.xpService.awardXp(userId, XpType.DAILY_STREAK);
-      await this.awardService.checkAndAward(userId, AchievementCategory.STREAK);
+      await this.awardXpInTx(tx, userId, XpType.DAILY_STREAK);
     }
   }
 
@@ -284,8 +305,8 @@ export class LearningService {
       },
     });
 
-    this.awardService.checkAndAward(userId, AchievementCategory.ENGAGEMENT);
-    this.auditService.logAction(userId, AuditAction.BOOKMARK_TOGGLED, `Lesson ${lessonId} bookmarked by user ${userId}`);
+    await this.awardService.checkAndAward(userId, AchievementCategory.ENGAGEMENT);
+    await this.auditService.logAction(userId, AuditAction.BOOKMARK_TOGGLED, `Lesson ${lessonId} bookmarked by user ${userId}`);
 
     return { success: true, bookmarked: true };
   }
@@ -294,19 +315,23 @@ export class LearningService {
    * Upsert notes for a lesson.
    */
   async upsertNote(userId: string, lessonId: string, content: string) {
-    const existing = await this.prisma.note.findUnique({
-      where: { userId_lessonId: { userId, lessonId } },
-    });
+    const existing = await this.prisma.retryOnWakeup(() =>
+      this.prisma.note.findUnique({
+        where: { userId_lessonId: { userId, lessonId } },
+      }),
+    );
 
-    const note = await this.prisma.note.upsert({
-      where: { userId_lessonId: { userId, lessonId } },
-      update: { content },
-      create: { userId, lessonId, content },
-    });
+    const note = await this.prisma.retryOnWakeup(() =>
+      this.prisma.note.upsert({
+        where: { userId_lessonId: { userId, lessonId } },
+        update: { content },
+        create: { userId, lessonId, content },
+      }),
+    );
 
     if (!existing) {
-      this.awardService.checkAndAward(userId, AchievementCategory.ENGAGEMENT);
-      this.auditService.logAction(userId, AuditAction.NOTE_CREATED, `Note created for lesson ${lessonId} by user ${userId}`);
+      await this.awardService.checkAndAward(userId, AchievementCategory.ENGAGEMENT);
+      await this.auditService.logAction(userId, AuditAction.NOTE_CREATED, `Note created for lesson ${lessonId} by user ${userId}`);
     }
 
     return note;
@@ -316,11 +341,13 @@ export class LearningService {
    * Retrieve notes for a lesson.
    */
   async getNote(userId: string, lessonId: string) {
-    return this.prisma.note.findUnique({
-      where: {
-        userId_lessonId: { userId, lessonId },
-      },
-    });
+    return this.prisma.retryOnWakeup(() =>
+      this.prisma.note.findUnique({
+        where: {
+          userId_lessonId: { userId, lessonId },
+        },
+      }),
+    );
   }
 
   /**

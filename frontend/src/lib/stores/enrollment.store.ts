@@ -147,6 +147,10 @@ export const useEnrollmentStore = create<EnrollmentState>()(
       getEnrollment: (courseId) => get().enrollments[courseId],
 
       markLessonComplete: async (courseId, lessonId) => {
+        // Snapshot previous state for rollback
+        const prevEnrollments = structuredClone(get().enrollments);
+        const prevXp = get().xpEarned;
+
         // Optimistic local update — instant UI feedback
         set((state) => {
           const enrollment = state.enrollments[courseId];
@@ -165,17 +169,23 @@ export const useEnrollmentStore = create<EnrollmentState>()(
           };
         });
 
-        // Fire API in background — don't block navigation
-        learningApi.completeLesson(lessonId).then((response) => {
+        try {
+          const response = await learningApi.completeLesson(lessonId);
           if (response.success) {
             if (response.xpResult?.currentXp) {
               get().setXp(response.xpResult.currentXp);
             }
             get().fetchEnrollments();
           }
-        }).catch((error) => {
+        } catch (error) {
           console.error("Failed to save lesson completion:", error);
-        });
+          // Rollback optimistic update on error
+          set({
+            enrollments: prevEnrollments,
+            xpEarned: prevXp,
+          });
+          throw error;
+        }
       },
 
       toggleBookmark: async (courseId, lessonId) => {

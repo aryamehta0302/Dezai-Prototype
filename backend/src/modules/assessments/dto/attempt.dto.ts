@@ -18,4 +18,8 @@ export class SubmitAttemptDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @IsObject()
+  @IsOptional()
+  answers?: Record<string, string>;
 }

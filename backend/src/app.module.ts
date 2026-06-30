@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { CacheModule } from '@nestjs/cache-manager';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -19,6 +21,27 @@ import { AchievementsModule } from './modules/achievements/achievements.module';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      inject: [ConfigService],
+      useFactory: async (config: ConfigService) => {
+        const store = config.get<string>('CACHE_STORE', 'memory');
+
+        if (store === 'redis') {
+          const { redisStore } = await import('cache-manager-ioredis-yet');
+          return {
+            store: redisStore,
+            host: config.get<string>('REDIS_HOST', 'localhost'),
+            port: config.get<number>('REDIS_PORT', 6379),
+            password: config.get<string>('REDIS_PASSWORD', ''),
+            ttl: 300_000, // 5 minutes in ms
+          };
+        }
+
+        return { ttl: 300_000 }; // in-memory fallback
+      },
+    }),
     DatabaseModule,
     AuthModule,
     UsersModule,
@@ -41,3 +64,4 @@ import { AchievementsModule } from './modules/achievements/achievements.module';
   providers: [],
 })
 export class AppModule {}
+

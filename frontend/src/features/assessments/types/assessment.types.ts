@@ -29,6 +29,9 @@ export interface Attempt {
   questions: AttemptQuestion[];
   remainingTime?: number;
   answers?: Record<string, string>;
+  maxAttempts?: number;
+  timeLimitEnabled?: boolean;
+  allowResume?: boolean;
 }
 
 export interface AttemptResultQuestionItem {
@@ -80,4 +83,17 @@ export interface AttemptStatusResponse {
   bestScore: number | null;
   bestPercentage: number | null;
   everPassed: boolean;
+}
+
+// ─────────────────── SPRINT 7: SYNC TYPES ───────────────────
+
+export interface SyncAnswersPayload {
+  attemptId: string;
+  answers: Record<string, string>;
+  clientTimestamp?: number;
+}
+
+export interface SyncResponse {
+  syncedCount: number;
+  serverTimestamp: number;
 }

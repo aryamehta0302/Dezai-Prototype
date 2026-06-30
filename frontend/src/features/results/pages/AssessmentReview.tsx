@@ -96,7 +96,7 @@ export function AssessmentReview({ slug, assessmentId }: AssessmentReviewProps) 
           <span className={`px-3 py-1 rounded-full text-xs font-bold ${
             result.passed ? "bg-green-500/10 text-green-600 border border-green-500/20" : "bg-red-500/10 text-red-600 border border-red-500/20"
           }`}>
-            {result.score}% Score
+            {result.percentage}% Score
           </span>
         </div>
       </div>
