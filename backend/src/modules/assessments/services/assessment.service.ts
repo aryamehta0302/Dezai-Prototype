@@ -3,7 +3,11 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Inject,
+  Logger,
 } from "@nestjs/common";
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
+import { Cache } from "cache-manager";
 import { PrismaService } from "../../../database/prisma.service";
 import { UserRole, AuditAction, ExamStatus, ViolationType, Difficulty, AchievementCategory, Prisma } from "@prisma/client";
 import { AuditService } from "../../audit/services/audit.service";
@@ -37,12 +41,34 @@ function shuffleArray<T>(array: T[]): T[] {
 
 @Injectable()
 export class AssessmentService {
+  private readonly logger = new Logger(AssessmentService.name);
+
   constructor(
     private prisma: PrismaService,
     private auditService: AuditService,
     private passFailEvaluationService: PassFailEvaluationService,
     private awardService: AwardService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) { }
+
+  // ─────────────────── SPRINT 7: CACHE INVALIDATION ───────────────────
+
+  /**
+   * Invalidates cached question pools for all assessments linked to a question bank.
+   * Called when questions or banks are created/updated/deleted.
+   */
+  private async invalidateQuestionBankCache(bankId: string): Promise<void> {
+    const assessments = await this.prisma.assessment.findMany({
+      where: { questionBankId: bankId },
+      select: { id: true },
+    });
+
+    for (const assessment of assessments) {
+      const cacheKey = `qbank:${assessment.id}:questions`;
+      await this.cacheManager.del(cacheKey);
+      this.logger.debug(`Cache INVALIDATED: ${cacheKey}`);
+    }
+  }
 
   // ─────────────────── OWNERSHIP GUARD ───────────────────
 
@@ -171,6 +197,8 @@ export class AssessmentService {
       `QuestionBank "${bank.title}" (ID: ${bank.id}) created by ${userRole}`
     );
 
+    await this.invalidateQuestionBankCache(bank.id);
+
     return this.getQuestionBankById(bank.id);
   }
 
@@ -188,10 +216,15 @@ export class AssessmentService {
       AuditAction.ASSESSMENT_PUBLISHED,
       `QuestionBank "${bank.title}" (ID: ${bank.id}) updated`
     );
+
+    await this.invalidateQuestionBankCache(id);
+
     return bank;
   }
 
   async deleteQuestionBank(id: string, userId: string) {
+    await this.invalidateQuestionBankCache(id);
+
     const bank = await this.prisma.questionBank.delete({ where: { id } });
     await this.auditService.logAction(
       userId,
@@ -234,6 +267,8 @@ export class AssessmentService {
       `Question (ID: ${question.id}) added to QuestionBank "${bank.title}" (ID: ${bankId})`
     );
 
+    await this.invalidateQuestionBankCache(bankId);
+
     return question;
   }
 
@@ -262,6 +297,8 @@ export class AssessmentService {
       `Question (ID: ${questionId}) updated`
     );
 
+    await this.invalidateQuestionBankCache(existing.questionBankId);
+
     return question;
   }
 
@@ -282,6 +319,8 @@ export class AssessmentService {
       AuditAction.ASSESSMENT_PUBLISHED,
       `Question (ID: ${questionId}) deleted from QuestionBank (ID: ${existing.questionBankId})`
     );
+
+    await this.invalidateQuestionBankCache(existing.questionBankId);
   }
 
   async duplicateQuestion(questionId: string, userId: string) {
@@ -315,6 +354,8 @@ export class AssessmentService {
       AuditAction.ASSESSMENT_PUBLISHED,
       `Question (ID: ${questionId}) duplicated as (ID: ${duplicate.id})`
     );
+
+    await this.invalidateQuestionBankCache(original.questionBankId);
 
     return duplicate;
   }
@@ -766,7 +807,11 @@ export class AssessmentService {
     });
 
     const existingAttempts = await this.prisma.assessmentAttempt.count({
-      where: { userId, assessmentId: session.assessmentId },
+      where: {
+        userId,
+        assessmentId: session.assessmentId,
+        completedAt: { not: null },
+      },
     });
 
     if (assessment && existingAttempts >= assessment.maxAttempts) {

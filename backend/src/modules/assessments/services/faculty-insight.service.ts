@@ -7,6 +7,7 @@ import { PrismaService } from '../../../database/prisma.service';
 import { AuditAction, Difficulty } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { WeakTopicDetectionService } from './weak-topic-detection.service';
+import { AssessmentAnalyticsService } from './assessment-analytics.service';
 import type {
   AtRiskStudent,
   LowProgressStudent,
@@ -62,6 +63,7 @@ export class FacultyInsightService {
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
     private readonly weakTopicDetectionService: WeakTopicDetectionService,
+    private readonly assessmentAnalyticsService: AssessmentAnalyticsService,
   ) {}
 
   // ─────────────────── TASK B1: AT-RISK STUDENTS ───────────────────
@@ -677,6 +679,32 @@ export class FacultyInsightService {
       facultyUserId,
     );
 
+    // Sprint 7: Get performance reports for student's attempted assessments in faculty programs
+    const studentAttempts = await this.prisma.assessmentAttempt.findMany({
+      where: {
+        userId: studentUserId,
+        completedAt: { not: null },
+        assessment: {
+          module: {
+            track: {
+              program: {
+                faculty: { userId: facultyUserId },
+              },
+            },
+          },
+        },
+      },
+      select: { assessmentId: true },
+    });
+
+    const assessmentIds = Array.from(new Set(studentAttempts.map((a) => a.assessmentId)));
+
+    const assessmentPerformance = await Promise.all(
+      assessmentIds.map((id) =>
+        this.assessmentAnalyticsService.getAssessmentPerformanceReport(id, facultyUserId),
+      ),
+    );
+
     return {
       userId: student.id,
       userName: student.name ?? student.email,
@@ -692,6 +720,7 @@ export class FacultyInsightService {
         weakTopics: weakTopicNames,
       },
       academicHealth,
+      assessmentPerformance,
       xp: student.xp,
       streakCount: student.streakCount,
       lastActiveAt: student.lastActiveAt,

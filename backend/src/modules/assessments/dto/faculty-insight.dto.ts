@@ -91,6 +91,8 @@ export interface AssessmentFailurePattern {
   failureConcentrationByDifficulty: FailureConcentrationByDifficulty;
 }
 
+import { AssessmentPerformanceReport } from './intelligence.dto';
+
 // ─────────────────── STUDENT DETAIL INSIGHT ───────────────────
 
 export interface StudentEnrolledProgram {
@@ -115,6 +117,7 @@ export interface StudentDetailInsight {
   enrolledPrograms: StudentEnrolledProgram[];
   assessmentStats: StudentAssessmentStats;
   academicHealth: AcademicHealthResult;
+  assessmentPerformance: AssessmentPerformanceReport[];
   xp: number;
   streakCount: number;
   lastActiveAt: Date | null;

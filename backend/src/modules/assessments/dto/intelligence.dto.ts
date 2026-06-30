@@ -95,6 +95,7 @@ export interface AssessmentPerformanceReport {
   difficultyBreakdown: DifficultyBreakdown;
   trend: AssessmentTrendPoint[];
   topMissedQuestions: TopMissedQuestion[];
+  weakTopics: AggregatedWeakTopicResult[];
   generatedAt: Date;
 }
 

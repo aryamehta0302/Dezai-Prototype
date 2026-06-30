@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { Difficulty } from '@prisma/client';
 import type {
@@ -97,11 +97,15 @@ export class WeakTopicDetectionService {
   /**
    * For faculty: aggregated weak topics across all students for an assessment.
    * Shows which categories the entire cohort struggles with.
+   *
+   * Sprint 7: Added facultyUserId verification.
    */
   async getAssessmentWeakTopics(
     assessmentId: string,
+    facultyUserId: string,
   ): Promise<AggregatedWeakTopicResult[]> {
     await this.validateAssessmentExists(assessmentId);
+    await this.validateAssessmentFacultyOwnership(assessmentId, facultyUserId);
 
     const answers = await this.prisma.attemptAnswer.findMany({
       where: {
@@ -470,9 +474,55 @@ export class WeakTopicDetectionService {
   }
 
   /**
+   * Validates that the requesting faculty member has ownership/access to the assessment.
+   */
+  private async validateAssessmentFacultyOwnership(
+    assessmentId: string,
+    userId: string,
+  ): Promise<true> {
+    const assessment = await this.prisma.assessment.findUnique({
+      where: { id: assessmentId },
+      include: {
+        module: {
+          include: {
+            track: {
+              include: {
+                program: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!assessment) {
+      throw new NotFoundException(`Assessment with ID ${assessmentId} not found`);
+    }
+
+    const program = assessment.module.track.program;
+
+    const faculty = await this.prisma.facultyMember.findUnique({
+      where: { userId },
+    });
+
+    if (!faculty) {
+      throw new ForbiddenException('Faculty profile not found');
+    }
+
+    if (program.facultyId !== faculty.id && program.institutionId !== faculty.institutionId) {
+      throw new ForbiddenException(
+        'You do not have access to this assessment',
+      );
+    }
+
+    return true;
+  }
+
+  /**
    * Rounds a number to 4 decimal places for clean output.
    */
   private round(value: number): number {
     return Math.round(value * 10000) / 10000;
   }
 }
+
