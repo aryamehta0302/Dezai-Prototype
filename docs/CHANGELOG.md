@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Sprint 7] — 2026-06-30
+
+### Assessment Hardening & Production Readiness (Antigravity AI)
+
+#### Added
+- **Docker Compose for Redis** — Added local Redis 7 Alpine configuration with AOF persistence.
+- **PATCH /api/assessments/attempts/sync** — Batch synchronization endpoint for offline answers.
+- **Offline Sync Queue** — React hook integration with connection state monitoring, automatic retry queue (exponential backoff), and `navigator.sendBeacon` fallback.
+- **Sync Status Badge** — Dynamic status badge (`Saved`, `Syncing...`, `Offline`, `Sync Error`) in the assessment player interface.
+- **Unit Tests** — Added 3 test suites covering Question Selection caching, Sync attempt constraints, and Analytics validation logic.
+
+#### Changed
+- **Redis Cache-Aside** — Integrated cache-aside caching for QuestionSelectionService (5-minute TTL) with automatic invalidation hooks on question banks and questions modifications.
+- **Tenant Isolation** — Added strict program/faculty validation to cohort weak topic detection and analytics queries to prevent cross-tenant data leaks.
+- **Attempt Count Validation Fix** — Corrected `submitSession` attempt count query to filter exclusively by completed attempts (`completedAt !== null`), preventing active attempts from counting towards the maximum limit.
+
 ---
 
 ## [Sprint 6.6] — 2026-06-25
