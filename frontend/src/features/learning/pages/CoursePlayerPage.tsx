@@ -32,11 +32,12 @@ interface CoursePlayerPageProps {
 }
 
 export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
-  const { isEnrolled, getEnrollment, setLastAccessedLesson } = useEnrollmentStore();
+  const { isEnrolled, getEnrollment, setLastAccessedLesson, hasFetched } = useEnrollmentStore();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentLessonId, setCurrentLessonId] = useState(lessonId);
   const [course, setCourse] = useState<ApiProgram | null>(null);
   const [lessonDetail, setLessonDetail] = useState<ApiLessonDetail | null>(null);
+  const [lessonError, setLessonError] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Load course on mount only (not on every lessonId change)
@@ -52,10 +53,14 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
   // Fetch lesson content when currentLessonId changes
   const fetchLesson = useCallback(async (id: string) => {
     setLessonDetail(null);
+    setLessonError(false);
     try {
       const res = await learningApi.getLesson(id);
       if (res.success) setLessonDetail(res.lesson);
-    } catch { /* ignore */ }
+      else setLessonError(true);
+    } catch {
+      setLessonError(true);
+    }
   }, []);
 
   // Initial lesson fetch
@@ -94,7 +99,7 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
     );
   }
 
-  if (!isEnrolled(course.id)) {
+  if (hasFetched && !isEnrolled(course.id)) {
     const courseSlug = slugify(course.title);
     return (
       <div className="py-16">
@@ -123,6 +128,8 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
   const completedCount = enrollment?.lessonsCompleted.length ?? 0;
   const totalLessons = allLessons.length;
   const localProgress = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+
+  const firstAssessment = allModules.flatMap(m => m.assessments || [])[0];
 
   const goPrev = () => {
     if (currentIndex > 0) goToLesson(allLessons[currentIndex - 1].id);
@@ -157,14 +164,15 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
                 href={`/programs/${slug}`}
                 className="flex items-center gap-1.5 text-sm text-muted hover:text-primary transition-colors"
               >
-                <ArrowLeft className="h-3 w-3" />
+                <ArrowLeft className="h-3 w-3" aria-hidden="true" />
                 Back to program
               </Link>
               <button
                 onClick={() => setSidebarOpen(false)}
                 className="p-1 rounded hover:bg-surface-low"
+                aria-label="Close sidebar"
               >
-                <X className="h-4 w-4 text-muted" />
+                <X className="h-4 w-4 text-muted" aria-hidden="true" />
               </button>
             </div>
             <h3 className="font-semibold text-sm text-on-surface line-clamp-1">
@@ -195,8 +203,9 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
           <button
             onClick={() => setSidebarOpen(true)}
             className="absolute left-2 top-20 z-10 rounded-lg bg-white border border-border-light p-2 shadow-level-1 hover:bg-surface-low"
+            aria-label="Open sidebar"
           >
-            <Menu className="h-4 w-4" />
+            <Menu className="h-4 w-4" aria-hidden="true" />
           </button>
         )}
 
@@ -219,7 +228,14 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
               />
             )}
 
-            {lessonDetail ? (
+            {lessonError ? (
+              <EmptyState
+                icon={BookOpen}
+                title="Failed to load lesson"
+                description="Something went wrong. Please try again."
+                action={<Button onClick={() => fetchLesson(currentLessonId)}>Retry</Button>}
+              />
+            ) : lessonDetail ? (
               <>
                 {lessonDetail.content && <LessonMarkdownRenderer content={lessonDetail.content} />}
                 {lessonDetail.resources && lessonDetail.resources.length > 0 && (
@@ -227,7 +243,7 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
                 )}
               </>
             ) : (
-              <div className="space-y-3 animate-pulse">
+              <div className="space-y-3 animate-pulse" role="status" aria-label="Loading lesson content">
                 <div className="h-3 bg-border-light rounded w-3/4" />
                 <div className="h-3 bg-border-light rounded w-full" />
                 <div className="h-3 bg-border-light rounded w-5/6" />
@@ -250,7 +266,7 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
             disabled={currentIndex <= 0}
             className="gap-1.5"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             Previous
           </Button>
 
@@ -268,27 +284,19 @@ export function CoursePlayerPage({ slug, lessonId }: CoursePlayerPageProps) {
               className="gap-1.5"
             >
               Next
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </Button>
-          ) : allModules.flatMap(m => m.assessments || []).length > 0 ? (
-            <Link href={`/programs/${slug}/assessment/${allModules.flatMap(m => m.assessments || [])[0].id}`}>
-              <Button
-                size="sm"
-                className="gap-1.5 bg-primary text-white hover:bg-primary/90"
-              >
+          ) : firstAssessment ? (
+            <Link href={`/programs/${slug}/assessment/${firstAssessment.id}`}>
+              <Button size="sm" className="gap-1.5 bg-primary text-white hover:bg-primary/90">
                 Go to Quiz
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
               </Button>
             </Link>
           ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled
-              className="gap-1.5"
-            >
+            <Button variant="outline" size="sm" disabled className="gap-1.5">
               Next
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </Button>
           )}
         </div>

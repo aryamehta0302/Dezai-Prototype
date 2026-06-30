@@ -15,41 +15,43 @@ interface MarkCompleteButtonProps {
 export function MarkCompleteButton({ courseId, lessonId, onComplete }: MarkCompleteButtonProps) {
   const { markLessonComplete, isLessonCompleted } = useEnrollmentStore();
   const [completing, setCompleting] = useState(false);
-  
+
   const completed = isLessonCompleted(courseId, lessonId);
 
   const handleClick = async () => {
-    if (completed) return;
+    if (completed || completing) return;
 
-    // Navigate next immediately so the video starts transitioning
+    setCompleting(true);
     onComplete?.();
 
     try {
       await markLessonComplete(courseId, lessonId);
       toast.success(
         <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-warning" />
+          <Sparkles className="h-4 w-4 text-warning" aria-hidden="true" />
           <span>Lesson completed! XP updated.</span>
         </div>
       );
     } catch {
-      // API failure already logged in store — no misleading toast
+      toast.error("Failed to save progress. Please try again.");
+    } finally {
+      setCompleting(false);
     }
   };
 
   if (completed) {
     return (
-      <Button variant="outline" disabled className="gap-2 bg-success/10 text-success border-success/20">
-        <CheckCircle className="h-4 w-4" />
+      <Button variant="outline" disabled className="gap-2 bg-success/10 text-success border-success/20" aria-label="Lesson already completed">
+        <CheckCircle className="h-4 w-4" aria-hidden="true" />
         Completed
       </Button>
     );
   }
 
   return (
-    <Button onClick={handleClick} className="gap-2">
-      <CheckCircle className="h-4 w-4" />
-      Mark as Complete
+    <Button onClick={handleClick} disabled={completing} className="gap-2" aria-label={completing ? "Saving progress" : "Mark lesson as complete"}>
+      <CheckCircle className="h-4 w-4" aria-hidden="true" />
+      {completing ? "Saving..." : "Mark as Complete"}
     </Button>
   );
 }
