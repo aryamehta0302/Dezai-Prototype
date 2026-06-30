@@ -322,19 +322,35 @@ async function main() {
     update: { role: UserRole.FACULTY, onboarded: true, passwordHash: commonPasswordHash },
     create: { email: 'faculty@dezai.edu', name: 'Dr. Sarah Connor', role: UserRole.FACULTY, passwordHash: commonPasswordHash, onboarded: true },
   });
-  await prisma.facultyMember.upsert({
+  const mainFaculty = await prisma.facultyMember.upsert({
     where: { userId: mainFacultyUser.id },
     update: { institutionId: instDezai.id },
     create: { userId: mainFacultyUser.id, institutionId: instDezai.id },
   });
   console.log('Users created/up-to-date');
 
+  // Seeding more mock students for Dr. Sarah Connor's cohort
+  const mockStudents = [
+    { email: 'john@dezai.edu', name: 'John Connor', lastActiveDaysAgo: 0 },
+    { email: 'kyle@dezai.edu', name: 'Kyle Reese', lastActiveDaysAgo: 1 },
+    { email: 'marcus@dezai.edu', name: 'Marcus Wright', lastActiveDaysAgo: 12 }, // Inactive risk
+    { email: 't800@dezai.edu', name: 'Cyberdyne T-800', lastActiveDaysAgo: 2 }, // Repeated failures risk
+  ];
+
+  for (const s of mockStudents) {
+    await prisma.user.upsert({
+      where: { email: s.email },
+      update: { role: UserRole.STUDENT, onboarded: true, passwordHash: commonPasswordHash, lastActiveAt: new Date(Date.now() - 86400000 * s.lastActiveDaysAgo) },
+      create: { email: s.email, name: s.name, role: UserRole.STUDENT, passwordHash: commonPasswordHash, onboarded: true, lastActiveAt: new Date(Date.now() - 86400000 * s.lastActiveDaysAgo) },
+    });
+  }
+
   // 3. Programs (upsert — no inline tracks, curriculum is handled separately)
   console.log('\n--- Programs ---');
   interface ProgramSeed { id: string; title: string; description: string; institutionId: string; facultyId: string; thumbnail: string }
   const programs: ProgramSeed[] = [
-    { id: 'course-1', title: 'Generative AI for Leaders: Strategic Implementation', description: 'Master the strategic implementation of generative AI technologies in enterprise settings.', institutionId: instStanford.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'elena@stanford.edu' } }))!.id } }))!.id, thumbnail: thumbnailUrl('course-1') },
-    { id: 'course-2', title: 'Machine Learning Fundamentals', description: 'Build a strong foundation in machine learning algorithms and practical applications.', institutionId: instKPGU.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'rajesh@kpgu.edu' } }))!.id } }))!.id, thumbnail: thumbnailUrl('course-2') },
+    { id: 'course-1', title: 'Generative AI for Leaders: Strategic Implementation', description: 'Master the strategic implementation of generative AI technologies in enterprise settings.', institutionId: instDezai.id, facultyId: mainFaculty.id, thumbnail: thumbnailUrl('course-1') },
+    { id: 'course-2', title: 'Machine Learning Fundamentals', description: 'Build a strong foundation in machine learning algorithms and practical applications.', institutionId: instDezai.id, facultyId: mainFaculty.id, thumbnail: thumbnailUrl('course-2') },
     { id: 'course-3', title: 'Deep Learning Masterclass', description: 'Advanced deep learning techniques including CNNs, RNNs, and GANs.', institutionId: instCharusat.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'kavita@charusat.edu' } }))!.id } }))!.id, thumbnail: thumbnailUrl('course-3') },
     { id: 'course-4', title: 'AI Ethics & Governance', description: 'Navigate the ethical challenges and governance frameworks for AI systems.', institutionId: instKPGU.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'neel@kpgu.edu' } }))!.id } }))!.id, thumbnail: thumbnailUrl('course-4') },
     { id: 'course-5', title: 'Digital Marketing Strategy', description: 'Master modern digital marketing channels and data-driven strategies.', institutionId: instMSU.id, facultyId: (await prisma.facultyMember.findFirst({ where: { userId: (await prisma.user.findUnique({ where: { email: 'vikram@msu.edu' } }))!.id } }))!.id, thumbnail: thumbnailUrl('course-5') },
@@ -362,43 +378,56 @@ async function main() {
   // 5. Sample Enrollments & Progress
   console.log('\n--- Enrollments & Progress ---');
   const studentUser = await prisma.user.findUnique({ where: { email: 'student@dezai.edu' } });
-  if (studentUser) {
-    const enrollPrograms = ['course-1', 'course-2', 'course-3'];
-    for (const pid of enrollPrograms) {
+  
+  const allCohortStudents = [
+    { email: 'student@dezai.edu', progress: 55, activeDaysAgo: 0 },
+    { email: 'john@dezai.edu', progress: 85, activeDaysAgo: 0 },
+    { email: 'kyle@dezai.edu', progress: 12, activeDaysAgo: 1 },
+    { email: 'marcus@dezai.edu', progress: 40, activeDaysAgo: 12 },
+    { email: 't800@dezai.edu', progress: 28, activeDaysAgo: 2 },
+  ];
+
+  for (const stu of allCohortStudents) {
+    const dbUser = await prisma.user.findUnique({ where: { email: stu.email } });
+    if (!dbUser) continue;
+    for (const pid of ['course-1', 'course-2']) {
       const program = await prisma.program.findUnique({ where: { id: pid } });
       if (!program) continue;
       await prisma.enrollment.upsert({
-        where: { userId_programId: { userId: studentUser.id, programId: pid } },
+        where: { userId_programId: { userId: dbUser.id, programId: pid } },
         update: {
-          progress: pid === 'course-1' ? 100 : 10,
-          completedAt: pid === 'course-1' ? new Date() : null,
+          progress: stu.progress,
+          completedAt: stu.progress === 100 ? new Date() : null,
         },
         create: {
-          userId: studentUser.id,
+          userId: dbUser.id,
           programId: pid,
-          progress: pid === 'course-1' ? 100 : 10,
-          completedAt: pid === 'course-1' ? new Date() : null,
+          progress: stu.progress,
+          completedAt: stu.progress === 100 ? new Date() : null,
         },
       });
 
-      // Mark all lessons as completed for course-1 to ensure actual 100% completion
-      if (pid === 'course-1') {
-        const tracks = await prisma.programTrack.findMany({ where: { programId: pid } });
-        for (const track of tracks) {
-          const mods = await prisma.module.findMany({ where: { trackId: track.id } });
-          for (const mod of mods) {
-            const lessons = await prisma.lesson.findMany({ where: { moduleId: mod.id } });
-            for (const lesson of lessons) {
+      // Seeding completed lessons to match progress
+      const tracks = await prisma.programTrack.findMany({ where: { programId: pid } });
+      for (const track of tracks) {
+        const mods = await prisma.module.findMany({ where: { trackId: track.id } });
+        for (const mod of mods) {
+          const lessons = await prisma.lesson.findMany({ where: { moduleId: mod.id } });
+          const targetCompletions = Math.round(lessons.length * (stu.progress / 100));
+          let count = 0;
+          for (const lesson of lessons) {
+            if (count < targetCompletions) {
               await prisma.progress.upsert({
-                where: { userId_lessonId: { userId: studentUser.id, lessonId: lesson.id } },
+                where: { userId_lessonId: { userId: dbUser.id, lessonId: lesson.id } },
                 update: {},
-                create: { userId: studentUser.id, lessonId: lesson.id, completedAt: new Date() },
+                create: { userId: dbUser.id, lessonId: lesson.id, completedAt: new Date(Date.now() - 86400000 * Math.floor(Math.random() * 5)) },
               });
+              count++;
             }
           }
         }
       }
-      console.log(`  ✓ Enrolled in ${program.title}`);
+      console.log(`  ✓ Enrolled & set progress for ${stu.email} in ${program.title}`);
     }
   }
 
@@ -673,6 +702,72 @@ async function main() {
           });
           console.log(`  ✓ Passed AssessmentAttempt seeded for "${assessment.title}"`);
         }
+      }
+    }
+
+    // Seed attempts for custom cohort students to populate diagnostics
+    const t800User = await prisma.user.findUnique({ where: { email: 't800@dezai.edu' } });
+    const johnUser = await prisma.user.findUnique({ where: { email: 'john@dezai.edu' } });
+    const kyleUser = await prisma.user.findUnique({ where: { email: 'kyle@dezai.edu' } });
+
+    const course1Assessments = await prisma.assessment.findMany({
+      where: { module: { track: { programId: 'course-1' } } }
+    });
+
+    if (course1Assessments.length > 0) {
+      const targetAssessment = course1Assessments[0];
+
+      // 1. T-800: 3 failed attempts (repeated failures risk)
+      if (t800User) {
+        for (let i = 0; i < 3; i++) {
+          await prisma.assessmentAttempt.create({
+            data: {
+              userId: t800User.id,
+              assessmentId: targetAssessment.id,
+              score: 35 + i * 5,
+              passed: false,
+              completedAt: new Date(Date.now() - 3600000 * (3 - i)),
+            }
+          });
+        }
+        console.log(`  ✓ Seeded 3 failed attempts for Cyberdyne T-800 on "${targetAssessment.title}"`);
+      }
+
+      // 2. John Connor: 1 passed attempt (95%)
+      if (johnUser) {
+        await prisma.assessmentAttempt.create({
+          data: {
+            userId: johnUser.id,
+            assessmentId: targetAssessment.id,
+            score: 95,
+            passed: true,
+            completedAt: new Date(Date.now() - 1800000),
+          }
+        });
+        console.log(`  ✓ Seeded passed attempt for John Connor on "${targetAssessment.title}"`);
+      }
+
+      // 3. Kyle Reese: 1 failed (45%), 1 passed (75%)
+      if (kyleUser) {
+        await prisma.assessmentAttempt.create({
+          data: {
+            userId: kyleUser.id,
+            assessmentId: targetAssessment.id,
+            score: 45,
+            passed: false,
+            completedAt: new Date(Date.now() - 7200000),
+          }
+        });
+        await prisma.assessmentAttempt.create({
+          data: {
+            userId: kyleUser.id,
+            assessmentId: targetAssessment.id,
+            score: 75,
+            passed: true,
+            completedAt: new Date(Date.now() - 3600000),
+          }
+        });
+        console.log(`  ✓ Seeded attempts for Kyle Reese on "${targetAssessment.title}"`);
       }
     }
   }

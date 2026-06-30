@@ -22,6 +22,7 @@ import {
   PassFailEvaluationService,
   AttemptAnswerWithRelations,
 } from './pass-fail-evaluation.service';
+import { InsightsSseService } from '../../analytics/services/insights-sse.service';
 import type {
   GetAttemptResultResponseDto,
   AttemptHistoryResponseDto,
@@ -44,6 +45,7 @@ export class AttemptService {
     private awardService: AwardService,
     private assessmentService: AssessmentService,
     private passFailEvaluationService: PassFailEvaluationService,
+    private insightsSseService: InsightsSseService,
   ) { }
 
   async startAttempt(userId: string, assessmentId: string) {
@@ -403,6 +405,14 @@ export class AttemptService {
     }
 
     await this.awardService.checkAndAward(userId, AchievementCategory.ASSESSMENT);
+
+    // Notify faculty in real-time about student activity
+    this.insightsSseService.notifyFacultyOfStudentUpdate(userId, 'HEALTH_UPDATE', {
+      userId,
+      assessmentId: attempt.assessmentId,
+      passed,
+      score: percentage,
+    });
 
     return {
       success: true,

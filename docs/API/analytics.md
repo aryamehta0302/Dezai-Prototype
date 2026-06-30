@@ -4,6 +4,13 @@
 > **Auth**: All endpoints require a valid `Bearer <JWT>` token in the `Authorization` header.
 > **Allowed Roles**: `FACULTY`, `UNIVERSITY_ADMIN`, `DEZAI_ADMIN`
 
+### Data Boundaries & Tenant Isolation (Sprint 7)
+All program-scoped endpoints enforce strict tenant isolation:
+- **DEZAI_ADMIN**: Full, unrestricted access to all data.
+- **UNIVERSITY_ADMIN**: Can only access programs belonging to their own `InstitutionAdmin.institutionId`.
+- **FACULTY**: Can only access programs where `program.facultyId` matches their `FacultyMember.id` OR `program.institutionId` matches their `FacultyMember.institutionId`.
+- Attempting to query cross-tenant or unassigned program IDs will trigger a `403 Forbidden` exception.
+
 ---
 
 ## Endpoints

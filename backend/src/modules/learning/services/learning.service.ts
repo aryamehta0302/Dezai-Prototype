@@ -5,6 +5,7 @@ import { XpService } from '../../users/services/xp.service';
 import { AwardService } from '../../achievements/services/award.service';
 import { AuditService } from '../../audit/services/audit.service';
 import { XpType, AchievementCategory, AuditAction } from '@prisma/client';
+import { InsightsSseService } from '../../analytics/services/insights-sse.service';
 
 @Injectable()
 export class LearningService {
@@ -14,6 +15,7 @@ export class LearningService {
     private xpService: XpService,
     private awardService: AwardService,
     private auditService: AuditService,
+    private insightsSseService: InsightsSseService,
   ) { }
 
   /**
@@ -145,6 +147,18 @@ export class LearningService {
     // Trigger update progress recalculation
     await this.enrollmentService.updateEnrollmentProgress(userId, programId);
 
+    const updatedEnrollment = await this.prisma.enrollment.findUnique({
+      where: { userId_programId: { userId, programId } },
+      select: { progress: true },
+    });
+
+    // Notify faculty in real-time
+    this.insightsSseService.notifyFacultyOfStudentUpdate(userId, 'HEALTH_UPDATE', {
+      userId,
+      programId,
+      progress: updatedEnrollment?.progress ?? 0,
+    });
+
     // Centralized XP Logic: Check if all lessons in the module are completed
     const allLessonIds = lesson.module.lessons.map((l) => l.id);
     const completedCount = await this.prisma.progress.count({
@@ -253,6 +267,18 @@ export class LearningService {
 
     if (lesson) {
       await this.enrollmentService.updateEnrollmentProgress(userId, lesson.module.track.programId);
+
+      const updatedEnrollment = await this.prisma.enrollment.findUnique({
+        where: { userId_programId: { userId, programId: lesson.module.track.programId } },
+        select: { progress: true },
+      });
+
+      // Notify faculty in real-time
+      this.insightsSseService.notifyFacultyOfStudentUpdate(userId, 'HEALTH_UPDATE', {
+        userId,
+        programId: lesson.module.track.programId,
+        progress: updatedEnrollment?.progress ?? 0,
+      });
     }
 
     return { success: true };

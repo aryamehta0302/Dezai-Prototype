@@ -20,7 +20,8 @@ import {
   Building2,
   ChevronRight,
   TrendingUp,
-  MapPin
+  MapPin,
+  Lightbulb
 } from "lucide-react";
 import { ModuleCompletionChart } from "@/features/analytics/components/module-completion-chart";
 import { ProgramPerformanceChart } from "@/features/analytics/components/program-performance-chart";
@@ -107,7 +108,7 @@ interface FacultyProfile {
 
 export function FacultyDashboard() {
   const { user: authUser } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "profile">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "monitoring" | "insights" | "profile">("overview");
   const [loading, setLoading] = useState(true);
 
   // States
@@ -122,6 +123,31 @@ export function FacultyDashboard() {
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+
+  // Faculty Monitoring States
+  const [taughtPrograms, setTaughtPrograms] = useState<any[]>([]);
+  const [selectedProgramId, setSelectedProgramId] = useState<string>("");
+  const [programAnalytics, setProgramAnalytics] = useState<any>(null);
+  const [cohortStudents, setCohortStudents] = useState<any[]>([]);
+  const [monitoringModuleStats, setMonitoringModuleStats] = useState<any[]>([]);
+  const [loadingMonitoring, setLoadingMonitoring] = useState(false);
+
+  // Student Detail Drawer States
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState<string>("");
+  const [detailedProgress, setDetailedProgress] = useState<any>(null);
+  const [loadingDetailedProgress, setLoadingDetailedProgress] = useState(false);
+
+  // Faculty Insights & Interventions States
+  const [programInsights, setProgramInsights] = useState<any>(null);
+  const [interventionsList, setInterventionsList] = useState<any[]>([]);
+  const [loadingInsights, setLoadingInsights] = useState(false);
+
+  // Intervention Modal States
+  const [showInterventionModal, setShowInterventionModal] = useState(false);
+  const [outreachStudent, setOutreachStudent] = useState<{ id: string; name: string } | null>(null);
+  const [outreachMessage, setOutreachMessage] = useState("");
+  const [submittingIntervention, setSubmittingIntervention] = useState(false);
 
   // Modal States
   const [showProgramModal, setShowProgramModal] = useState(false);
@@ -204,6 +230,15 @@ export function FacultyDashboard() {
       if (notifRes?.notifications) {
         setNotifications(notifRes.notifications);
       }
+
+      // Fetch taught programs for the monitoring selector
+      const progListRes = await apiClient.get<any>("/analytics/faculty/programs");
+      if (progListRes && progListRes.success && Array.isArray(progListRes.data)) {
+        setTaughtPrograms(progListRes.data);
+        if (progListRes.data.length > 0 && !selectedProgramId) {
+          setSelectedProgramId(progListRes.data[0].id);
+        }
+      }
     } catch (err: any) {
       console.error("Error loading dashboard details:", err);
       toast.error(err.message || "Failed to load dashboard data.");
@@ -211,6 +246,170 @@ export function FacultyDashboard() {
       setLoading(false);
     }
   };
+
+  const fetchProgramMonitoringData = async (programId: string) => {
+    if (!programId) return;
+    try {
+      setLoadingMonitoring(true);
+      
+      // 1. Fetch program general metrics
+      const analyticsRes = await apiClient.get<any>(`/analytics/programs/${programId}`);
+      if (analyticsRes && analyticsRes.success) {
+        setProgramAnalytics(analyticsRes.data);
+      }
+
+      // 2. Fetch module completion statistics
+      const modulesRes = await apiClient.get<any>(`/analytics/programs/${programId}/modules/stats`);
+      if (modulesRes && modulesRes.success) {
+        setMonitoringModuleStats(modulesRes.data);
+      }
+
+      // 3. Fetch student metrics table
+      const studentsRes = await apiClient.get<any>(`/analytics/programs/${programId}/students`);
+      if (studentsRes && studentsRes.success && studentsRes.data) {
+        setCohortStudents(studentsRes.data.students || []);
+      }
+    } catch (err: any) {
+      console.error("Error loading program monitoring details:", err);
+      toast.error(err.message || "Failed to load program metrics.");
+    } finally {
+      setLoadingMonitoring(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedProgramId && activeTab === "monitoring") {
+      fetchProgramMonitoringData(selectedProgramId);
+    }
+  }, [selectedProgramId, activeTab]);
+
+  const handleOpenStudentDrawer = async (studentId: string) => {
+    if (!studentId || !selectedProgramId) return;
+    setSelectedStudentId(studentId);
+    setDrawerOpen(true);
+    setDetailedProgress(null);
+    try {
+      setLoadingDetailedProgress(true);
+      const detailRes = await apiClient.get<any>(`/analytics/programs/${selectedProgramId}/students/${studentId}`);
+      if (detailRes && detailRes.success) {
+        setDetailedProgress(detailRes.data);
+      }
+    } catch (err: any) {
+      console.error("Error loading student detailed progress:", err);
+      toast.error(err.message || "Failed to load student progress details.");
+      setDrawerOpen(false);
+    } finally {
+      setLoadingDetailedProgress(false);
+    }
+  };
+
+  const fetchInsightsData = async (programId: string) => {
+    if (!programId) return;
+    try {
+      setLoadingInsights(true);
+      const insightsRes = await apiClient.get<any>(`/analytics/programs/${programId}/insights`);
+      if (insightsRes && insightsRes.success) {
+        setProgramInsights(insightsRes.data);
+      }
+      
+      const interventionsRes = await apiClient.get<any>(`/analytics/programs/${programId}/interventions`);
+      if (interventionsRes && interventionsRes.success && Array.isArray(interventionsRes.data)) {
+        setInterventionsList(interventionsRes.data);
+      }
+    } catch (err: any) {
+      console.error("Error loading insights metrics:", err);
+      toast.error(err.message || "Failed to load cohort health insights.");
+    } finally {
+      setLoadingInsights(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedProgramId && activeTab === "insights") {
+      fetchInsightsData(selectedProgramId);
+    }
+  }, [selectedProgramId, activeTab]);
+
+  const handleSubmitIntervention = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProgramId || !outreachStudent || !outreachMessage.trim() || submittingIntervention) return;
+    try {
+      setSubmittingIntervention(true);
+      const res = await apiClient.post<any>(`/analytics/programs/${selectedProgramId}/interventions`, {
+        userId: outreachStudent.id,
+        message: outreachMessage.trim(),
+      });
+      if (res && res.success) {
+        toast.success(`Outreach message successfully sent to ${outreachStudent.name}.`);
+        setShowInterventionModal(false);
+        setOutreachMessage("");
+        setOutreachStudent(null);
+        fetchInsightsData(selectedProgramId);
+      }
+    } catch (err: any) {
+      console.error("Error sending intervention outreach:", err);
+      toast.error(err.message || "Failed to send intervention.");
+    } finally {
+      setSubmittingIntervention(false);
+    }
+  };
+
+  // Real-time EventSource connection for Faculty Insights
+  useEffect(() => {
+    if (!authUser || authUser.role !== "FACULTY") return;
+
+    const eventSource = new EventSource("http://localhost:3001/api/faculty/insights/stream", {
+      withCredentials: true,
+    });
+
+    eventSource.onopen = () => {
+      console.log("Real-time faculty insights stream connected.");
+    };
+
+    eventSource.addEventListener("HEALTH_UPDATE", (event: MessageEvent) => {
+      try {
+        const payload = JSON.parse(event.data);
+        console.log("Real-time HEALTH_UPDATE received:", payload);
+        
+        toast.info(
+          `Real-time update: ${payload.studentName} progress in "${payload.programTitle}" updated.`
+        );
+
+        if (selectedProgramId === payload.programId) {
+          if (activeTab === "monitoring") {
+            fetchProgramMonitoringData(selectedProgramId);
+          } else if (activeTab === "insights") {
+            fetchInsightsData(selectedProgramId);
+          }
+          fetchDashboardData();
+        }
+      } catch (err) {
+        console.error("Error handling HEALTH_UPDATE SSE:", err);
+      }
+    });
+
+    eventSource.addEventListener("INTERVENTION_SENT", (event: MessageEvent) => {
+      try {
+        const payload = JSON.parse(event.data);
+        console.log("Real-time INTERVENTION_SENT received:", payload);
+        
+        if (selectedProgramId) {
+          fetchInsightsData(selectedProgramId);
+        }
+      } catch (err) {
+        console.error("Error handling INTERVENTION_SENT SSE:", err);
+      }
+    });
+
+    eventSource.onerror = (err) => {
+      console.warn("Real-time SSE connection warning:", err);
+    };
+
+    return () => {
+      eventSource.close();
+      console.log("Real-time faculty insights stream disconnected.");
+    };
+  }, [authUser, selectedProgramId, activeTab]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -392,6 +591,28 @@ export function FacultyDashboard() {
             </button>
 
             <button
+              onClick={() => setActiveTab("monitoring")}
+              className={`flex w-full items-center gap-3 px-3.5 py-3 text-sm font-semibold rounded-xl transition-all duration-200 ${activeTab === "monitoring"
+                ? "bg-primary text-white shadow-md shadow-primary/10"
+                : "text-muted hover:bg-surface hover:text-on-surface"
+                }`}
+            >
+              <Users className="h-4.5 w-4.5" />
+              <span>Faculty Monitoring</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("insights")}
+              className={`flex w-full items-center gap-3 px-3.5 py-3 text-sm font-semibold rounded-xl transition-all duration-200 ${activeTab === "insights"
+                ? "bg-primary text-white shadow-md shadow-primary/10"
+                : "text-muted hover:bg-surface hover:text-on-surface"
+                }`}
+            >
+              <Lightbulb className="h-4.5 w-4.5" />
+              <span>Insights & Interventions</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab("profile")}
               className={`flex w-full items-center gap-3 px-3.5 py-3 text-sm font-semibold rounded-xl transition-all duration-200 ${activeTab === "profile"
                 ? "bg-primary text-white shadow-md shadow-primary/10"
@@ -426,6 +647,8 @@ export function FacultyDashboard() {
             <h1 className="text-lg font-extrabold text-on-surface capitalize">
               {activeTab === "overview" && "Dashboard Overview"}
               {activeTab === "analytics" && "Cohort Analytics"}
+              {activeTab === "monitoring" && "Faculty Monitoring Hub"}
+              {activeTab === "insights" && "Insights & Interventions"}
               {activeTab === "profile" && "Profile & Institution Settings"}
             </h1>
             <p className="text-2xs text-muted font-medium">Manage and audit your micro-credentials</p>
@@ -900,6 +1123,348 @@ export function FacultyDashboard() {
             </div>
           )}
 
+          {/* --- TAB: MONITORING --- */}
+          {activeTab === "monitoring" && (
+            <div className="space-y-6">
+              {/* Program Selector & Selector Card */}
+              <div className="bg-white border border-border-light rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-extrabold text-on-surface">Faculty Monitoring Hub</h3>
+                  <p className="text-2xs text-muted font-medium">Audit syllabus progress, assessment results, and proctoring logs.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xs font-bold text-muted">Select Program:</span>
+                  <select
+                    value={selectedProgramId}
+                    onChange={(e) => setSelectedProgramId(e.target.value)}
+                    className="rounded-xl border border-border-light bg-neutral-50 px-4 py-2 text-xs font-semibold outline-hidden focus:border-primary focus:bg-white transition-all"
+                  >
+                    {taughtPrograms.length === 0 ? (
+                      <option value="">No programs available</option>
+                    ) : (
+                      taughtPrograms.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.title} ({p.institutionName})
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              {loadingMonitoring ? (
+                <div className="space-y-6 animate-pulse">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div className="h-28 bg-neutral-200/50 rounded-2xl" />
+                    <div className="h-28 bg-neutral-200/50 rounded-2xl" />
+                    <div className="h-28 bg-neutral-200/50 rounded-2xl" />
+                  </div>
+                  <div className="h-64 bg-neutral-200/50 rounded-2xl w-full" />
+                </div>
+              ) : taughtPrograms.length === 0 ? (
+                <div className="bg-white border border-border-light rounded-2xl p-10 text-center text-muted shadow-sm flex flex-col items-center justify-center space-y-3">
+                  <div className="h-14 w-14 rounded-2xl bg-neutral-50 flex items-center justify-center text-muted/60 border border-neutral-100/80 shadow-xs">
+                    <Users className="h-7 w-7" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-on-surface">No Programs Assigned</h3>
+                    <p className="text-xs text-muted mt-1 max-w-sm">There are no taught programs linked to your faculty profile.</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* General Program Stats */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div className="bg-white border border-border-light p-5 rounded-2xl shadow-sm">
+                      <span className="text-2xs font-bold text-muted uppercase tracking-wider">Cohort Progress</span>
+                      <h2 className="text-xl font-black text-on-surface mt-1">{programAnalytics?.completionPercent ?? 0}%</h2>
+                      <span className="text-3xs text-muted font-medium block mt-0.5">Average syllabus rate</span>
+                    </div>
+                    <div className="bg-white border border-border-light p-5 rounded-2xl shadow-sm">
+                      <span className="text-2xs font-bold text-muted uppercase tracking-wider">Active Cohort</span>
+                      <h2 className="text-xl font-black text-on-surface mt-1">{programAnalytics?.activeLearners ?? 0}</h2>
+                      <span className="text-3xs text-muted font-medium block mt-0.5">Enrolled active students</span>
+                    </div>
+                    <div className="bg-white border border-border-light p-5 rounded-2xl shadow-sm">
+                      <span className="text-2xs font-bold text-muted uppercase tracking-wider">Total Enrollments</span>
+                      <h2 className="text-xl font-black text-on-surface mt-1">{programAnalytics?.totalEnrollments ?? 0}</h2>
+                      <span className="text-3xs text-muted font-medium block mt-0.5">Total registered seats</span>
+                    </div>
+                  </div>
+
+                  {/* Student Table */}
+                  <div className="bg-white border border-border-light rounded-2xl shadow-sm overflow-hidden flex flex-col">
+                    <div className="p-5 border-b border-border-light">
+                      <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider">Syllabus completions & logs</h4>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-neutral-50/50 border-b border-neutral-100 text-3xs font-bold text-muted uppercase tracking-wider">
+                            <th className="p-4 pl-6">Student details</th>
+                            <th className="p-4 text-center">completions</th>
+                            <th className="p-4 text-center">XP</th>
+                            <th className="p-4 text-right pr-6">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-neutral-100 text-2xs font-semibold text-on-surface/90">
+                          {cohortStudents.length === 0 ? (
+                            <tr>
+                              <td colSpan={4} className="p-8 text-center text-muted">
+                                No students are currently enrolled in this program.
+                              </td>
+                            </tr>
+                          ) : (
+                            cohortStudents.map((student: any) => (
+                              <tr key={student.userId} className="hover:bg-neutral-50/30 transition-colors">
+                                <td className="p-4 pl-6">
+                                  <div>
+                                    <p className="font-extrabold text-on-surface">{student.name}</p>
+                                    <p className="text-3xs text-muted font-medium mt-0.5">{student.email}</p>
+                                  </div>
+                                </td>
+                                <td className="p-4 text-center">
+                                  <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-3xs font-extrabold">
+                                    {student.progress}%
+                                  </span>
+                                </td>
+                                <td className="p-4 text-center text-primary font-extrabold">{student.xp} XP</td>
+                                <td className="p-4 pr-6 text-right">
+                                  <button
+                                    onClick={() => handleOpenStudentDrawer(student.userId)}
+                                    className="px-3.5 py-1.5 bg-neutral-50 hover:bg-neutral-100 border border-border-light text-on-surface text-3xs font-bold rounded-xl transition-all"
+                                  >
+                                    View Audit Sheet
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* --- TAB: INSIGHTS --- */}
+          {activeTab === "insights" && (
+            <div className="space-y-6">
+              {/* Program Selector & Selector Card */}
+              <div className="bg-white border border-border-light rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-extrabold text-on-surface">Cohort Insights & Interventions</h3>
+                  <p className="text-2xs text-muted font-medium">Flag at-risk students, track cohort health score, and log direct interventions.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xs font-bold text-muted">Select Program:</span>
+                  <select
+                    value={selectedProgramId}
+                    onChange={(e) => setSelectedProgramId(e.target.value)}
+                    className="rounded-xl border border-border-light bg-neutral-50 px-4 py-2 text-xs font-semibold outline-hidden focus:border-primary focus:bg-white transition-all"
+                  >
+                    {taughtPrograms.length === 0 ? (
+                      <option value="">No programs available</option>
+                    ) : (
+                      taughtPrograms.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.title} ({p.institutionName})
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              {loadingInsights ? (
+                <div className="space-y-6 animate-pulse">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                    <div className="h-24 bg-neutral-200/50 rounded-2xl" />
+                    <div className="h-24 bg-neutral-200/50 rounded-2xl" />
+                    <div className="h-24 bg-neutral-200/50 rounded-2xl" />
+                    <div className="h-24 bg-neutral-200/50 rounded-2xl" />
+                  </div>
+                  <div className="h-64 bg-neutral-200/50 rounded-2xl w-full" />
+                </div>
+              ) : taughtPrograms.length === 0 ? (
+                <div className="bg-white border border-border-light rounded-2xl p-10 text-center text-muted shadow-sm flex flex-col items-center justify-center space-y-3">
+                  <div className="h-14 w-14 rounded-2xl bg-neutral-50 flex items-center justify-center text-muted/60 border border-neutral-100/80 shadow-xs">
+                    <Lightbulb className="h-7 w-7" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-on-surface">No Programs Assigned</h3>
+                    <p className="text-xs text-muted mt-1 max-w-sm">Select a program to check academic health insights.</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Insights Metrics Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                    {/* Metric Card 1 */}
+                    <div className="bg-white border border-border-light p-5 rounded-2xl shadow-sm flex items-center justify-between group">
+                      <div className="space-y-1">
+                        <span className="text-2xs font-bold text-muted uppercase tracking-wider">At-Risk Students</span>
+                        <h2 className="text-xl font-black text-danger">{programInsights?.atRiskCount ?? 0}</h2>
+                        <span className="text-3xs text-muted font-medium">Critical risk flagged</span>
+                      </div>
+                      <div className="h-10 w-10 rounded-xl bg-danger/10 flex items-center justify-center text-danger">
+                        <AlertTriangle className="h-5 w-5" />
+                      </div>
+                    </div>
+
+                    {/* Metric Card 2 */}
+                    <div className="bg-white border border-border-light p-5 rounded-2xl shadow-sm flex items-center justify-between group">
+                      <div className="space-y-1">
+                        <span className="text-2xs font-bold text-muted uppercase tracking-wider">Attention Needed</span>
+                        <h2 className="text-xl font-black text-warning">{programInsights?.warningCount ?? 0}</h2>
+                        <span className="text-3xs text-muted font-medium">Warning risk flagged</span>
+                      </div>
+                      <div className="h-10 w-10 rounded-xl bg-warning/10 flex items-center justify-center text-warning">
+                        <Clock className="h-5 w-5" />
+                      </div>
+                    </div>
+
+                    {/* Metric Card 3 */}
+                    <div className="bg-white border border-border-light p-5 rounded-2xl shadow-sm flex items-center justify-between group">
+                      <div className="space-y-1">
+                        <span className="text-2xs font-bold text-muted uppercase tracking-wider">Healthy Status</span>
+                        <h2 className="text-xl font-black text-success">{programInsights?.healthyCount ?? 0}</h2>
+                        <span className="text-3xs text-muted font-medium">Performing stably</span>
+                      </div>
+                      <div className="h-10 w-10 rounded-xl bg-success/10 flex items-center justify-center text-success">
+                        <CheckCircle2 className="h-5 w-5" />
+                      </div>
+                    </div>
+
+                    {/* Metric Card 4 */}
+                    <div className="bg-white border border-border-light p-5 rounded-2xl shadow-sm flex items-center justify-between group">
+                      <div className="space-y-1">
+                        <span className="text-2xs font-bold text-muted uppercase tracking-wider">Average Progress</span>
+                        <h2 className="text-xl font-black text-primary">{programInsights?.averageProgress ?? 0}%</h2>
+                        <span className="text-3xs text-muted font-medium">Cohort syllabus mean</span>
+                      </div>
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                        <TrendingUp className="h-5 w-5" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Flagged At-Risk List */}
+                  <div className="bg-white border border-border-light rounded-2xl shadow-sm overflow-hidden flex flex-col">
+                    <div className="p-5 border-b border-border-light flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider">Flagged At-Risk Students</h4>
+                      <span className="bg-danger/10 text-danger text-3xs font-extrabold px-2.5 py-0.5 rounded-full">
+                        {programInsights?.atRiskStudents?.length ?? 0} Students Flagged
+                      </span>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-neutral-50/50 border-b border-neutral-100 text-3xs font-bold text-muted uppercase tracking-wider">
+                            <th className="p-4 pl-6">Student Info</th>
+                            <th className="p-4 text-center">Progress / XP</th>
+                            <th className="p-4">Academic Health</th>
+                            <th className="p-4">Triggered Risk Factors</th>
+                            <th className="p-4 pr-6 text-right">Outreach Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-neutral-100 text-2xs font-semibold text-on-surface/90">
+                          {!programInsights?.atRiskStudents || programInsights.atRiskStudents.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="p-8 text-center text-muted">
+                                No students flagged for academic risk in this program. All cohorts performing stably!
+                              </td>
+                            </tr>
+                          ) : (
+                            programInsights.atRiskStudents.map((student: any) => (
+                              <tr key={student.userId} className="hover:bg-neutral-50/40 transition-colors">
+                                <td className="p-4 pl-6">
+                                  <div>
+                                    <p className="font-extrabold text-on-surface">{student.name}</p>
+                                    <p className="text-3xs text-muted font-medium mt-0.5">{student.email}</p>
+                                  </div>
+                                </td>
+                                <td className="p-4 text-center">
+                                  <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-3xs font-bold">
+                                    {student.progress}%
+                                  </span>
+                                  <p className="text-3xs text-muted font-semibold mt-1">{student.xp} XP</p>
+                                </td>
+                                <td className="p-4">
+                                  <span className={`px-2 py-0.5 rounded-full text-3xs font-extrabold ${
+                                    student.healthStatus === 'CRITICAL' ? 'bg-danger/10 text-danger' :
+                                    student.healthStatus === 'WARNING' ? 'bg-warning/10 text-warning' :
+                                    'bg-success/10 text-success'
+                                  }`}>
+                                    {student.healthStatus}
+                                  </span>
+                                </td>
+                                <td className="p-4 min-w-[200px]">
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {student.riskReasons.map((reason: string, idx: number) => (
+                                      <span key={idx} className="px-2 py-0.5 bg-neutral-100 border border-neutral-200 text-neutral-600 text-3xs font-semibold rounded-md">
+                                        {reason}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="p-4 pr-6 text-right">
+                                  <button
+                                    onClick={() => {
+                                      setOutreachStudent({ id: student.userId, name: student.name });
+                                      setOutreachMessage(`Hi ${student.name.split(' ')[0]}, I noticed some slowdown in your progress for "${programInsights.programTitle}". Let me know if you need help with any concepts!`);
+                                      setShowInterventionModal(true);
+                                    }}
+                                    className="px-3.5 py-1.5 bg-primary hover:bg-primary-hover text-white text-3xs font-bold rounded-xl shadow-xs transition-all inline-flex items-center gap-1"
+                                  >
+                                    <Lightbulb className="h-3.5 w-3.5" /> Trigger Outreach
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Interventions Sent History */}
+                  <div className="bg-white border border-border-light rounded-2xl shadow-sm p-5 space-y-4">
+                    <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-2">
+                      <Clock className="h-4.5 w-4.5 text-primary" /> Outreach Intervention Logs
+                    </h4>
+                    <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                      {interventionsList.length === 0 ? (
+                        <p className="text-2xs text-muted text-center py-6">No previous outreach reminders logged for this program.</p>
+                      ) : (
+                        interventionsList.map((item) => (
+                          <div key={item.id} className="p-3.5 bg-neutral-50/50 border border-neutral-100 rounded-xl space-y-2 hover:bg-neutral-50 transition-all">
+                            <div className="flex justify-between items-start gap-2">
+                              <div>
+                                <p className="text-2xs font-extrabold text-on-surface">Instructor Outreach to <span className="text-primary">{item.studentName}</span></p>
+                                <span className="text-3xs text-muted font-medium">{item.studentEmail}</span>
+                              </div>
+                              <span className="text-3xs text-muted font-semibold">
+                                {new Date(item.createdAt).toLocaleString()}
+                              </span>
+                            </div>
+                            <p className="text-2xs text-on-surface/80 bg-white border border-neutral-100 p-2.5 rounded-lg font-medium italic">
+                              "{item.message}"
+                            </p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
         </main>
       </div>
       </div>
@@ -1216,6 +1781,285 @@ export function FacultyDashboard() {
                     </>
                   ) : (
                     "Publish Assessment"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- STUDENT AUDIT DRAWER --- */}
+      {drawerOpen && (
+        <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
+          {/* Overlay backdrop */}
+          <div
+            onClick={() => setDrawerOpen(false)}
+            className="absolute inset-0 bg-black/45 backdrop-blur-xs transition-opacity"
+          />
+
+          <div className="relative w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col z-10 animate-slide-in-right">
+            {/* Header */}
+            <div className="p-4 border-b border-border-light flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">
+                  {detailedProgress?.student?.name ? detailedProgress.student.name.charAt(0).toUpperCase() : "S"}
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-on-surface">Student Audit & Logs</h3>
+                  <p className="text-3xs text-muted font-semibold">{detailedProgress?.student?.email ?? 'Audit Sheet'}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setDrawerOpen(false)}
+                className="p-1 rounded-lg hover:bg-neutral-100 text-muted"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* List / Content */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-6">
+              {loadingDetailedProgress ? (
+                <div className="flex h-full items-center justify-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
+                    <span className="text-xs font-semibold text-muted">Retrieving audit trace...</span>
+                  </div>
+                </div>
+              ) : !detailedProgress ? (
+                <p className="text-xs text-muted text-center py-10">Unable to load audit logs.</p>
+              ) : (
+                <>
+                  {/* Student profile overview */}
+                  <div className="p-4 bg-neutral-50/50 border border-neutral-100 rounded-xl grid grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-3xs text-muted font-bold uppercase tracking-wider">Student Name</p>
+                      <p className="text-xs font-extrabold text-on-surface mt-0.5">{detailedProgress.student.name}</p>
+                      <p className="text-3xs text-muted mt-0.5 truncate">{detailedProgress.student.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-3xs text-muted font-bold uppercase tracking-wider">Overall Progress</p>
+                      <p className="text-xs font-extrabold text-on-surface mt-0.5">{detailedProgress.student.overallProgress}% Completed</p>
+                      <span className="text-3xs text-muted font-semibold mt-0.5 block">
+                        {detailedProgress.student.completedAt ? "Finished all modules" : "In Progress"}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-3xs text-muted font-bold uppercase tracking-wider">Academic XP Score</p>
+                      <p className="text-xs font-extrabold text-primary mt-0.5">{detailedProgress.student.xp} XP</p>
+                      <span className="text-3xs text-muted font-semibold mt-0.5 block">Earned in system</span>
+                    </div>
+                  </div>
+
+                  {/* 1. Syllabus Progress Checklist */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-2">
+                      <BookOpen className="h-4.5 w-4.5 text-primary" /> Syllabus Progress Checklist
+                    </h4>
+                    <div className="border border-border-light rounded-xl overflow-hidden divide-y divide-border-light">
+                      {detailedProgress.syllabus.map((track: any) => (
+                        <div key={track.trackId} className="p-4 bg-neutral-50/20">
+                          <h5 className="text-xs font-extrabold text-on-surface flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-600 text-3xs font-extrabold uppercase">
+                              {track.trackType}
+                            </span>
+                            {track.trackTitle || "Main Syllabus"}
+                          </h5>
+                          <div className="mt-3 space-y-4">
+                            {track.modules.map((mod: any) => (
+                              <div key={mod.moduleId} className="space-y-2">
+                                <p className="text-2xs font-extrabold text-on-surface/80">{mod.moduleTitle}</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-2">
+                                  {mod.lessons.map((les: any) => (
+                                    <div
+                                      key={les.lessonId}
+                                      className={`flex items-center gap-2.5 p-2 border rounded-lg ${
+                                        les.completed
+                                          ? 'bg-success/5 border-success/15 text-success'
+                                          : 'bg-white border-neutral-100 text-muted'
+                                      }`}
+                                    >
+                                      <CheckCircle2 className={`h-4 w-4 shrink-0 ${les.completed ? 'text-success' : 'text-neutral-200'}`} />
+                                      <div className="min-w-0">
+                                        <p className="text-2xs font-bold truncate">{les.title}</p>
+                                        {les.completedAt && (
+                                          <p className="text-3xs text-success/75 font-semibold mt-0.5">
+                                            Completed {new Date(les.completedAt).toLocaleDateString()}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 2. Assessment Attempts Table */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-2">
+                      <Award className="h-4.5 w-4.5 text-success" /> Assessment Attempts History
+                    </h4>
+                    <div className="border border-border-light rounded-xl overflow-hidden">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-neutral-50 border-b border-neutral-100 text-3xs font-bold text-muted uppercase tracking-wider">
+                            <th className="p-3 pl-4">Assessment Title</th>
+                            <th className="p-3 text-center">Score</th>
+                            <th className="p-3 text-center">Result</th>
+                            <th className="p-3">Completed At</th>
+                            <th className="p-3 text-center pr-4">Anti-Cheat Alerts</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-neutral-100 text-2xs font-semibold text-on-surface/90">
+                          {detailedProgress.attempts.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="p-6 text-center text-muted">
+                                No assessment attempts logged for this student.
+                              </td>
+                            </tr>
+                          ) : (
+                            detailedProgress.attempts.map((att: any) => (
+                              <tr key={att.id} className="hover:bg-neutral-50/30">
+                                <td className="p-3 pl-4 font-extrabold">{att.assessmentTitle}</td>
+                                <td className="p-3 text-center font-extrabold text-on-surface">
+                                  {att.score}% <span className="text-3xs text-muted font-normal">/ {att.passingScore}%</span>
+                                </td>
+                                <td className="p-3 text-center">
+                                  <span className={`px-2 py-0.5 rounded-full text-3xs font-extrabold ${
+                                    att.passed ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
+                                  }`}>
+                                    {att.passed ? 'Pass' : 'Fail'}
+                                  </span>
+                                </td>
+                                <td className="p-3 text-muted">
+                                  {att.completedAt ? (
+                                    new Date(att.completedAt).toLocaleDateString(undefined, {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    })
+                                  ) : (
+                                    'In Progress'
+                                  )}
+                                </td>
+                                <td className="p-3 text-center pr-4">
+                                  {att.violationCount > 0 ? (
+                                    <span className="px-2.5 py-0.5 rounded-full bg-danger/10 text-danger text-3xs font-extrabold inline-flex items-center gap-1">
+                                      <AlertTriangle className="h-3 w-3" /> {att.violationCount} Violations
+                                    </span>
+                                  ) : (
+                                    <span className="text-3xs text-success font-extrabold">Clean Session</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* 3. Proctoring Violations Feed */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-2">
+                      <AlertTriangle className="h-4.5 w-4.5 text-danger" /> Proctoring Violations Feed
+                    </h4>
+                    <div className="border border-border-light rounded-xl overflow-hidden divide-y divide-neutral-100 max-h-60 overflow-y-auto">
+                      {detailedProgress.violations.length === 0 ? (
+                        <p className="p-6 text-center text-muted text-2xs">
+                          No proctoring violations recorded for this student in this program.
+                        </p>
+                      ) : (
+                        detailedProgress.violations.map((v: any) => (
+                          <div key={v.id} className="p-3 bg-danger/5 hover:bg-danger/10 flex items-start justify-between gap-4">
+                            <div className="space-y-1">
+                              <span className="px-2 py-0.5 rounded-md bg-danger/15 text-danger text-3xs font-extrabold uppercase">
+                                {v.type.replace('_', ' ')}
+                              </span>
+                              <p className="text-2xs font-bold text-on-surface mt-1">
+                                Triggered during assessment: <span className="font-extrabold">{v.assessmentTitle}</span>
+                              </p>
+                            </div>
+                            <span className="text-3xs text-muted font-semibold shrink-0">
+                              {new Date(v.loggedAt).toLocaleString()}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- INTERVENTION OUTREACH MODAL --- */}
+      {showInterventionModal && outreachStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div onClick={() => { setShowInterventionModal(false); setOutreachStudent(null); }} className="absolute inset-0 bg-black/45 backdrop-blur-xs" />
+          <div className="relative bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 z-10 space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-extrabold text-on-surface">Trigger Academic Outreach</h3>
+              <button
+                onClick={() => { setShowInterventionModal(false); setOutreachStudent(null); }}
+                className="p-1 rounded-lg hover:bg-neutral-100 text-muted"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitIntervention} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-2xs font-bold text-on-surface/85">Student</label>
+                <input
+                  type="text"
+                  disabled
+                  value={outreachStudent.name}
+                  className="w-full rounded-xl border border-border-light bg-neutral-100 px-4 py-2.5 text-xs outline-hidden text-muted cursor-not-allowed font-extrabold"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-2xs font-bold text-on-surface/85">Outreach Message</label>
+                <textarea
+                  required
+                  rows={4}
+                  value={outreachMessage}
+                  onChange={(e) => setOutreachMessage(e.target.value)}
+                  placeholder="Type supportive outreach message here..."
+                  className="w-full rounded-xl border border-border-light bg-neutral-50 px-4 py-3 text-xs outline-hidden focus:border-primary focus:bg-white transition-all resize-none font-medium leading-relaxed"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowInterventionModal(false); setOutreachStudent(null); }}
+                  className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-on-surface font-bold text-xs rounded-xl transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingIntervention}
+                  className="px-5 py-2 bg-primary hover:bg-primary-hover text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5"
+                >
+                  {submittingIntervention ? (
+                    <>
+                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      Sending outreach...
+                    </>
+                  ) : (
+                    "Send Outreach"
                   )}
                 </button>
               </div>
