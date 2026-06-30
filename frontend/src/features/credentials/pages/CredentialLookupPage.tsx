@@ -27,9 +27,15 @@ export function CredentialLookupPage() {
       setResult(null);
       setSearched(true);
       const response = await credentialService.verifyCredential(trimmed);
-      setResult(response.credential);
+      if (response.valid && response.credential) {
+        setResult(response.credential);
+      } else {
+        setError(response.message || 'Credential not found');
+        setResult(null);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Credential not found');
+      setResult(null);
     } finally {
       setLoading(false);
     }
