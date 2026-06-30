@@ -1,4 +1,6 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, Inject, Logger } from "@nestjs/common";
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
+import { Cache } from "cache-manager";
 import { PrismaService } from "../../../database/prisma.service";
 
 /**
@@ -10,10 +12,17 @@ import { PrismaService } from "../../../database/prisma.service";
  * 3. Slice the first `sampleSize` (default 15) questions
  * 4. Shuffle options[] within each selected question independently
  * 5. Return the session-specific question set — no two students see the same order
+ *
+ * Sprint 7: Added cache-aside for question bank data (5-min TTL).
  */
 @Injectable()
 export class QuestionSelectionService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(QuestionSelectionService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
 
   /**
    * Select a randomized set of questions for an assessment attempt.
@@ -22,14 +31,13 @@ export class QuestionSelectionService {
   async selectQuestions(assessmentId: string, seed?: string) {
     const assessment = await this.prisma.assessment.findUnique({
       where: { id: assessmentId },
-      include: {
-        questionBank: {
-          include: {
-            questions: {
-              include: { options: true },
-            },
-          },
-        },
+      select: {
+        id: true,
+        title: true,
+        passingScore: true,
+        timeLimit: true,
+        sampleSize: true,
+        questionBankId: true,
       },
     });
 
@@ -39,7 +47,52 @@ export class QuestionSelectionService {
       );
     }
 
-    const allQuestions = assessment.questionBank.questions;
+    // ── Cache-aside: try cache first for the raw question pool ──
+    const cacheKey = `qbank:${assessmentId}:questions`;
+    let allQuestions: {
+      id: string;
+      text: string;
+      category: string | null;
+      timerSeconds: number;
+      options: { id: string; text: string }[];
+    }[];
+
+    const cached = await this.cacheManager.get<typeof allQuestions>(cacheKey);
+
+    if (cached) {
+      this.logger.debug(`Cache HIT for ${cacheKey}`);
+      allQuestions = cached;
+    } else {
+      this.logger.debug(`Cache MISS for ${cacheKey}`);
+
+      const questionBank = await this.prisma.questionBank.findUnique({
+        where: { id: assessment.questionBankId },
+        include: {
+          questions: {
+            include: { options: true },
+          },
+        },
+      });
+
+      const rawQuestions = questionBank?.questions ?? [];
+
+      // Map to clean shape (strip isCorrect from options)
+      allQuestions = rawQuestions.map((q) => ({
+        id: q.id,
+        text: q.text,
+        category: q.category,
+        timerSeconds: q.timerSeconds,
+        options: q.options.map((o) => ({
+          id: o.id,
+          text: o.text,
+        })),
+      }));
+
+      // Only cache non-empty question banks
+      if (allQuestions.length > 0) {
+        await this.cacheManager.set(cacheKey, allQuestions, 300_000); // 5 min TTL
+      }
+    }
 
     if (allQuestions.length === 0) {
     return {
@@ -53,7 +106,7 @@ export class QuestionSelectionService {
     };
     }
 
-    // Step 1: Clone the questions array to avoid mutating the original
+    // Step 1: Clone the questions array to avoid mutating the cached data
     const pool = allQuestions.map((q) => ({
       id: q.id,
       text: q.text,

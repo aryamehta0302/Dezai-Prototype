@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../../../database/prisma.service';
 import { Difficulty, UserRole } from '@prisma/client';
 import { AssessmentService } from './assessment.service';
+import { WeakTopicDetectionService } from './weak-topic-detection.service';
 import type {
   DifficultyBreakdown,
   DifficultyStats,
@@ -49,6 +50,7 @@ export class AssessmentAnalyticsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly assessmentService: AssessmentService,
+    private readonly weakTopicDetectionService: WeakTopicDetectionService,
   ) {}
 
   // ─────────────────── TASK A3: DIFFICULTY BREAKDOWN ───────────────────
@@ -170,6 +172,7 @@ export class AssessmentAnalyticsService {
    */
   async getAssessmentPerformanceReport(
     assessmentId: string,
+    facultyUserId: string,
   ): Promise<AssessmentPerformanceReport> {
     const assessment = await this.prisma.assessment.findUnique({
       where: { id: assessmentId },
@@ -181,6 +184,12 @@ export class AssessmentAnalyticsService {
         `Assessment with ID ${assessmentId} not found`,
       );
     }
+
+    // Validate faculty ownership
+    await this.assessmentService.validateAssessmentFacultyOwnership(
+      assessmentId,
+      facultyUserId,
+    );
 
     const attempts = await this.fetchCompletedAttempts(assessmentId);
     const totalAttempts = attempts.length;
@@ -201,11 +210,12 @@ export class AssessmentAnalyticsService {
       overallAverageScore = this.round(sumPercentage / totalAttempts);
     }
 
-    // Get difficulty breakdown, trend, and top missed questions concurrently
-    const [difficultyBreakdown, trend, topMissedQuestions] = await Promise.all([
+    // Get difficulty breakdown, trend, top missed questions, and weak topics concurrently
+    const [difficultyBreakdown, trend, topMissedQuestions, weakTopics] = await Promise.all([
       this.getDifficultyBreakdown(assessmentId),
       this.getAssessmentTrend(assessmentId),
       this.getTopMissedQuestions(assessmentId, 5),
+      this.weakTopicDetectionService.getAssessmentWeakTopics(assessmentId, facultyUserId),
     ]);
 
     return {
@@ -218,6 +228,7 @@ export class AssessmentAnalyticsService {
       difficultyBreakdown,
       trend,
       topMissedQuestions,
+      weakTopics,
       generatedAt: new Date(),
     };
   }
