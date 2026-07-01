@@ -436,6 +436,28 @@ export class AttemptService {
     );
 
     if (passed) {
+      // 1. Generate an Assessment-level credential
+      const moduleInfo = await this.prisma.module.findUnique({
+        where: { id: attempt.assessment.moduleId },
+        include: { track: { include: { program: true } } }
+      });
+      if (moduleInfo) {
+        const uniqueCode = require('crypto').randomBytes(9).toString('hex').toUpperCase();
+        await this.prisma.credential.create({
+          data: {
+            userId,
+            programId: moduleInfo.track.programId,
+            institutionId: moduleInfo.track.program.institutionId,
+            issuedById: userId, // System issued
+            tier: 'FORGE',
+            verificationCode: uniqueCode,
+            verificationUrl: `/verify/${uniqueCode}`,
+            verificationStatus: 'ACTIVE',
+          }
+        });
+      }
+
+      // 2. Check for Program-level credential eligibility
       await this.checkCredentialEligibility(userId, attempt.assessment.moduleId);
     }
 
@@ -496,21 +518,37 @@ export class AttemptService {
     const programId = track.program.id;
     const trackId = track.id;
 
+    // Generate unique code
+    const uniqueCode = require('crypto').randomBytes(9).toString('hex').toUpperCase();
+
+    // Create credential directly in DB
+    const credential = await this.prisma.credential.create({
+      data: {
+        userId,
+        programId,
+        institutionId: track.program.institutionId,
+        issuedById: userId, // Self-issued for prototype or system ID
+        tier: 'CITADEL',
+        verificationCode: uniqueCode,
+        verificationUrl: `/verify/${uniqueCode}`,
+        verificationStatus: 'ACTIVE',
+      }
+    });
+
     await this.prisma.notification.create({
       data: {
         userId,
-        title: 'You are eligible for a credential!',
-        message:
-          'You have passed all assessments in the track. Your credential is being processed.',
-        type: NotificationType.CREDENTIAL,
+        title: 'You earned a credential!',
+        message: 'You have passed all assessments in the track. Your credential has been issued.',
+        type: 'CREDENTIAL',
         read: false,
       },
     });
 
     await this.auditService.logAction(
       userId,
-      AuditAction.CREDENTIAL_ISSUED,
-      `CredentialEligibility: userId=${userId}, programId=${programId}, trackId=${trackId}`,
+      'CREDENTIAL_ISSUED',
+      `Credential "${credential.verificationCode}" (ID: ${credential.id}) issued to user ${userId} for program ${programId}`,
     );
   }
 

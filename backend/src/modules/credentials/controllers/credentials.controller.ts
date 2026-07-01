@@ -9,7 +9,7 @@ import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 
-@Controller('api/credentials')
+@Controller('credentials')
 export class CredentialsController {
     constructor(
         private readonly credentialsService: CredentialsService,
