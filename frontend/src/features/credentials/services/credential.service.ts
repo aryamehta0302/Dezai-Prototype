@@ -1,53 +1,35 @@
 import { Credential, CreateCredentialDto, UpdateCredentialStatusDto, VerifyStatus, CredentialType, CredentialTemplate } from '../types/credential.types';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL 
-    ? `${process.env.NEXT_PUBLIC_API_URL}/api/credentials` 
-    : 'http://localhost:3001/api/credentials';
+import { apiClient } from '@/core/api/client';
 
 export const CredentialService = {
     
     verify: async (code: string): Promise<{ valid: boolean; data?: Credential; message?: string }> => {
-        const response = await fetch(`${API_BASE}/verify/${code}`);
-        if (!response.ok) {
+        try {
+            const response = await apiClient.get<{ valid: boolean; data?: Credential; message?: string }>(`/credentials/verify/${code}`);
+            return response;
+        } catch (error) {
             return { valid: false, message: 'Invalid verification code or server error' };
         }
-        return await response.json();
     },
 
     getStudentCredentials: async (userId: string): Promise<Credential[]> => {
-        const response = await fetch(`${API_BASE}/student/${userId}`);
-        if (!response.ok) throw new Error("Failed to fetch student credentials");
-        const json = await response.json();
-        return json.credentials ?? json;
+        const response = await apiClient.get<{ credentials: Credential[] }>(`/credentials/student/${userId}`);
+        return response.credentials;
     },
 
     issueCredential: async (data: CreateCredentialDto): Promise<Credential> => {
-        const response = await fetch(`${API_BASE}/issue`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        if (!response.ok) throw new Error("Failed to issue credential");
-        const json = await response.json();
-        return json.credential ?? json;
+        const response = await apiClient.post<{ credential: Credential }>('/credentials/issue', data);
+        return response.credential;
     },
 
     updateCredentialStatus: async (id: string, status: VerifyStatus): Promise<Credential> => {
-        const response = await fetch(`${API_BASE}/${id}/status`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status })
-        });
-        if (!response.ok) throw new Error("Failed to update status");
-        const json = await response.json();
-        return json.credential ?? json;
+        const response = await apiClient.patch<{ credential: Credential }>(`/credentials/${id}/status`, { status });
+        return response.credential;
     },
 
     getAllCredentials: async (): Promise<Credential[]> => {
-        const response = await fetch(`${API_BASE}/all`);
-        if (!response.ok) throw new Error("Failed to fetch all credentials");
-        const json = await response.json();
-        return json.credentials ?? json;
+        const response = await apiClient.get<{ credentials: Credential[] }>('/credentials/all');
+        return response.credentials;
     },
 
     getDownloadUrl: (credentialId: string) => {
@@ -58,17 +40,13 @@ export const CredentialService = {
     },
 
     getTemplates: async (): Promise<CredentialTemplate[]> => {
-        const response = await fetch(`${API_BASE}/templates`);
-        if (!response.ok) throw new Error("Failed to fetch templates");
-        const json = await response.json();
-        return json.templates ?? json;
+        const response = await apiClient.get<{ templates: CredentialTemplate[] }>('/credentials/templates');
+        return response.templates;
     },
 
     getTemplatesByType: async (type: CredentialType): Promise<CredentialTemplate[]> => {
-        const response = await fetch(`${API_BASE}/templates/${type}`);
-        if (!response.ok) throw new Error("Failed to fetch templates by type");
-        const json = await response.json();
-        return json.templates ?? json;
+        const response = await apiClient.get<{ templates: CredentialTemplate[] }>(`/credentials/templates/${type}`);
+        return response.templates;
     }
 };
 

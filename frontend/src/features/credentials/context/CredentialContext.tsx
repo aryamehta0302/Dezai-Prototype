@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { Credential, CredentialTemplate, CredentialType, CreateCredentialDto, VerifyStatus } from '../types/credential.types';
 import { CredentialService } from '../services/credential.service';
 
@@ -26,7 +26,7 @@ export function CredentialProvider({ children }: { children: React.ReactNode }) 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchStudentCredentials = async (userId: string) => {
+    const fetchStudentCredentials = useCallback(async (userId: string) => {
         setIsLoading(true);
         setError(null);
         try {
@@ -38,9 +38,9 @@ export function CredentialProvider({ children }: { children: React.ReactNode }) 
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const fetchAllCredentials = async () => {
+    const fetchAllCredentials = useCallback(async () => {
         setIsLoading(true);
         setError(null);
         try {
@@ -52,9 +52,9 @@ export function CredentialProvider({ children }: { children: React.ReactNode }) 
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const fetchTemplates = async (type?: CredentialType) => {
+    const fetchTemplates = useCallback(async (type?: CredentialType) => {
         try {
             // Future API Call: await fetch(`/api/credentials/templates${type ? `/${type}` : ''}`)
             const data = type 
@@ -64,9 +64,9 @@ export function CredentialProvider({ children }: { children: React.ReactNode }) 
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to fetch templates');
         }
-    };
+    }, []);
 
-    const issueCredential = async (data: CreateCredentialDto) => {
+    const issueCredential = useCallback(async (data: CreateCredentialDto) => {
         setIsLoading(true);
         try {
             // Future API Call: await fetch(`/api/credentials/issue`, { method: 'POST', body: JSON.stringify(data) })
@@ -78,9 +78,9 @@ export function CredentialProvider({ children }: { children: React.ReactNode }) 
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const changeStatus = async (id: string, status: VerifyStatus) => {
+    const changeStatus = useCallback(async (id: string, status: VerifyStatus) => {
         try {
             // Future API Call: await fetch(`/api/credentials/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) })
             const updated = await CredentialService.updateCredentialStatus(id, status);
@@ -89,7 +89,7 @@ export function CredentialProvider({ children }: { children: React.ReactNode }) 
             setError(err instanceof Error ? err.message : 'Failed to update status');
             throw err;
         }
-    };
+    }, []);
 
     return (
         <CredentialContext.Provider value={{
