@@ -457,6 +457,25 @@ export class AttemptService {
       score: percentage,
     }, assessmentProgramId);
 
+    if (!passed) {
+      const failCount = await this.prisma.assessmentAttempt.count({
+        where: {
+          userId,
+          assessmentId: attempt.assessmentId,
+          passed: false,
+        },
+      });
+      if (failCount >= 2) {
+        this.insightsSseService.notifyFacultyOfStudentUpdate(userId, 'AT_RISK_ALERT', {
+          userId,
+          assessmentId: attempt.assessmentId,
+          assessmentTitle: attempt.assessment.title,
+          failCount,
+          reason: `Failed assessment "${attempt.assessment.title}" ${failCount} times.`,
+        }, assessmentProgramId);
+      }
+    }
+
     return {
       success: true,
       attemptId: updatedAttempt.id,

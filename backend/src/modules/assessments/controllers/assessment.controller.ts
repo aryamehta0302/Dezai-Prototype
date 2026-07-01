@@ -189,6 +189,11 @@ export class AssessmentController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
   async createAssessment(@Req() req, @Body() body: CreateAssessmentDto) {
+    await this.assessmentService.validateModuleAccess(
+      body.moduleId,
+      req.user.id,
+      req.user.role as UserRole
+    );
     const assessment = await this.assessmentService.createAssessment(
       body,
       req.user.id
@@ -204,6 +209,11 @@ export class AssessmentController {
     @Req() req,
     @Body() body: UpdateAssessmentDto
   ) {
+    await this.assessmentService.validateAssessmentAccess(
+      id,
+      req.user.id,
+      req.user.role as UserRole
+    );
     const assessment = await this.assessmentService.updateAssessment(
       id,
       body,
@@ -217,6 +227,11 @@ export class AssessmentController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
   async deleteAssessment(@Param("id") id: string, @Req() req) {
+    await this.assessmentService.validateAssessmentAccess(
+      id,
+      req.user.id,
+      req.user.role as UserRole
+    );
     await this.assessmentService.deleteAssessment(id, req.user.id);
     return { success: true, message: "Assessment deleted" };
   }
@@ -236,7 +251,12 @@ export class AssessmentController {
   @Get(":id/analytics")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
-  async getAssessmentAnalytics(@Param("id") id: string) {
+  async getAssessmentAnalytics(@Param("id") id: string, @Req() req) {
+    await this.assessmentService.validateAssessmentAccess(
+      id,
+      req.user.id,
+      req.user.role as UserRole
+    );
     const analytics =
       await this.assessmentService.getAssessmentAnalytics(id);
     return { success: true, analytics };
@@ -245,7 +265,12 @@ export class AssessmentController {
   @Get(":id/results")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
-  async getAssessmentResults(@Param("id") id: string) {
+  async getAssessmentResults(@Param("id") id: string, @Req() req) {
+    await this.assessmentService.validateAssessmentAccess(
+      id,
+      req.user.id,
+      req.user.role as UserRole
+    );
     const results = await this.assessmentService.getAssessmentResults(id);
     return { success: true, results };
   }

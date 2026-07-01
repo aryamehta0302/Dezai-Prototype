@@ -125,6 +125,8 @@ export function FacultyDashboard() {
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [monitoringError, setMonitoringError] = useState<string | null>(null);
+  const [insightsError, setInsightsError] = useState<string | null>(null);
 
   // Faculty Monitoring States
   const [taughtPrograms, setTaughtPrograms] = useState<any[]>([]);
@@ -253,6 +255,7 @@ export function FacultyDashboard() {
     if (!programId) return;
     try {
       setLoadingMonitoring(true);
+      setMonitoringError(null);
       
       // 1. Fetch program general metrics
       const analyticsRes = await apiClient.get<any>(`/analytics/programs/${programId}`);
@@ -273,6 +276,7 @@ export function FacultyDashboard() {
       }
     } catch (err: any) {
       console.error("Error loading program monitoring details:", err);
+      setMonitoringError(err.message || "Failed to load program metrics.");
       toast.error(err.message || "Failed to load program metrics.");
     } finally {
       setLoadingMonitoring(false);
@@ -309,6 +313,7 @@ export function FacultyDashboard() {
     if (!programId) return;
     try {
       setLoadingInsights(true);
+      setInsightsError(null);
       const insightsRes = await apiClient.get<any>(`/analytics/programs/${programId}/insights`);
       if (insightsRes && insightsRes.success) {
         setProgramInsights(insightsRes.data);
@@ -320,6 +325,7 @@ export function FacultyDashboard() {
       }
     } catch (err: any) {
       console.error("Error loading insights metrics:", err);
+      setInsightsError(err.message || "Failed to load cohort health insights.");
       toast.error(err.message || "Failed to load cohort health insights.");
     } finally {
       setLoadingInsights(false);
@@ -416,6 +422,28 @@ export function FacultyDashboard() {
           }
         } catch (err) {
           console.error("Error handling INTERVENTION_SENT SSE:", err);
+        }
+      });
+
+      eventSource.addEventListener("AT_RISK_ALERT", (event: MessageEvent) => {
+        try {
+          const payload = JSON.parse(event.data);
+          console.log("Real-time AT_RISK_ALERT received:", payload);
+
+          toast.error(
+            `At-Risk Warning: Student ${payload.studentName} has failed assessment "${payload.assessmentTitle}" ${payload.failCount} times!`
+          );
+
+          if (selectedProgramIdRef.current === payload.programId) {
+            if (activeTabRef.current === "monitoring") {
+              fetchProgramMonitoringData(selectedProgramIdRef.current);
+            } else if (activeTabRef.current === "insights") {
+              fetchInsightsData(selectedProgramIdRef.current);
+            }
+            fetchDashboardData();
+          }
+        } catch (err) {
+          console.error("Error handling AT_RISK_ALERT SSE:", err);
         }
       });
 
@@ -1185,6 +1213,22 @@ export function FacultyDashboard() {
                   </div>
                   <div className="h-64 bg-neutral-200/50 rounded-2xl w-full" />
                 </div>
+              ) : monitoringError ? (
+                <div className="bg-white border border-border-light rounded-2xl p-10 text-center text-muted shadow-sm flex flex-col items-center justify-center space-y-3">
+                  <div className="h-14 w-14 rounded-2xl bg-danger/10 flex items-center justify-center text-danger border border-danger/20 shadow-xs animate-bounce">
+                    <AlertTriangle className="h-7 w-7" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-on-surface">Failed to Load Monitoring Metrics</h3>
+                    <p className="text-xs text-muted mt-1 max-w-sm">{monitoringError}</p>
+                  </div>
+                  <button
+                    onClick={() => fetchProgramMonitoringData(selectedProgramId)}
+                    className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-primary/95 transition-all cursor-pointer mt-2"
+                  >
+                    Retry Fetching
+                  </button>
+                </div>
               ) : taughtPrograms.length === 0 ? (
                 <div className="bg-white border border-border-light rounded-2xl p-10 text-center text-muted shadow-sm flex flex-col items-center justify-center space-y-3">
                   <div className="h-14 w-14 rounded-2xl bg-neutral-50 flex items-center justify-center text-muted/60 border border-neutral-100/80 shadow-xs">
@@ -1312,6 +1356,22 @@ export function FacultyDashboard() {
                     <div className="h-24 bg-neutral-200/50 rounded-2xl" />
                   </div>
                   <div className="h-64 bg-neutral-200/50 rounded-2xl w-full" />
+                </div>
+              ) : insightsError ? (
+                <div className="bg-white border border-border-light rounded-2xl p-10 text-center text-muted shadow-sm flex flex-col items-center justify-center space-y-3">
+                  <div className="h-14 w-14 rounded-2xl bg-danger/10 flex items-center justify-center text-danger border border-danger/20 shadow-xs animate-bounce">
+                    <AlertTriangle className="h-7 w-7" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-on-surface">Failed to Load Cohort Insights</h3>
+                    <p className="text-xs text-muted mt-1 max-w-sm">{insightsError}</p>
+                  </div>
+                  <button
+                    onClick={() => fetchInsightsData(selectedProgramId)}
+                    className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-primary/95 transition-all cursor-pointer mt-2"
+                  >
+                    Retry Fetching
+                  </button>
                 </div>
               ) : taughtPrograms.length === 0 ? (
                 <div className="bg-white border border-border-light rounded-2xl p-10 text-center text-muted shadow-sm flex flex-col items-center justify-center space-y-3">

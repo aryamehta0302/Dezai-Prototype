@@ -1270,7 +1270,7 @@ export class AnalyticsService {
       if (!faculty) {
         throw new ForbiddenException('Faculty profile not found');
       }
-      if (program.facultyId !== faculty.id && program.institutionId !== faculty.institutionId) {
+      if (program.facultyId !== faculty.id) {
         throw new ForbiddenException('Access denied. You do not have access to this program.');
       }
     } else {
