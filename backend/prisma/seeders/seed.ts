@@ -420,7 +420,7 @@ async function main() {
               await prisma.progress.upsert({
                 where: { userId_lessonId: { userId: dbUser.id, lessonId: lesson.id } },
                 update: {},
-                create: { userId: dbUser.id, lessonId: lesson.id, completedAt: new Date(Date.now() - 86400000 * Math.floor(Math.random() * 5)) },
+                create: { userId: dbUser.id, lessonId: lesson.id, completedAt: new Date(Date.now() - 86400000 * (count % 5)) },
               });
               count++;
             }
@@ -491,8 +491,9 @@ async function main() {
       { text: correct, isCorrect: true },
       ...wrong.map(w => ({ text: w, isCorrect: false })),
     ];
+    // Deterministic shuffle: use index-based swap instead of Math.random()
     for (let i = opts.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = i % 2 === 0 ? 0 : i - 1; // deterministic swap pattern
       [opts[i], opts[j]] = [opts[j], opts[i]];
     }
     return opts;

@@ -1,7 +1,8 @@
 /* eslint-disable react-hooks/exhaustive-deps, @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect, @typescript-eslint/no-unused-vars, @next/next/no-img-element */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { getSession } from "next-auth/react";
 import {
   LayoutDashboard,
   BarChart3,
@@ -355,62 +356,84 @@ export function FacultyDashboard() {
     }
   };
 
+  // Refs for SSE handlers — read current values without reconnecting
+  const selectedProgramIdRef = useRef(selectedProgramId);
+  const activeTabRef = useRef(activeTab);
+  useEffect(() => { selectedProgramIdRef.current = selectedProgramId; }, [selectedProgramId]);
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+
   // Real-time EventSource connection for Faculty Insights
+  // Uses refs so the SSE connection stays alive across tab/program switches (one per session).
+  // Token is passed via query param because browser EventSource cannot send custom headers.
   useEffect(() => {
     if (!authUser || authUser.role !== "FACULTY") return;
 
-    const eventSource = new EventSource("http://localhost:3001/api/faculty/insights/stream", {
-      withCredentials: true,
-    });
+    let eventSource: EventSource | null = null;
+    let cancelled = false;
 
-    eventSource.onopen = () => {
-      console.log("Real-time faculty insights stream connected.");
-    };
+    const connectSSE = async () => {
+      const session = await getSession();
+      const token = (session as any)?.accessToken;
+      if (cancelled || !token) return;
 
-    eventSource.addEventListener("HEALTH_UPDATE", (event: MessageEvent) => {
-      try {
-        const payload = JSON.parse(event.data);
-        console.log("Real-time HEALTH_UPDATE received:", payload);
-        
-        toast.info(
-          `Real-time update: ${payload.studentName} progress in "${payload.programTitle}" updated.`
-        );
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+      const sseUrl = `${apiUrl}/faculty/insights/stream?token=${encodeURIComponent(token)}`;
+      eventSource = new EventSource(sseUrl);
 
-        if (selectedProgramId === payload.programId) {
-          if (activeTab === "monitoring") {
-            fetchProgramMonitoringData(selectedProgramId);
-          } else if (activeTab === "insights") {
-            fetchInsightsData(selectedProgramId);
+      eventSource.onopen = () => {
+        console.log("Real-time faculty insights stream connected.");
+      };
+
+      eventSource.addEventListener("HEALTH_UPDATE", (event: MessageEvent) => {
+        try {
+          const payload = JSON.parse(event.data);
+          console.log("Real-time HEALTH_UPDATE received:", payload);
+
+          toast.info(
+            `Real-time update: ${payload.studentName} progress in "${payload.programTitle}" updated.`
+          );
+
+          if (selectedProgramIdRef.current === payload.programId) {
+            if (activeTabRef.current === "monitoring") {
+              fetchProgramMonitoringData(selectedProgramIdRef.current);
+            } else if (activeTabRef.current === "insights") {
+              fetchInsightsData(selectedProgramIdRef.current);
+            }
+            fetchDashboardData();
           }
-          fetchDashboardData();
+        } catch (err) {
+          console.error("Error handling HEALTH_UPDATE SSE:", err);
         }
-      } catch (err) {
-        console.error("Error handling HEALTH_UPDATE SSE:", err);
-      }
-    });
+      });
 
-    eventSource.addEventListener("INTERVENTION_SENT", (event: MessageEvent) => {
-      try {
-        const payload = JSON.parse(event.data);
-        console.log("Real-time INTERVENTION_SENT received:", payload);
-        
-        if (selectedProgramId) {
-          fetchInsightsData(selectedProgramId);
+      eventSource.addEventListener("INTERVENTION_SENT", (event: MessageEvent) => {
+        try {
+          const payload = JSON.parse(event.data);
+          console.log("Real-time INTERVENTION_SENT received:", payload);
+
+          if (selectedProgramIdRef.current) {
+            fetchInsightsData(selectedProgramIdRef.current);
+          }
+        } catch (err) {
+          console.error("Error handling INTERVENTION_SENT SSE:", err);
         }
-      } catch (err) {
-        console.error("Error handling INTERVENTION_SENT SSE:", err);
-      }
-    });
+      });
 
-    eventSource.onerror = (err) => {
-      console.warn("Real-time SSE connection warning:", err);
+      eventSource.onerror = (err) => {
+        console.warn("Real-time SSE connection warning:", err);
+      };
     };
+
+    connectSSE();
 
     return () => {
-      eventSource.close();
-      console.log("Real-time faculty insights stream disconnected.");
+      cancelled = true;
+      if (eventSource) {
+        eventSource.close();
+        console.log("Real-time faculty insights stream disconnected.");
+      }
     };
-  }, [authUser, selectedProgramId, activeTab]);
+  }, [authUser]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -1799,7 +1822,7 @@ export function FacultyDashboard() {
             className="absolute inset-0 bg-black/45 backdrop-blur-xs transition-opacity"
           />
 
-          <div className="relative w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col z-10 animate-slide-in-right">
+          <div role="dialog" aria-modal="true" aria-label="Student Audit Drawer" className="relative w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col z-10 animate-slide-in-right">
             {/* Header */}
             <div className="p-4 border-b border-border-light flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -2007,7 +2030,7 @@ export function FacultyDashboard() {
       {showInterventionModal && outreachStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div onClick={() => { setShowInterventionModal(false); setOutreachStudent(null); }} className="absolute inset-0 bg-black/45 backdrop-blur-xs" />
-          <div className="relative bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 z-10 space-y-4">
+          <div role="dialog" aria-modal="true" aria-label="Trigger Academic Outreach" className="relative bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 z-10 space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-sm font-extrabold text-on-surface">Trigger Academic Outreach</h3>
               <button

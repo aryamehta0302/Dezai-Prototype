@@ -6,7 +6,7 @@ import { PrismaService } from '../../../database/prisma.service';
 interface SseEvent {
   facultyUserId: string;
   type: string;
-  data: any;
+  data: Record<string, unknown>;
 }
 
 @Injectable()
@@ -36,13 +36,25 @@ export class InsightsSseService {
   }
 
   /**
-   * Look up all faculty members that teach the student across their enrolled programs,
-   * and notify them about a student progress/score update.
+   * Notify only the faculty/admins of a specific program about a student update.
+   * When programId is provided, only that program's faculty & institution admins are notified.
+   * This prevents leaking activity across programs for multi-enrolled students.
+   *
+   * Queries are batched to avoid N+1 patterns.
    */
-  async notifyFacultyOfStudentUpdate(studentUserId: string, type: string, data: any) {
+  async notifyFacultyOfStudentUpdate(
+    studentUserId: string,
+    type: string,
+    data: Record<string, unknown>,
+    programId?: string,
+  ) {
     try {
+      // Fetch enrollments scoped to a specific program (or all if not provided)
       const enrollments = await this.prisma.enrollment.findMany({
-        where: { userId: studentUserId },
+        where: {
+          userId: studentUserId,
+          ...(programId ? { programId } : {}),
+        },
         include: {
           program: {
             select: {
@@ -62,46 +74,65 @@ export class InsightsSseService {
 
       const studentName = student?.name || 'A student';
 
+      // Collect unique facultyIds and institutionIds to batch-query
+      const facultyIds = new Set<string>();
+      const institutionIds = new Set<string>();
+
+      for (const enrollment of enrollments) {
+        if (enrollment.program?.facultyId) facultyIds.add(enrollment.program.facultyId);
+        if (enrollment.program?.institutionId) institutionIds.add(enrollment.program.institutionId);
+      }
+
+      // Batch query: fetch all relevant faculty members in one call
+      const facultyMembers = facultyIds.size > 0
+        ? await this.prisma.facultyMember.findMany({
+            where: { id: { in: Array.from(facultyIds) } },
+            select: { id: true, userId: true },
+          })
+        : [];
+
+      // Batch query: fetch all relevant institution admins in one call
+      const institutionAdmins = institutionIds.size > 0
+        ? await this.prisma.institutionAdmin.findMany({
+            where: { institutionId: { in: Array.from(institutionIds) } },
+            select: { userId: true, institutionId: true },
+          })
+        : [];
+
+      // Build lookup maps for O(1) access
+      const facultyByMemberId = new Map(facultyMembers.map(f => [f.id, f.userId]));
+      const adminsByInstitutionId = new Map<string, string[]>();
+      for (const admin of institutionAdmins) {
+        const existing = adminsByInstitutionId.get(admin.institutionId) || [];
+        existing.push(admin.userId);
+        adminsByInstitutionId.set(admin.institutionId, existing);
+      }
+
+      // Emit events using pre-fetched data (no more N+1 queries)
       for (const enrollment of enrollments) {
         const program = enrollment.program;
         if (!program) continue;
 
-        if (program.facultyId) {
-          const faculty = await this.prisma.facultyMember.findUnique({
-            where: { id: program.facultyId },
-            select: { userId: true },
-          });
+        const eventPayload = {
+          ...data,
+          studentName,
+          programTitle: program.title,
+          programId: program.id,
+        };
 
-          if (faculty) {
-            this.emit({
-              facultyUserId: faculty.userId,
-              type,
-              data: {
-                ...data,
-                studentName,
-                programTitle: program.title,
-                programId: program.id,
-              },
-            });
+        // Notify faculty member
+        if (program.facultyId) {
+          const facultyUserId = facultyByMemberId.get(program.facultyId);
+          if (facultyUserId) {
+            this.emit({ facultyUserId, type, data: eventPayload });
           }
         }
 
+        // Notify institution admins
         if (program.institutionId) {
-          const admins = await this.prisma.institutionAdmin.findMany({
-            where: { institutionId: program.institutionId },
-            select: { userId: true },
-          });
-          for (const admin of admins) {
-            this.emit({
-              facultyUserId: admin.userId,
-              type,
-              data: {
-                ...data,
-                studentName,
-                programTitle: program.title,
-                programId: program.id,
-              },
-            });
+          const adminUserIds = adminsByInstitutionId.get(program.institutionId) || [];
+          for (const adminUserId of adminUserIds) {
+            this.emit({ facultyUserId: adminUserId, type, data: eventPayload });
           }
         }
       }

@@ -182,7 +182,7 @@ export class LearningService {
           userId,
           programId,
           progress: updatedEnrollment.progress,
-        });
+        }, programId);
       }
     }
 
@@ -302,7 +302,7 @@ export class LearningService {
         userId,
         programId: lesson.module.track.programId,
         progress: updatedEnrollment?.progress ?? 0,
-      });
+      }, lesson.module.track.programId);
     }
 
     return { success: true };

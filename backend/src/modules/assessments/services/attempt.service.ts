@@ -304,6 +304,11 @@ export class AttemptService {
       include: {
         assessment: {
           include: {
+            module: {
+              include: {
+                track: { select: { programId: true } },
+              },
+            },
             questionBank: {
               include: {
                 questions: {
@@ -443,13 +448,14 @@ export class AttemptService {
 
     await this.awardService.checkAndAward(userId, AchievementCategory.ASSESSMENT);
 
-    // Notify faculty in real-time about student activity
+    // Notify faculty in real-time about student activity (scoped to the correct program)
+    const assessmentProgramId = attempt.assessment.module?.track?.programId;
     this.insightsSseService.notifyFacultyOfStudentUpdate(userId, 'HEALTH_UPDATE', {
       userId,
       assessmentId: attempt.assessmentId,
       passed,
       score: percentage,
-    });
+    }, assessmentProgramId);
 
     return {
       success: true,
