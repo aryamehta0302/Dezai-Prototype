@@ -14,8 +14,6 @@ import { FacultyInsightService } from '../services/faculty-insight.service';
 import { AssessmentService } from '../services/assessment.service';
 
 /**
- * FacultyInsightsController — Sprint 6 Task B endpoints
- *
  * Faculty Insights & Intervention: at-risk detection, low-progress alerts,
  * inactive student monitoring, academic health scoring, repeated failure
  * analysis, and detailed student insight views.

@@ -9,8 +9,7 @@ interface CredentialContextState {
     templates: CredentialTemplate[];
     isLoading: boolean;
     error: string | null;
-    
-    // Actions
+
     fetchStudentCredentials: (userId: string) => Promise<void>;
     fetchAllCredentials: () => Promise<void>;
     fetchTemplates: (type?: CredentialType) => Promise<void>;
@@ -30,7 +29,6 @@ export function CredentialProvider({ children }: { children: React.ReactNode }) 
         setIsLoading(true);
         setError(null);
         try {
-            // Future API Call: await fetch(`/api/credentials/student/${userId}`)
             const data = await CredentialService.getStudentCredentials(userId);
             setCredentials(data);
         } catch (err) {
@@ -44,7 +42,6 @@ export function CredentialProvider({ children }: { children: React.ReactNode }) 
         setIsLoading(true);
         setError(null);
         try {
-            // Future API Call: await fetch(`/api/credentials/all`)
             const data = await CredentialService.getAllCredentials();
             setCredentials(data);
         } catch (err) {
@@ -56,8 +53,7 @@ export function CredentialProvider({ children }: { children: React.ReactNode }) 
 
     const fetchTemplates = useCallback(async (type?: CredentialType) => {
         try {
-            // Future API Call: await fetch(`/api/credentials/templates${type ? `/${type}` : ''}`)
-            const data = type 
+            const data = type
                 ? await CredentialService.getTemplatesByType(type)
                 : await CredentialService.getTemplates();
             setTemplates(data);
@@ -69,12 +65,11 @@ export function CredentialProvider({ children }: { children: React.ReactNode }) 
     const issueCredential = useCallback(async (data: CreateCredentialDto) => {
         setIsLoading(true);
         try {
-            // Future API Call: await fetch(`/api/credentials/issue`, { method: 'POST', body: JSON.stringify(data) })
             const newCred = await CredentialService.issueCredential(data);
             setCredentials(prev => [newCred, ...prev]);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to issue credential');
-            throw err; // Re-throw to handle in UI components
+            throw err;
         } finally {
             setIsLoading(false);
         }
@@ -82,7 +77,6 @@ export function CredentialProvider({ children }: { children: React.ReactNode }) 
 
     const changeStatus = useCallback(async (id: string, status: VerifyStatus) => {
         try {
-            // Future API Call: await fetch(`/api/credentials/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) })
             const updated = await CredentialService.updateCredentialStatus(id, status);
             setCredentials(prev => prev.map(c => c.id === id ? updated : c));
         } catch (err) {

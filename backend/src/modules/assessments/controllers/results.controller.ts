@@ -13,8 +13,7 @@ import { Roles } from '../../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 
 /**
- * ResultsController — Sprint 5 endpoints for assessment results,
- * attempt status, history, and faculty analytics.
+ * Endpoints for assessment results, attempt status, history, and faculty analytics.
  *
  * All routes are under @Controller('assessments') and use multi-segment
  * paths (e.g. :assessmentId/attempt-status) to avoid collisions with

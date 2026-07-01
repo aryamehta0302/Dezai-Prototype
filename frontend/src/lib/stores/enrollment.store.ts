@@ -74,15 +74,16 @@ export const useEnrollmentStore = create<EnrollmentState>()(
           const response = await learningApi.getEnrollments();
           if (response.success) {
             const enrollmentsMap: Record<string, CourseEnrollment> = {};
-            response.enrollments.forEach((e) => {
+            response.enrollments.forEach((e: any) => {
               enrollmentsMap[e.programId] = {
                 id: e.id,
                 courseId: e.programId,
                 enrolledAt: e.createdAt,
                 progress: e.progress,
-                lessonsCompleted: (e.completedLessonIds || []).map((id: string) => ({
-                  lessonId: id,
+                lessonsCompleted: (e.progresses || e.completedLessonIds || []).map((p: any) => ({
+                  lessonId: typeof p === 'string' ? p : p.lessonId,
                   completed: true,
+                  completedAt: typeof p === 'string' ? undefined : p.completedAt,
                 })),
                 notes: {},
               };
@@ -146,6 +147,10 @@ export const useEnrollmentStore = create<EnrollmentState>()(
       getEnrollment: (courseId) => get().enrollments[courseId],
 
       markLessonComplete: async (courseId, lessonId) => {
+        // Snapshot previous state for rollback
+        const prevEnrollments = structuredClone(get().enrollments);
+        const prevXp = get().xpEarned;
+
         // Optimistic local update — instant UI feedback
         set((state) => {
           const enrollment = state.enrollments[courseId];
@@ -164,17 +169,23 @@ export const useEnrollmentStore = create<EnrollmentState>()(
           };
         });
 
-        // Fire API in background — don't block navigation
-        learningApi.completeLesson(lessonId).then((response) => {
+        try {
+          const response = await learningApi.completeLesson(lessonId);
           if (response.success) {
             if (response.xpResult?.currentXp) {
               get().setXp(response.xpResult.currentXp);
             }
             get().fetchEnrollments();
           }
-        }).catch((error) => {
+        } catch (error) {
           console.error("Failed to save lesson completion:", error);
-        });
+          // Rollback optimistic update on error
+          set({
+            enrollments: prevEnrollments,
+            xpEarned: prevXp,
+          });
+          throw error;
+        }
       },
 
       toggleBookmark: async (courseId, lessonId) => {

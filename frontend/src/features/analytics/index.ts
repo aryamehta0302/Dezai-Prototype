@@ -8,9 +8,9 @@
  */
 
 // ─── Components ───────────────────────────────────────────────────────────────
-// export { ModuleCompletionChart } from './components/module-completion-chart';
-// export { ProgramPerformanceChart } from './components/program-performance-chart';
-// export { XpGrowthChart } from './components/xp-growth-chart';
+export { ModuleCompletionChart } from './components/module-completion-chart';
+export { ProgramPerformanceChart } from './components/program-performance-chart';
+export { XpGrowthChart } from './components/xp-growth-chart';
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 export { useProgramAnalytics } from './hooks/useProgramAnalytics';

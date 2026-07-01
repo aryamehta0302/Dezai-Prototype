@@ -89,23 +89,68 @@ export class LearningActivityService {
 
   async getActivityTimeline(
     userId: string,
-    options?: { limit?: number; offset?: number; types?: ActivityType[] },
-  ): Promise<ActivityEvent[]> {
+    options?: { limit?: number; offset?: number; types?: ActivityType[]; cursor?: string },
+  ): Promise<{ events: ActivityEvent[]; nextCursor: string | null }> {
     const limit = options?.limit ?? 20;
-    const offset = options?.offset ?? 0;
+    const fetchWindow = limit * 5;
     const activities: ActivityEvent[] = [];
 
-    const lessonProgresses = await this.prisma.progress.findMany({
-      where: { userId },
-      include: {
-        lesson: {
-          select: { title: true, module: { select: { title: true } } },
-        },
-      },
-      orderBy: { completedAt: 'desc' },
-      take: limit,
-      skip: offset,
-    });
+    let cursorDate: Date | null = null;
+    let cursorId: string | null = null;
+    if (options?.cursor) {
+      const parts = options.cursor.split('_');
+      cursorDate = new Date(parts[0]);
+      cursorId = parts[1] ?? null;
+    }
+
+    const buildWhere = (dateField: string) => {
+      const w: any = { userId };
+      if (cursorDate) {
+        w[dateField] = cursorId
+          ? { lt: cursorDate }
+          : { lte: cursorDate };
+      }
+      return w;
+    };
+
+    const [lessonProgresses, assessmentAttempts, enrollments, xpTransactions, bookmarks] =
+      await Promise.all([
+        this.prisma.progress.findMany({
+          where: buildWhere('completedAt'),
+          include: {
+            lesson: {
+              select: { title: true, module: { select: { title: true } } },
+            },
+          },
+          orderBy: { completedAt: 'desc' },
+          take: fetchWindow,
+        }),
+        this.prisma.assessmentAttempt.findMany({
+          where: { ...buildWhere('completedAt'), completedAt: { not: null } },
+          include: {
+            assessment: { select: { title: true, module: { select: { title: true } } } },
+          },
+          orderBy: { completedAt: 'desc' },
+          take: fetchWindow,
+        }),
+        this.prisma.enrollment.findMany({
+          where: buildWhere('createdAt'),
+          include: { program: { select: { title: true } } },
+          orderBy: { createdAt: 'desc' },
+          take: fetchWindow,
+        }),
+        this.prisma.xpTransaction.findMany({
+          where: buildWhere('createdAt'),
+          orderBy: { createdAt: 'desc' },
+          take: fetchWindow,
+        }),
+        this.prisma.bookmark.findMany({
+          where: buildWhere('createdAt'),
+          include: { lesson: { select: { title: true } } },
+          orderBy: { createdAt: 'desc' },
+          take: fetchWindow,
+        }),
+      ]);
 
     for (const p of lessonProgresses) {
       activities.push({
@@ -117,16 +162,6 @@ export class LearningActivityService {
       });
     }
 
-    const assessmentAttempts = await this.prisma.assessmentAttempt.findMany({
-      where: { userId, completedAt: { not: null } },
-      include: {
-        assessment: { select: { title: true, module: { select: { title: true } } } },
-      },
-      orderBy: { completedAt: 'desc' },
-      take: limit,
-      skip: offset,
-    });
-
     for (const a of assessmentAttempts) {
       const passedType: ActivityType = a.passed ? 'ASSESSMENT_PASSED' : 'ASSESSMENT_FAILED';
       activities.push({
@@ -136,21 +171,9 @@ export class LearningActivityService {
         description: a.passed
           ? `Passed assessment "${a.assessment.title}" (Score: ${a.score}%)`
           : `Failed assessment "${a.assessment.title}" (Score: ${a.score}%)`,
-        metadata: {
-          assessmentId: a.assessmentId,
-          score: a.score,
-          passed: a.passed,
-        },
+        metadata: { assessmentId: a.assessmentId, score: a.score, passed: a.passed },
       });
     }
-
-    const enrollments = await this.prisma.enrollment.findMany({
-      where: { userId },
-      include: { program: { select: { title: true } } },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      skip: offset,
-    });
 
     for (const e of enrollments) {
       activities.push({
@@ -172,13 +195,6 @@ export class LearningActivityService {
       }
     }
 
-    const xpTransactions = await this.prisma.xpTransaction.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      skip: offset,
-    });
-
     let xpAccumulated = 0;
     const xpMilestones = [100, 500, 1000, 2500, 5000, 10000];
     for (const t of xpTransactions) {
@@ -194,14 +210,6 @@ export class LearningActivityService {
       }
     }
 
-    const bookmarks = await this.prisma.bookmark.findMany({
-      where: { userId },
-      include: { lesson: { select: { title: true } } },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      skip: offset,
-    });
-
     for (const b of bookmarks) {
       activities.push({
         id: `bookmark-${b.id}`,
@@ -214,10 +222,17 @@ export class LearningActivityService {
 
     activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
+    let filtered = activities;
     if (options?.types && options.types.length > 0) {
-      return activities.filter((a) => options.types!.includes(a.type)).slice(0, limit);
+      filtered = filtered.filter((a) => options.types!.includes(a.type));
     }
 
-    return activities.slice(0, limit);
+    const sliced = filtered.slice(0, limit);
+    const last = sliced[sliced.length - 1];
+    const nextCursor = sliced.length === limit && filtered.length > limit
+      ? `${last.timestamp.toISOString()}_${last.id}`
+      : null;
+
+    return { events: sliced, nextCursor };
   }
 }

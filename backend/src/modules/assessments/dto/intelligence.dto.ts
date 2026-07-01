@@ -1,11 +1,10 @@
-// ─────────────────── SPRINT 6 RESPONSE DTOs — ASSESSMENT INTELLIGENCE ───────────────────
+// ─────────────────── ASSESSMENT INTELLIGENCE ───────────────────
 //
-// Response-shape interfaces for Task A endpoints (Weak Topics, Accuracy, Analytics).
-// Follows the Sprint 5 pattern: pure interfaces, not class-validator DTOs.
+// Response-shape interfaces for weak topics, accuracy, and analytics.
 
 import { Difficulty } from '@prisma/client';
 
-// ─────────────────── TASK A1: WEAK TOPICS ───────────────────
+// ─────────────────── WEAK TOPICS ───────────────────
 
 export interface WeakTopicResult {
   category: string;
@@ -35,7 +34,7 @@ export interface IncorrectQuestionAnalysis {
   mostSelectedWrongOptionText: string | null;  // the distractor most students pick
 }
 
-// ─────────────────── TASK A2: TOPIC ACCURACY TRACKING ───────────────────
+// ─────────────────── TOPIC ACCURACY TRACKING ───────────────────
 
 export interface TopicAccuracyDataPoint {
   attemptId: string;
@@ -56,7 +55,7 @@ export interface TopicImprovementResult {
   improved: boolean;           // delta > 0
 }
 
-// ─────────────────── TASK A3: DIFFICULTY-BASED ANALYTICS ───────────────────
+// ─────────────────── DIFFICULTY-BASED ANALYTICS ───────────────────
 
 export interface DifficultyStats {
   totalQuestions: number;
@@ -96,10 +95,11 @@ export interface AssessmentPerformanceReport {
   difficultyBreakdown: DifficultyBreakdown;
   trend: AssessmentTrendPoint[];
   topMissedQuestions: TopMissedQuestion[];
+  weakTopics: AggregatedWeakTopicResult[];
   generatedAt: Date;
 }
 
-// ─────────────────── TASK A4: INSIGHT SUMMARIES ───────────────────
+// ─────────────────── INSIGHT SUMMARIES ───────────────────
 
 export interface FacultyAssessmentInsightItem {
   assessmentId: string;

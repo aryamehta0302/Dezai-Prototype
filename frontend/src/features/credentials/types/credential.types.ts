@@ -16,11 +16,13 @@ export interface CredentialTemplate {
 export interface UserSnippet {
     id: string;
     name: string;
+    email?: string;
 }
 
 export interface ProgramSnippet {
     id: string;
     title: string;
+    institution?: InstitutionSnippet;
 }
 
 export interface InstitutionSnippet {
@@ -47,6 +49,7 @@ export interface Credential {
     user?: UserSnippet;
     program?: ProgramSnippet;
     institution?: InstitutionSnippet;
+    issuer?: UserSnippet;
     credentialTemplate?: CredentialTemplate;
 }
 
@@ -63,9 +66,56 @@ export interface CreateCredentialDto {
 
 export interface UpdateCredentialStatusDto {
     status: VerifyStatus;
+    reason?: string;
 }
 
 export type PublicCredential = Credential;
+
+export interface CredentialSearchParams {
+    query?: string;
+    status?: VerifyStatus;
+    tier?: CredentialTier;
+    programId?: string;
+    issuerId?: string;
+    institutionId?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    page?: number;
+    limit?: number;
+}
+
+export interface SearchResult {
+    data: Credential[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
+export interface ActivityEntry {
+    id: string;
+    userId: string | null;
+    action: string;
+    details: string | null;
+    ipAddress: string | null;
+    createdAt: string;
+    user: { id: string; name: string; email: string; role: string } | null;
+}
+
+export interface ActivityFeedResult {
+    data: ActivityEntry[];
+    total: number;
+    limit: number;
+    offset: number;
+}
+
+export interface EnhancedAnalytics {
+    statusCounts: { ACTIVE: number; SUSPENDED: number; REVOKED: number };
+    programStats: { programId: string; programTitle: string; count: number }[];
+    issuerStats: { issuedById: string; issuerName: string; count: number }[];
+    dailyActivity: { date: string; issued: number; revoked: number; suspended: number }[];
+    tierStats: { FORGE: number; ARENA: number; CITADEL: number };
+}
 
 export interface TierDisplayInfo {
     label: string;

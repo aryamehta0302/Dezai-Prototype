@@ -1,11 +1,11 @@
-// ─────────────────── SPRINT 5 RESPONSE DTOs ───────────────────
+// ─────────────────── RESPONSE DTOs ───────────────────
 //
-// These are response-shape interfaces — not class-validator DTOs.
+// Response-shape interfaces — not class-validator DTOs.
 // Used for type-safe controller return values and API documentation.
 
 import { AttemptStatus } from '../services/pass-fail-evaluation.service';
 
-// ─────────────────── TASK 1: RESULT & HISTORY ───────────────────
+// ─────────────────── RESULT & HISTORY ───────────────────
 
 /**
  * GET /api/assessments/attempts/:attemptId/result
@@ -75,7 +75,7 @@ export interface MyHistoryAttemptDto {
   completedAt: Date | null;
 }
 
-// ─────────────────── TASK 2: ATTEMPT STATUS ───────────────────
+// ─────────────────── ATTEMPT STATUS ───────────────────
 
 /**
  * GET /api/assessments/:assessmentId/attempt-status
@@ -93,7 +93,7 @@ export interface AttemptStatusResponseDto {
   everPassed: boolean;
 }
 
-// ─────────────────── TASK 4: ANALYTICS ───────────────────
+// ─────────────────── ANALYTICS ───────────────────
 
 /**
  * GET /api/assessments/:assessmentId/result-analytics

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/lib/stores/auth.store";
 import { useEnrollmentStore } from "@/lib/stores/enrollment.store";
@@ -26,7 +26,6 @@ import { DifficultyAnalysisCard } from "../components/difficulty-analysis-card";
 import { apiClient } from "@/core/api/client";
 import {
   useMilestones,
-  useStreakInfo,
   useInsights,
   useRecommendations,
   useActivityTimeline,
@@ -53,13 +52,12 @@ import {
 
 export function StudentDashboardPage() {
   const { user } = useAuthStore();
-  const { fetchEnrollments, fetchStats, xpEarned, enrollments, globalRank, isLoading, hasFetched } = useEnrollmentStore();
-  const { fetchPrograms, programs } = useProgramsStore();
+  const { fetchEnrollments, fetchStats, xpEarned, globalRank, hasFetched } = useEnrollmentStore();
+  const { fetchPrograms, hasFetched: programsHasFetched } = useProgramsStore();
   const { enrolledCourses, inProgressCourses, stats: progressStats } = useProgress();
-  const { achievements, unlockedCount } = useAchievements();
+  const { achievements, unlockedCount, isLoading: achievementsLoading } = useAchievements();
 
   const { data: milestones, unlocked: unlockedMilestones, total: totalMCount, loading: loadingMilestones } = useMilestones();
-  const { data: streakInfo, loading: loadingStreak } = useStreakInfo();
   const { data: insights, loading: loadingInsights } = useInsights();
   const { data: recommendations, loading: loadingRecs } = useRecommendations();
   const { data: timelineEvents, loading: loadingTimeline } = useActivityTimeline(5);
@@ -77,17 +75,12 @@ export function StudentDashboardPage() {
     fetchStats();
     fetchPrograms();
 
-    // Fetch weekly rank for Sprint 6 Leaderboard Analytics
-    apiClient.get<any>("/leaderboards/widgets/student")
+    apiClient.get<{ rank: number }>("/leaderboards/widgets/student")
       .then(res => {
         if (res?.rank) setWeeklyRank(res.rank);
       })
       .catch(() => {});
   }, [fetchEnrollments, fetchStats, fetchPrograms]);
-
-  const programsMap = useMemo(() => {
-    return programs.reduce((acc, p) => ({ ...acc, [p.id]: p }), {} as Record<string, { title: string }>);
-  }, [programs]);
 
   const greeting = () => {
     const hour = new Date().getHours();
@@ -96,22 +89,15 @@ export function StudentDashboardPage() {
     return "Good evening";
   };
 
-  const hasData = hasFetched || Object.keys(enrollments).length > 0;
-  const showSkeleton = !hasData && isLoading;
-
   return (
     <PageContainer className="py-12 space-y-10 pb-20">
-      {/* Header */}
+      {/* Header — always available from user store */}
       <div className="flex flex-col lg:flex-row gap-8">
         <div className="flex-1 space-y-2">
-          {showSkeleton ? (
-            <LoadingSkeleton className="h-10 w-64 rounded-lg" />
-          ) : (
-            <h1 className="text-3xl font-bold text-on-surface">
-              {greeting()}, {user?.name?.split(" ")[0] || "Student"}
-            </h1>
-          )}
-          {showSkeleton ? (
+          <h1 className="text-3xl font-bold text-on-surface">
+            {greeting()}, {user?.name?.split(" ")[0] || "Student"}
+          </h1>
+          {!hasFetched || !programsHasFetched ? (
             <LoadingSkeleton className="h-5 w-96 rounded-lg" />
           ) : (
             <p className="text-secondary leading-relaxed max-w-2xl">
@@ -120,30 +106,24 @@ export function StudentDashboardPage() {
                 : "Start exploring our programs to begin your learning journey."}
             </p>
           )}
-          {!showSkeleton && (
-            <div className="pt-3">
-              <Link href="/catalog">
-                <Button className="gap-2 px-6">
-                  <BookOpen className="h-4 w-4" />
-                  Explore Courses
-                </Button>
-              </Link>
-            </div>
-          )}
+          <div className="pt-3">
+            <Link href="/catalog">
+              <Button className="gap-2 px-6">
+                <BookOpen className="h-4 w-4" />
+                Explore Courses
+              </Button>
+            </Link>
+          </div>
         </div>
         <div className="w-full lg:w-[380px]">
-          {showSkeleton ? (
-            <LoadingSkeleton className="h-[140px] rounded-xl" />
-          ) : (
-            <LevelProgressCard xp={xpEarned} />
-          )}
+          <LevelProgressCard xp={xpEarned} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         <div className="xl:col-span-2 space-y-8">
           {/* Continue Learning — highest priority */}
-          {showSkeleton ? (
+          {!hasFetched || !programsHasFetched ? (
             <section className="space-y-4">
               <LoadingSkeleton className="h-6 w-48 rounded-lg" />
               <div className="grid gap-4 md:grid-cols-2">
@@ -182,7 +162,7 @@ export function StudentDashboardPage() {
           {/* My Enrolled Courses — second priority */}
           <section className="space-y-4">
             <h2 className="text-xl font-bold text-on-surface">My Enrolled Courses</h2>
-            {showSkeleton ? (
+            {!hasFetched || !programsHasFetched ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[1, 2].map((i) => (
                   <LoadingSkeleton key={i} className="h-64 rounded-xl" />
@@ -220,11 +200,11 @@ export function StudentDashboardPage() {
                 <Layers className="h-5 w-5 text-primary" />
                 Milestones
               </h2>
-              {!showSkeleton && totalMCount > 0 && (
+              {totalMCount > 0 && (
                 <span className="text-xs text-secondary">{unlockedMilestones.length} / {totalMCount} unlocked</span>
               )}
             </div>
-            {showSkeleton || loadingMilestones ? (
+            {loadingMilestones ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {[1, 2, 3, 4].map((i) => (
                   <LoadingSkeleton key={i} className="h-24 rounded-xl" />
@@ -250,7 +230,11 @@ export function StudentDashboardPage() {
                   </button>
                 )}
               </>
-            ) : null}
+            ) : (
+              <div className="card-elevation py-10 text-center space-y-2">
+                <p className="text-sm text-secondary">No milestones yet — keep learning to unlock your first one!</p>
+              </div>
+            )}
           </section>
 
           {/* Recommendations */}
@@ -261,7 +245,7 @@ export function StudentDashboardPage() {
                 Recommendations
               </h2>
             </div>
-            {showSkeleton || loadingRecs ? (
+            {loadingRecs ? (
               <div className="space-y-3">
                 {[1, 2].map((i) => (
                   <LoadingSkeleton key={i} className="h-20 rounded-xl" />
@@ -287,18 +271,22 @@ export function StudentDashboardPage() {
                   </button>
                 )}
               </>
-            ) : null}
+            ) : (
+              <div className="card-elevation py-10 text-center space-y-2">
+                <p className="text-sm text-secondary">No recommendations yet — keep learning to get personalized suggestions.</p>
+              </div>
+            )}
           </section>
 
           {/* Achievements */}
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-on-surface">Achievements</h2>
-              {!showSkeleton && (
+              {achievements.length > 0 && (
                 <span className="text-xs text-secondary">{unlockedCount} / {achievements.length} unlocked</span>
               )}
             </div>
-            {showSkeleton ? (
+            {achievementsLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <LoadingSkeleton className="h-28 rounded-xl" />
                 <LoadingSkeleton className="h-28 rounded-xl" />
@@ -315,32 +303,29 @@ export function StudentDashboardPage() {
               <BarChart3 className="h-5 w-5 text-primary" />
               Learning Analytics
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                {!showSkeleton && !loadingWeak && weakTopics.length > 0 && (
-                  <WeakTopicsCard topics={weakTopics} />
-                )}
-                {!showSkeleton && loadingWeak && <LoadingSkeleton className="h-44 rounded-xl" />}
-              </div>
-              <div>
-                {!showSkeleton && !loadingDifficulty && difficultyAnalysis.length > 0 && (
-                  <DifficultyAnalysisCard analysis={difficultyAnalysis} />
-                )}
-                {!showSkeleton && loadingDifficulty && <LoadingSkeleton className="h-44 rounded-xl" />}
-              </div>
-              <div>
-                {!showSkeleton && !loadingPrediction && predictionRules && predictionRules.length > 0 && (
-                  <PredictionRulesCard rules={predictionRules} />
-                )}
-                {!showSkeleton && loadingPrediction && <LoadingSkeleton className="h-44 rounded-xl" />}
-              </div>
+            <div className="flex flex-wrap gap-4">
+              {loadingWeak ? (
+                <LoadingSkeleton className="h-44 rounded-xl w-[calc(33%-8px)] min-w-[250px]" />
+              ) : weakTopics.length > 0 ? (
+                <div className="w-[calc(33%-8px)] min-w-[250px]"><WeakTopicsCard topics={weakTopics} /></div>
+              ) : null}
+              {loadingDifficulty ? (
+                <LoadingSkeleton className="h-44 rounded-xl w-[calc(33%-8px)] min-w-[250px]" />
+              ) : difficultyAnalysis.length > 0 ? (
+                <div className="w-[calc(33%-8px)] min-w-[250px]"><DifficultyAnalysisCard analysis={difficultyAnalysis} /></div>
+              ) : null}
+              {loadingPrediction ? (
+                <LoadingSkeleton className="h-44 rounded-xl w-[calc(33%-8px)] min-w-[250px]" />
+              ) : predictionRules && predictionRules.length > 0 ? (
+                <div className="w-[calc(33%-8px)] min-w-[250px]"><PredictionRulesCard rules={predictionRules} /></div>
+              ) : null}
             </div>
           </section>
         </div>
 
         <div className="xl:col-span-1 space-y-8">
           {/* Stats — compact summary card */}
-          {showSkeleton ? (
+          {!hasFetched || !programsHasFetched ? (
             <LoadingSkeleton className="h-64 rounded-xl" />
           ) : (
             <div className="card-elevation p-5 space-y-4">
@@ -392,7 +377,7 @@ export function StudentDashboardPage() {
               <Sparkles className="h-4 w-4 text-primary" />
               Insights
             </h3>
-            {showSkeleton || loadingInsights ? (
+            {loadingInsights ? (
               <div className="space-y-3">
                 {[1, 2].map((i) => (
                   <LoadingSkeleton key={i} className="h-20 rounded-xl" />
@@ -404,28 +389,41 @@ export function StudentDashboardPage() {
                   <InsightCard key={insight.id} insight={insight} />
                 ))}
               </div>
-            ) : null}
+            ) : (
+              <p className="text-sm text-secondary card-elevation py-6 text-center">No insights yet. Complete more lessons to get learning insights.</p>
+            )}
           </section>
 
           {/* Learning Patterns */}
-          {!showSkeleton && !loadingPatterns && patterns && (
+          {loadingPatterns ? (
+            <LoadingSkeleton className="h-44 rounded-xl" />
+          ) : patterns ? (
             <LearningPatternCard pattern={patterns} />
+          ) : (
+            <div className="card-elevation p-5 text-center">
+              <p className="text-sm text-secondary">Not enough data to detect learning patterns yet.</p>
+            </div>
           )}
 
           {/* Ranking Card */}
-          {!showSkeleton && globalRank !== null && globalRank > 0 && (
+          {globalRank !== null && globalRank > 0 ? (
             <StudentRankingCard
               rank={globalRank}
               weeklyRank={weeklyRank}
               xp={xpEarned}
               streakCount={progressStats.learningStreak}
             />
+          ) : (
+            <div className="card-elevation p-5 text-center space-y-2">
+              <p className="text-sm font-medium text-on-surface">Ranking unavailable</p>
+              <p className="text-xs text-secondary">Complete lessons and earn XP to appear on the leaderboard.</p>
+            </div>
           )}
 
           {/* Activity Timeline */}
           <section className="space-y-4">
             <h2 className="text-lg font-bold text-on-surface">Recent Activity</h2>
-            {showSkeleton || loadingTimeline ? (
+            {loadingTimeline ? (
               <div className="space-y-4">
                 {[1, 2, 3].map(i => (
                   <div key={i} className="flex gap-4">

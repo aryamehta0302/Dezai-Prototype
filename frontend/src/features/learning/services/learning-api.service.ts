@@ -115,10 +115,10 @@ export const learningApi = {
     }),
 
   /**
-   * Get activity timeline
+   * Get activity timeline (cursor-based pagination)
    */
-  getActivityTimeline: (params?: { limit?: number; offset?: number; types?: string }) =>
-    apiClient.get<{ success: boolean; data: ActivityEvent[] }>("/learning/activities", { params }),
+  getActivityTimeline: (params?: { limit?: number; cursor?: string; types?: string }) =>
+    apiClient.get<{ success: boolean; data: ActivityEvent[]; nextCursor: string | null }>("/learning/activities", { params }),
 
   /**
    * Get milestones

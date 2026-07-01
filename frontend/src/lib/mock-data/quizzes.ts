@@ -88,6 +88,16 @@ for (let i = 3; i <= 12; i++) {
   }
 }
 
+// Statically seed quiz-program to match default program assessment to avoid new object references
+const q1 = mockQuizzes.find(q => q.id === 'quiz-1');
+if (q1 && !mockQuizzes.some(q => q.id === 'quiz-program')) {
+  mockQuizzes.push({
+    ...q1,
+    id: 'quiz-program',
+    courseId: 'default-program-id'
+  });
+}
+
 export function getQuizByCourseId(courseId: string): MockQuiz | undefined {
   return mockQuizzes.find((q) => q.courseId === courseId);
 }

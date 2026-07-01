@@ -22,7 +22,7 @@ export class ProgramsService {
   constructor(
     private prisma: PrismaService,
     private auditService: AuditService
-  ) {}
+  ) { }
 
   // ─────────────────── OWNERSHIP GUARD ───────────────────
 
@@ -228,7 +228,10 @@ export class ProgramsService {
       include: {
         modules: {
           orderBy: { order: "asc" },
-          include: { lessons: { orderBy: { order: "asc" } } },
+          include: {
+            lessons: { orderBy: { order: "asc" } },
+            assessments: { select: { id: true, title: true, passingScore: true } },
+          },
         },
       },
     });
