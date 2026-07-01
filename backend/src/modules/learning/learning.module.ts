@@ -6,6 +6,7 @@ import { LearningMilestoneService } from './services/learning-milestone.service'
 import { LearningPatternService } from './services/learning-pattern.service';
 import { LearningInsightService } from './services/learning-insight.service';
 import { LearningRecommendationService } from './services/learning-recommendation.service';
+import { LearningCleanupService } from './services/learning-cleanup.service';
 import { ProgramsModule } from '../programs/programs.module';
 import { UsersModule } from '../users/users.module';
 import { AchievementsModule } from '../achievements/achievements.module';
@@ -20,6 +21,7 @@ import { AchievementsModule } from '../achievements/achievements.module';
     LearningPatternService,
     LearningInsightService,
     LearningRecommendationService,
+    LearningCleanupService,
   ],
   exports: [
     LearningService,
@@ -28,6 +30,7 @@ import { AchievementsModule } from '../achievements/achievements.module';
     LearningPatternService,
     LearningInsightService,
     LearningRecommendationService,
+    LearningCleanupService,
   ],
 })
 export class LearningModule {}

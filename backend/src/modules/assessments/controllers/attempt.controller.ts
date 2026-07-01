@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Param,
   Body,
   UseGuards,
@@ -13,6 +14,7 @@ import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { StartAttemptDto, AutoSaveAnswersDto, SubmitAttemptDto } from '../dto/attempt.dto';
+import { SyncAnswersDto } from '../dto/sync.dto';
 
 @Controller('assessments/attempts')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -47,6 +49,20 @@ export class AttemptController {
       req.user.id,
       req.user.role as UserRole,
     );
+  }
+
+  // ─────────────────── SPRINT 7: SYNC ENDPOINT ───────────────────
+
+  /**
+   * PATCH /api/assessments/attempts/sync
+   *
+   * Offline retry-queue endpoint — batch-syncs buffered answers.
+   * Must be declared before any :id route.
+   */
+  @Patch('sync')
+  @Roles(UserRole.STUDENT)
+  async syncAnswers(@Req() req, @Body() body: SyncAnswersDto) {
+    return this.attemptService.syncAnswers(req.user.id, body);
   }
 
   // ─────────────────── PARAMETERISED ROUTES ───────────────────

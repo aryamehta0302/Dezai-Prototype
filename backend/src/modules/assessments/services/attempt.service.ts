@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import {
@@ -29,6 +30,7 @@ import type {
   MyHistoryResponseDto,
   AttemptStatusResponseDto,
 } from '../dto/result.dto';
+import type { SyncAnswersDto, SyncResponseDto } from '../dto/sync.dto';
 
 interface QuestionSetItem {
   questionId: string;
@@ -38,6 +40,8 @@ interface QuestionSetItem {
 
 @Injectable()
 export class AttemptService {
+  private readonly logger = new Logger(AttemptService.name);
+
   constructor(
     private prisma: PrismaService,
     private auditService: AuditService,
@@ -255,6 +259,39 @@ export class AttemptService {
     }
 
     return { success: true };
+  }
+
+  // ─────────────────── SPRINT 7: SYNC ANSWERS ───────────────────
+
+  /**
+   * PATCH /api/assessments/attempts/sync
+   *
+   * Validates the attempt, rejects completed ones, and delegates
+   * persistence to autoSaveAnswers. Returns synced count + server timestamp.
+   */
+  async syncAnswers(userId: string, dto: SyncAnswersDto): Promise<SyncResponseDto> {
+    const attempt = await this.prisma.assessmentAttempt.findUnique({
+      where: { id: dto.attemptId },
+    });
+
+    if (!attempt || attempt.userId !== userId) {
+      throw new NotFoundException('Attempt not found');
+    }
+
+    if (attempt.completedAt) {
+      throw new BadRequestException('Cannot sync answers for a completed attempt');
+    }
+
+    await this.autoSaveAnswers(userId, dto.attemptId, dto.answers);
+
+    this.logger.debug(
+      `Synced ${Object.keys(dto.answers).length} answers for attempt ${dto.attemptId}`,
+    );
+
+    return {
+      syncedCount: Object.keys(dto.answers).length,
+      serverTimestamp: Date.now(),
+    };
   }
 
   async submitAttempt(

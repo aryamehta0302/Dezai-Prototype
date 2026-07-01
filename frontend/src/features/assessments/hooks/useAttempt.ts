@@ -28,10 +28,42 @@ export function useAttempt(assessmentId: string, accessToken?: string, slug?: st
   const answersRef = useRef(answers);
   const isSubmittingRef = useRef(false);
 
+  // Sprint 7: Offline Sync Queue
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator !== "undefined" ? navigator.onLine : true
+  );
+  const syncQueueRef = useRef<Record<string, string>>({});
+  const [syncStatus, setSyncStatus] = useState<"saved" | "syncing" | "offline" | "error">("saved");
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryCountRef = useRef(0);
+
   // Sync answers ref
   useEffect(() => {
     answersRef.current = answers;
   }, [answers]);
+
+  // Sprint 7: Online/Offline detection
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      setSyncStatus(prev => prev === "offline" ? "saved" : prev);
+      // Flush queued answers on reconnect
+      flushSyncQueue();
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      setSyncStatus("offline");
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+    };
+  }, []);
 
   // Guard to prevent initializeAttempt from running twice (React Strict Mode)
   const initializedRef = useRef(false);
@@ -259,11 +291,64 @@ export function useAttempt(assessmentId: string, accessToken?: string, slug?: st
         e.preventDefault();
         e.returnValue = "You have unsaved answers. Are you sure you want to leave?";
       }
+
+      // Sprint 7: sendBeacon fallback for queued answers
+      const queuedAnswers = syncQueueRef.current;
+      if (attempt && Object.keys(queuedAnswers).length > 0) {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+        const payload = JSON.stringify({
+          attemptId: attempt.attemptId,
+          answers: queuedAnswers,
+          clientTimestamp: Date.now(),
+        });
+        // sendBeacon is best-effort — no auth header possible
+        navigator.sendBeacon(
+          `${apiUrl}/assessments/attempts/sync`,
+          new Blob([payload], { type: "application/json" })
+        );
+      }
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [saveCurrentAnswers]);
+  }, [saveCurrentAnswers, attempt]);
+
+  // Sprint 7: Flush sync queue with exponential backoff
+  const flushSyncQueue = useCallback(async () => {
+    if (!attempt || !accessToken) return;
+    const queue = syncQueueRef.current;
+    if (Object.keys(queue).length === 0) return;
+    if (!navigator.onLine) {
+      setSyncStatus("offline");
+      return;
+    }
+
+    try {
+      setSyncStatus("syncing");
+      await assessmentAttemptService.syncAnswers(
+        {
+          attemptId: attempt.attemptId,
+          answers: { ...queue },
+          clientTimestamp: Date.now(),
+        },
+        accessToken
+      );
+      // Clear the queue on success
+      syncQueueRef.current = {};
+      retryCountRef.current = 0;
+      setSyncStatus("saved");
+    } catch {
+      retryCountRef.current++;
+      if (retryCountRef.current <= 3) {
+        const delay = 5000 * Math.pow(2, retryCountRef.current - 1); // 5s, 10s, 20s
+        setSyncStatus("error");
+        retryTimeoutRef.current = setTimeout(() => flushSyncQueue(), delay);
+      } else {
+        setSyncStatus("error");
+        retryCountRef.current = 0;
+      }
+    }
+  }, [attempt, accessToken]);
 
   // Answer selection handler
   const selectOption = (questionId: string, optionId: string) => {
@@ -275,6 +360,14 @@ export function useAttempt(assessmentId: string, accessToken?: string, slug?: st
     }));
     hasUnsavedChanges.current = true;
     setSaveStatus("idle");
+
+    // Sprint 7: Push to sync queue and flush if online
+    syncQueueRef.current[questionId] = optionId;
+    if (navigator.onLine) {
+      flushSyncQueue();
+    } else {
+      setSyncStatus("offline");
+    }
   };
 
   // Flag question handler
@@ -385,5 +478,10 @@ export function useAttempt(assessmentId: string, accessToken?: string, slug?: st
     handleViolation,
     initializeAttempt,
     isSubmittingRef,
+
+    // Sprint 7: Sync states
+    isOnline,
+    syncStatus,
+    flushSyncQueue,
   };
 }

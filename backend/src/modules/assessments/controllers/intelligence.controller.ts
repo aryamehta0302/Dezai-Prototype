@@ -88,6 +88,7 @@ export class IntelligenceController {
     const result =
       await this.weakTopicDetectionService.getAssessmentWeakTopics(
         assessmentId,
+        req.user.id,
       );
     return { success: true, weakTopics: result };
   }
@@ -230,6 +231,7 @@ export class IntelligenceController {
     const result =
       await this.assessmentAnalyticsService.getAssessmentPerformanceReport(
         assessmentId,
+        req.user.id,
       );
     return { success: true, report: result };
   }

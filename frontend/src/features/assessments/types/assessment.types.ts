@@ -84,3 +84,16 @@ export interface AttemptStatusResponse {
   bestPercentage: number | null;
   everPassed: boolean;
 }
+
+// ─────────────────── SPRINT 7: SYNC TYPES ───────────────────
+
+export interface SyncAnswersPayload {
+  attemptId: string;
+  answers: Record<string, string>;
+  clientTimestamp?: number;
+}
+
+export interface SyncResponse {
+  syncedCount: number;
+  serverTimestamp: number;
+}

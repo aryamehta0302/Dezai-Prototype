@@ -52,6 +52,10 @@ export function AssessmentPlayer({ slug, assessmentId }: AssessmentPlayerProps) 
     setIsFullscreenActive,
     handleViolation,
     initializeAttempt,
+
+    // Sprint 7: Sync
+    isOnline,
+    syncStatus,
   } = useAttempt(assessmentId, token, slug);
 
   const [started, setStarted] = useState(false);
@@ -393,18 +397,21 @@ export function AssessmentPlayer({ slug, assessmentId }: AssessmentPlayerProps) 
                   -{scoreDeduction}% Penalty Applied
                 </Badge>
               )}
-              {saveStatus === "saving" && (
-                <span className="text-xs text-muted flex items-center gap-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-ping" />
-                  Saving...
-                </span>
-              )}
-              {saveStatus === "saved" && (
-                <span className="text-xs text-green-500 font-semibold flex items-center gap-1">
-                  <CheckCircle className="h-3 w-3" />
-                  Saved
-                </span>
-              )}
+              {/* Sprint 7: Dynamic sync status indicator */}
+              <span aria-live="polite" className="text-xs font-semibold flex items-center gap-1">
+                {syncStatus === "saved" && (
+                  <><span className="h-1.5 w-1.5 rounded-full bg-green-500" /><span className="text-green-500">Saved</span></>
+                )}
+                {syncStatus === "syncing" && (
+                  <><span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-ping" /><span className="text-blue-500">Syncing...</span></>
+                )}
+                {syncStatus === "offline" && (
+                  <><span className="h-1.5 w-1.5 rounded-full bg-yellow-500" /><span className="text-yellow-500">Offline</span></>
+                )}
+                {syncStatus === "error" && (
+                  <><span className="h-1.5 w-1.5 rounded-full bg-red-500" /><span className="text-red-500">Sync Error</span></>
+                )}
+              </span>
             </div>
           </div>
 

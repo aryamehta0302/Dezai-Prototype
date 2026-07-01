@@ -54,9 +54,9 @@ export function CourseModuleSidebar({
                 )}
               >
                 {isCompleted ? (
-                  <CheckCircle className="h-4 w-4 text-success flex-shrink-0" />
+                  <CheckCircle className="h-4 w-4 text-success flex-shrink-0" aria-hidden="true" />
                 ) : (
-                  <Icon className={cn("h-4 w-4 flex-shrink-0", isCurrent ? "text-primary" : "text-muted")} />
+                  <Icon className={cn("h-4 w-4 flex-shrink-0", isCurrent ? "text-primary" : "text-muted")} aria-hidden="true" />
                 )}
                 <span className="flex-1 line-clamp-1">{lesson.title}</span>
                 {lesson.videoUrl && (

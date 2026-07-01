@@ -784,13 +784,13 @@ Sprint 6 focused on finalizing the **Analytics Completion Track**, wiring up adv
 
 ---
 
-## Sprint 7: Faculty Dashboard V2, Real-time Insights & Data Boundaries (Antigravity)
+## Sprint 7: Faculty Dashboard V2, Real-time Insights & Data Boundaries (Antigravity) & Production Readiness Improvements
 ### Status: IMPLEMENTED ✅
 **Date Completed**: 2026-06-30
 
 ### Overview
 
-Sprint 7 finalized the **Faculty Dashboard UX**, implemented **real-time insights synchronization** using Server-Sent Events (SSE), and **hardened tenant isolation (data boundaries)** for all Faculty and Analytics APIs.
+Sprint 7 finalized the **Faculty Dashboard UX**, implemented **real-time insights synchronization** using Server-Sent Events (SSE), hardened tenant isolation (data boundaries) for all Faculty and Analytics APIs, and added production hardening enhancements for error handling.
 
 ### Features Delivered
 
@@ -806,12 +806,19 @@ Sprint 7 finalized the **Faculty Dashboard UX**, implemented **real-time insight
    - Implemented central access audits in `AnalyticsService` validating program ownership for `FACULTY` and `UNIVERSITY_ADMIN` roles.
    - Integrated ownership audits in `FacultyInsightsController` scoping query parameters and assessment metrics to the logged-in user's assigned student cohorts/institutions.
 
+4. **Production Readiness & Hardening:**
+   - Added a global HTTP exception filter for consistent API error responses.
+   - Registered the global exception filter in the NestJS application bootstrap.
+   - Restored analytics feature barrel exports for reusable chart components.
+
 ### Files Added / Modified
 
 | Action | File |
 |---|---|
 | CREATED | [backend/src/modules/analytics/services/insights-sse.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/services/insights-sse.service.ts) |
 | CREATED | [backend/src/modules/analytics/controllers/faculty-insights-stream.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/controllers/faculty-insights-stream.controller.ts) |
+| CREATED | backend/src/common/filters/http-exception.filter.ts |
+| MODIFIED | backend/src/main.ts |
 | MODIFIED | [backend/src/modules/analytics/services/analytics.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/services/analytics.service.ts) |
 | MODIFIED | [backend/src/modules/analytics/controllers/analytics.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/controllers/analytics.controller.ts) |
 | MODIFIED | [backend/src/modules/analytics/analytics.module.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/analytics.module.ts) |
@@ -819,7 +826,10 @@ Sprint 7 finalized the **Faculty Dashboard UX**, implemented **real-time insight
 | MODIFIED | [backend/src/modules/assessments/services/attempt.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/assessments/services/attempt.service.ts) |
 | MODIFIED | [backend/src/modules/learning/services/learning.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/learning/services/learning.service.ts) |
 | MODIFIED | [frontend/src/features/dashboard/components/FacultyDashboard.tsx](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/components/FacultyDashboard.tsx) |
+| MODIFIED | frontend/src/features/analytics/index.ts |
 | MODIFIED | [docs/CHANGELOG.md](file:///d:/Project/Dezai-ai/Dezai-Prototype/docs/CHANGELOG.md) |
 | MODIFIED | [docs/IMPLEMENTED.md](file:///d:/Project/Dezai-ai/Dezai-Prototype/docs/IMPLEMENTED.md) |
 
+### Notes
 
+- Focused on high-quality real-time notifications, strict tenant boundaries, and robust NestJS production error filtering.

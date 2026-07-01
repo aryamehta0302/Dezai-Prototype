@@ -1,4 +1,4 @@
-import { Attempt, AttemptResult, AttemptHistoryItem, AttemptStatusResponse } from "../types/assessment.types";
+import { Attempt, AttemptResult, AttemptHistoryItem, AttemptStatusResponse, SyncAnswersPayload, SyncResponse } from "../types/assessment.types";
 
 const getApiUrl = () => {
   return process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
@@ -147,6 +147,29 @@ export const assessmentAttemptService = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.message || "Failed to log proctoring violation");
+    }
+
+    return res.json();
+  },
+
+  // ─────────────────── SPRINT 7: SYNC ───────────────────
+
+  async syncAnswers(
+    payload: SyncAnswersPayload,
+    token: string
+  ): Promise<SyncResponse> {
+    const res = await fetch(`${getApiUrl()}/assessments/attempts/sync`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || "Failed to sync answers");
     }
 
     return res.json();

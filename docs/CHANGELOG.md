@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Sprint 7] — 2026-06-30
+
+### Assessment Hardening & Production Readiness (Antigravity AI)
+
+#### Added
+- **Docker Compose for Redis** — Added local Redis 7 Alpine configuration with AOF persistence.
+- **PATCH /api/assessments/attempts/sync** — Batch synchronization endpoint for offline answers.
+- **Offline Sync Queue** — React hook integration with connection state monitoring, automatic retry queue (exponential backoff), and `navigator.sendBeacon` fallback.
+- **Sync Status Badge** — Dynamic status badge (`Saved`, `Syncing...`, `Offline`, `Sync Error`) in the assessment player interface.
+- **Unit Tests** — Added 3 test suites covering Question Selection caching, Sync attempt constraints, and Analytics validation logic.
+
+#### Changed
+- **Redis Cache-Aside** — Integrated cache-aside caching for QuestionSelectionService (5-minute TTL) with automatic invalidation hooks on question banks and questions modifications.
+- **Tenant Isolation** — Added strict program/faculty validation to cohort weak topic detection and analytics queries to prevent cross-tenant data leaks.
+- **Attempt Count Validation Fix** — Corrected `submitSession` attempt count query to filter exclusively by completed attempts (`completedAt !== null`), preventing active attempts from counting towards the maximum limit.
+
 ---
 
 ## [Sprint 7.0] — 2026-06-30
@@ -454,7 +470,24 @@ frontend/src/app/(student)/chat/page.tsx (NEW)
 - Curriculum & Program Management (Manan Panchal)
 - See [IMPLEMENTED.md](file:///d:/git/dezai/Dezai-Prototype/docs/IMPLEMENTED.md) Sections 5–7.
 
+--
+## [Sprint 7] - Production Readiness(Krish Parmar) 2026-06-29
 
+### Added
+
+- Global HTTP exception filter for standardized backend error responses.
+
+### Changed
+
+- Registered global exception filter during application bootstrap.
+- Restored analytics barrel exports for chart components.
+
+### Notes
+
+- No new features introduced.
+- No database changes.
+- No API contract changes.
+- Production hardening only.
 ---
 
 ## [Sprint 6] — 2026-06-23

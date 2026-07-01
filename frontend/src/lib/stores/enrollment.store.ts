@@ -147,6 +147,10 @@ export const useEnrollmentStore = create<EnrollmentState>()(
       getEnrollment: (courseId) => get().enrollments[courseId],
 
       markLessonComplete: async (courseId, lessonId) => {
+        // Snapshot previous state for rollback
+        const prevEnrollments = structuredClone(get().enrollments);
+        const prevXp = get().xpEarned;
+
         // Optimistic local update — instant UI feedback
         set((state) => {
           const enrollment = state.enrollments[courseId];
@@ -175,6 +179,11 @@ export const useEnrollmentStore = create<EnrollmentState>()(
           }
         } catch (error) {
           console.error("Failed to save lesson completion:", error);
+          // Rollback optimistic update on error
+          set({
+            enrollments: prevEnrollments,
+            xpEarned: prevXp,
+          });
           throw error;
         }
       },
