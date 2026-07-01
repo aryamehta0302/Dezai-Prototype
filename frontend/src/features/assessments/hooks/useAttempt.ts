@@ -37,6 +37,43 @@ export function useAttempt(assessmentId: string, accessToken?: string, slug?: st
   const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryCountRef = useRef(0);
 
+  // Sprint 7: Flush sync queue with exponential backoff
+  const flushSyncQueue = useCallback(async () => {
+    if (!attempt || !accessToken) return;
+    const queue = syncQueueRef.current;
+    if (Object.keys(queue).length === 0) return;
+    if (!navigator.onLine) {
+      setSyncStatus("offline");
+      return;
+    }
+
+    try {
+      setSyncStatus("syncing");
+      await assessmentAttemptService.syncAnswers(
+        {
+          attemptId: attempt.attemptId,
+          answers: { ...queue },
+          clientTimestamp: Date.now(),
+        },
+        accessToken
+      );
+      // Clear the queue on success
+      syncQueueRef.current = {};
+      retryCountRef.current = 0;
+      setSyncStatus("saved");
+    } catch {
+      retryCountRef.current++;
+      if (retryCountRef.current <= 3) {
+        const delay = 5000 * Math.pow(2, retryCountRef.current - 1); // 5s, 10s, 20s
+        setSyncStatus("error");
+        retryTimeoutRef.current = setTimeout(() => flushSyncQueue(), delay);
+      } else {
+        setSyncStatus("error");
+        retryCountRef.current = 0;
+      }
+    }
+  }, [attempt, accessToken]);
+
   // Sync answers ref
   useEffect(() => {
     answersRef.current = answers;
@@ -313,42 +350,7 @@ export function useAttempt(assessmentId: string, accessToken?: string, slug?: st
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [saveCurrentAnswers, attempt]);
 
-  // Sprint 7: Flush sync queue with exponential backoff
-  const flushSyncQueue = useCallback(async () => {
-    if (!attempt || !accessToken) return;
-    const queue = syncQueueRef.current;
-    if (Object.keys(queue).length === 0) return;
-    if (!navigator.onLine) {
-      setSyncStatus("offline");
-      return;
-    }
 
-    try {
-      setSyncStatus("syncing");
-      await assessmentAttemptService.syncAnswers(
-        {
-          attemptId: attempt.attemptId,
-          answers: { ...queue },
-          clientTimestamp: Date.now(),
-        },
-        accessToken
-      );
-      // Clear the queue on success
-      syncQueueRef.current = {};
-      retryCountRef.current = 0;
-      setSyncStatus("saved");
-    } catch {
-      retryCountRef.current++;
-      if (retryCountRef.current <= 3) {
-        const delay = 5000 * Math.pow(2, retryCountRef.current - 1); // 5s, 10s, 20s
-        setSyncStatus("error");
-        retryTimeoutRef.current = setTimeout(() => flushSyncQueue(), delay);
-      } else {
-        setSyncStatus("error");
-        retryCountRef.current = 0;
-      }
-    }
-  }, [attempt, accessToken]);
 
   // Answer selection handler
   const selectOption = (questionId: string, optionId: string) => {

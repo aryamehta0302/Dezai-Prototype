@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
+import { InsightsSseService } from './insights-sse.service';
 
 // ─── Response Type Interfaces (for documentation + controller import) ─────────
 
@@ -170,7 +171,10 @@ export interface InterventionDto {
  */
 @Injectable()
 export class AnalyticsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private insightsSseService: InsightsSseService,
+  ) {}
 
   // ─────────────────────────────────────────────────────────────────────────
   // 1. FACULTY ANALYTICS
@@ -545,7 +549,8 @@ export class AnalyticsService {
   //    Aggregates for a single Program by its ID.
   //    Includes total XP earned by all students in that program.
   // ─────────────────────────────────────────────────────────────────────────
-  async getProgramAnalytics(programId: string) {
+  async getProgramAnalytics(programId: string, userId: string, role: string) {
+    await this.validateProgramAccess(programId, userId, role);
     // Step 1: Verify program exists
     const program = await this.prisma.program.findUnique({
       where: { id: programId },
@@ -623,7 +628,8 @@ export class AnalyticsService {
   //    OPTIMIZED: Institution is fetched ONCE from the program lookup (Step 1),
   //    not repeated per enrollment row — avoids redundant nested joins.
   // ─────────────────────────────────────────────────────────────────────────
-  async getStudentMetrics(programId: string) {
+  async getStudentMetrics(programId: string, userId: string, role: string) {
+    await this.validateProgramAccess(programId, userId, role);
     // Step 1: Verify program exists and fetch institution name in one query
     const program = await this.prisma.program.findUnique({
       where: { id: programId },
@@ -738,7 +744,8 @@ export class AnalyticsService {
   // 5. MODULE COMPLETION RATE STATISTICS
   //    Calculates module-by-module completion rates for all students in a Program.
   // ─────────────────────────────────────────────────────────────────────────
-  async getModuleCompletionStats(programId: string): Promise<ModuleCompletionStatDto[]> {
+  async getModuleCompletionStats(programId: string, userId: string, role: string): Promise<ModuleCompletionStatDto[]> {
+    await this.validateProgramAccess(programId, userId, role);
     const program = await this.prisma.program.findUnique({
       where: { id: programId },
     });
@@ -816,7 +823,8 @@ export class AnalyticsService {
   // 6. STUDENT DETAILED PROGRESS & PROCTORING LOGS
   //    Gets a student's profile, lesson completions, and anti-cheat history.
   // ─────────────────────────────────────────────────────────────────────────
-  async getStudentDetailedProgress(programId: string, studentId: string): Promise<StudentDetailedProgressResponseDto> {
+  async getStudentDetailedProgress(programId: string, studentId: string, userId: string, role: string): Promise<StudentDetailedProgressResponseDto> {
+    await this.validateProgramAccess(programId, userId, role);
     const enrollment = await this.prisma.enrollment.findUnique({
       where: {
         userId_programId: { userId: studentId, programId },
@@ -996,7 +1004,8 @@ export class AnalyticsService {
   //    Flags students as CRITICAL / WARNING based on inactivity, low progress,
   //    and repeated quiz failures.
   // ─────────────────────────────────────────────────────────────────────────
-  async getProgramInsights(programId: string): Promise<ProgramInsightsResponseDto> {
+  async getProgramInsights(programId: string, userId: string, role: string): Promise<ProgramInsightsResponseDto> {
+    await this.validateProgramAccess(programId, userId, role);
     const program = await this.prisma.program.findUnique({
       where: { id: programId },
       select: { id: true, title: true },
@@ -1137,7 +1146,9 @@ export class AnalyticsService {
     facultyUserId: string,
     studentUserId: string,
     message: string,
+    role: string,
   ): Promise<any> {
+    await this.validateProgramAccess(programId, facultyUserId, role);
     const enrollment = await this.prisma.enrollment.findUnique({
       where: {
         userId_programId: { userId: studentUserId, programId },
@@ -1174,6 +1185,18 @@ export class AnalyticsService {
       },
     });
 
+    // Notify faculty in real-time
+    this.insightsSseService.emit({
+      facultyUserId,
+      type: 'INTERVENTION_SENT',
+      data: {
+        id: notification.id,
+        studentId: studentUserId,
+        message,
+        createdAt: notification.createdAt,
+      },
+    });
+
     return notification;
   }
 
@@ -1181,7 +1204,8 @@ export class AnalyticsService {
   // 9. GET SENT INTERVENTIONS HISTORY
   //    Returns a list of all logged intervention messages for this program.
   // ─────────────────────────────────────────────────────────────────────────
-  async getInterventionsList(programId: string): Promise<InterventionDto[]> {
+  async getInterventionsList(programId: string, userId: string, role: string): Promise<InterventionDto[]> {
+    await this.validateProgramAccess(programId, userId, role);
     const notifications = await this.prisma.notification.findMany({
       where: {
         type: 'REMINDER',
@@ -1214,5 +1238,43 @@ export class AnalyticsService {
       message: n.message,
       createdAt: n.createdAt,
     }));
+  }
+
+  async validateProgramAccess(programId: string, userId: string, role: string): Promise<void> {
+    if (role === 'DEZAI_ADMIN') {
+      return;
+    }
+
+    const program = await this.prisma.program.findUnique({
+      where: { id: programId },
+      select: { id: true, facultyId: true, institutionId: true },
+    });
+
+    if (!program) {
+      throw new NotFoundException(`Program with ID "${programId}" not found`);
+    }
+
+    if (role === 'UNIVERSITY_ADMIN') {
+      const admin = await this.prisma.institutionAdmin.findUnique({
+        where: { userId },
+        select: { institutionId: true },
+      });
+      if (!admin || admin.institutionId !== program.institutionId) {
+        throw new ForbiddenException('Access denied. This program does not belong to your institution.');
+      }
+    } else if (role === 'FACULTY') {
+      const faculty = await this.prisma.facultyMember.findUnique({
+        where: { userId },
+        select: { id: true, institutionId: true },
+      });
+      if (!faculty) {
+        throw new ForbiddenException('Faculty profile not found');
+      }
+      if (program.facultyId !== faculty.id) {
+        throw new ForbiddenException('Access denied. You do not have access to this program.');
+      }
+    } else {
+      throw new ForbiddenException('Access denied. Invalid role for program analytics.');
+    }
   }
 }

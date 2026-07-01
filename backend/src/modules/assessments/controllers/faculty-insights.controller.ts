@@ -131,6 +131,12 @@ export class FacultyInsightsController {
     @Req() req,
     @Query('assessmentId') assessmentId?: string,
   ) {
+    if (assessmentId) {
+      await this.assessmentService.validateAssessmentFacultyOwnership(
+        assessmentId,
+        req.user.id,
+      );
+    }
     const result =
       await this.facultyInsightService.getRepeatedFailureStudents(
         req.user.id,

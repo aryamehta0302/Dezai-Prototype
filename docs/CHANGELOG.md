@@ -20,6 +20,31 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Sprint 7.0] — 2026-06-30
+
+### Faculty Dashboard V2: Real-time Insights, Tenant isolation, & UX finalization (Antigravity)
+
+#### Added
+- **Real-time Server-Sent Events (SSE) Stream** — Added `GET /api/faculty/insights/stream` to push instant academic health and outreach logs updates to instructors.
+  - Files: [insights-sse.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/services/insights-sse.service.ts), [faculty-insights-stream.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/controllers/faculty-insights-stream.controller.ts)
+- **Live EventSource SSE listener** — Integrated Real-time stream listener in frontend dashboard showing live notifications and refreshing dashboard cards/tables optimistically.
+  - File: [FacultyDashboard.tsx](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/components/FacultyDashboard.tsx)
+- **Premium Loading Skeletons** — CSS-styled pulsing skeletons for dashboard overview widgets, cohort metrics, and student list tables.
+  - File: [FacultyDashboard.tsx](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/components/FacultyDashboard.tsx)
+- **Descriptive Empty States** — Added custom empty states for sections with no active programs, warnings, or logged actions.
+  - File: [FacultyDashboard.tsx](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/components/FacultyDashboard.tsx)
+
+#### Changed
+- **Restored Dashboard Tabs** — Brought back the "Faculty Monitoring" (`monitoring`) and "Insights & Interventions" (`insights`) tabs in the sidebar and content views.
+  - File: [FacultyDashboard.tsx](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/components/FacultyDashboard.tsx)
+- **Prisma Client regenerated** — Synchronized NestJS structures to match recent Neon database schema changes.
+
+#### Fixed
+- **Strict Tenant Isolation & Data Boundaries** — Hardened all analytical endpoints to validate program and assessment access boundaries for university administrators and faculty roles.
+  - Files: [analytics.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/services/analytics.service.ts), [analytics.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/controllers/analytics.controller.ts), [faculty-insights.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/assessments/controllers/faculty-insights.controller.ts)
+
+---
+
 ## [Sprint 6.6] — 2026-06-25
 
 ### Auth, DB Resilience & Performance Stabilization + Seed Fixes (Ansh Dhanani)

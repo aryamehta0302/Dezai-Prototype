@@ -108,8 +108,11 @@ export class AnalyticsController {
   @Get('programs/:id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
-  async getProgramAnalytics(@Param('id') programId: string): Promise<{ success: boolean; data: ProgramAnalyticsResponseDto }> {
-    const data = await this.analyticsService.getProgramAnalytics(programId);
+  async getProgramAnalytics(
+    @Param('id') programId: string,
+    @Req() req,
+  ): Promise<{ success: boolean; data: ProgramAnalyticsResponseDto }> {
+    const data = await this.analyticsService.getProgramAnalytics(programId, req.user.id, req.user.role);
     return { success: true, data };
   }
 
@@ -123,8 +126,11 @@ export class AnalyticsController {
   @Get('programs/:id/students')
   @UseGuards(RolesGuard)
   @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
-  async getStudentMetrics(@Param('id') programId: string): Promise<{ success: boolean; data: StudentMetricsResponseDto }> {
-    const data = await this.analyticsService.getStudentMetrics(programId);
+  async getStudentMetrics(
+    @Param('id') programId: string,
+    @Req() req,
+  ): Promise<{ success: boolean; data: StudentMetricsResponseDto }> {
+    const data = await this.analyticsService.getStudentMetrics(programId, req.user.id, req.user.role);
     return { success: true, data };
   }
 
@@ -135,8 +141,11 @@ export class AnalyticsController {
   @Get('programs/:id/modules/stats')
   @UseGuards(RolesGuard)
   @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
-  async getModuleCompletionStats(@Param('id') programId: string): Promise<{ success: boolean; data: ModuleCompletionStatDto[] }> {
-    const data = await this.analyticsService.getModuleCompletionStats(programId);
+  async getModuleCompletionStats(
+    @Param('id') programId: string,
+    @Req() req,
+  ): Promise<{ success: boolean; data: ModuleCompletionStatDto[] }> {
+    const data = await this.analyticsService.getModuleCompletionStats(programId, req.user.id, req.user.role);
     return { success: true, data };
   }
 
@@ -150,8 +159,9 @@ export class AnalyticsController {
   async getStudentDetailedProgress(
     @Param('programId') programId: string,
     @Param('userId') userId: string,
+    @Req() req,
   ): Promise<{ success: boolean; data: StudentDetailedProgressResponseDto }> {
-    const data = await this.analyticsService.getStudentDetailedProgress(programId, userId);
+    const data = await this.analyticsService.getStudentDetailedProgress(programId, userId, req.user.id, req.user.role);
     return { success: true, data };
   }
 
@@ -162,8 +172,11 @@ export class AnalyticsController {
   @Get('programs/:id/insights')
   @UseGuards(RolesGuard)
   @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
-  async getProgramInsights(@Param('id') programId: string): Promise<{ success: boolean; data: ProgramInsightsResponseDto }> {
-    const data = await this.analyticsService.getProgramInsights(programId);
+  async getProgramInsights(
+    @Param('id') programId: string,
+    @Req() req,
+  ): Promise<{ success: boolean; data: ProgramInsightsResponseDto }> {
+    const data = await this.analyticsService.getProgramInsights(programId, req.user.id, req.user.role);
     return { success: true, data };
   }
 
@@ -184,6 +197,7 @@ export class AnalyticsController {
       req.user.id,
       body.userId,
       body.message,
+      req.user.role,
     );
     return { success: true, data };
   }
@@ -195,8 +209,11 @@ export class AnalyticsController {
   @Get('programs/:id/interventions')
   @UseGuards(RolesGuard)
   @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
-  async getInterventionsList(@Param('id') programId: string): Promise<{ success: boolean; data: InterventionDto[] }> {
-    const data = await this.analyticsService.getInterventionsList(programId);
+  async getInterventionsList(
+    @Param('id') programId: string,
+    @Req() req,
+  ): Promise<{ success: boolean; data: InterventionDto[] }> {
+    const data = await this.analyticsService.getInterventionsList(programId, req.user.id, req.user.role);
     return { success: true, data };
   }
 }

@@ -256,5 +256,35 @@ Full per-student profile combining enrollment data, assessment stats, academic h
 
 ---
 
-*Sprint 6 · Faculty Insights & Intervention API Documentation*
-*Developer: Manan Panchal · Generated: 2026-06-23*
+## Real-time SSE Stream
+
+### GET `/api/faculty/insights/stream`
+
+Establishes a Server-Sent Events (SSE) connection to push real-time cohort health updates and logged intervention outreach events.
+
+**Guard:** `JwtAuthGuard`, `RolesGuard(FACULTY, UNIVERSITY_ADMIN, DEZAI_ADMIN)`
+
+**Event Types:**
+- `HEALTH_UPDATE`: Fired when a student completes/uncompletes a lesson or submits an assessment attempt.
+- `INTERVENTION_SENT`: Fired when a faculty member logs an outreach intervention.
+
+**Sample Stream Event payload (`HEALTH_UPDATE`):**
+```json
+{
+  "type": "HEALTH_UPDATE",
+  "data": {
+    "userId": "student-uuid",
+    "assessmentId": "assessment-uuid",
+    "passed": true,
+    "score": 85,
+    "studentName": "John Doe",
+    "programTitle": "Strategic AI Leadership",
+    "programId": "program-uuid"
+  }
+}
+```
+
+---
+
+*Sprint 7 · Faculty Insights & Intervention API Documentation*
+*Developer: Antigravity · Generated: 2026-06-30*

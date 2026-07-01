@@ -11,14 +11,21 @@ export class JwtAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const authHeader = request.headers.authorization;
+    // Primary: Authorization header. Fallback: ?token= query param (for SSE EventSource).
+    let token: string | undefined;
 
-    if (!authHeader) {
+    if (authHeader) {
+      const [type, headerToken] = authHeader.split(' ');
+      if (type !== 'Bearer' || !headerToken) {
+        throw new UnauthorizedException('Invalid token format. Use Bearer <token>');
+      }
+      token = headerToken;
+    } else if (request.query?.token) {
+      // SSE connections via browser EventSource cannot send custom headers,
+      // so we accept the JWT as a query parameter fallback.
+      token = request.query.token as string;
+    } else {
       throw new UnauthorizedException('Authorization header is missing');
-    }
-
-    const [type, token] = authHeader.split(' ');
-    if (type !== 'Bearer' || !token) {
-      throw new UnauthorizedException('Invalid token format. Use Bearer <token>');
     }
 
     const secretString = process.env.AUTH_SECRET;

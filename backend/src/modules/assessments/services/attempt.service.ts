@@ -23,6 +23,7 @@ import {
   PassFailEvaluationService,
   AttemptAnswerWithRelations,
 } from './pass-fail-evaluation.service';
+import { InsightsSseService } from '../../analytics/services/insights-sse.service';
 import type {
   GetAttemptResultResponseDto,
   AttemptHistoryResponseDto,
@@ -48,6 +49,7 @@ export class AttemptService {
     private awardService: AwardService,
     private assessmentService: AssessmentService,
     private passFailEvaluationService: PassFailEvaluationService,
+    private insightsSseService: InsightsSseService,
   ) { }
 
   async startAttempt(userId: string, assessmentId: string) {
@@ -302,6 +304,11 @@ export class AttemptService {
       include: {
         assessment: {
           include: {
+            module: {
+              include: {
+                track: { select: { programId: true } },
+              },
+            },
             questionBank: {
               include: {
                 questions: {
@@ -440,6 +447,34 @@ export class AttemptService {
     }
 
     await this.awardService.checkAndAward(userId, AchievementCategory.ASSESSMENT);
+
+    // Notify faculty in real-time about student activity (scoped to the correct program)
+    const assessmentProgramId = attempt.assessment.module?.track?.programId;
+    this.insightsSseService.notifyFacultyOfStudentUpdate(userId, 'HEALTH_UPDATE', {
+      userId,
+      assessmentId: attempt.assessmentId,
+      passed,
+      score: percentage,
+    }, assessmentProgramId);
+
+    if (!passed) {
+      const failCount = await this.prisma.assessmentAttempt.count({
+        where: {
+          userId,
+          assessmentId: attempt.assessmentId,
+          passed: false,
+        },
+      });
+      if (failCount >= 2) {
+        this.insightsSseService.notifyFacultyOfStudentUpdate(userId, 'AT_RISK_ALERT', {
+          userId,
+          assessmentId: attempt.assessmentId,
+          assessmentTitle: attempt.assessment.title,
+          failCount,
+          reason: `Failed assessment "${attempt.assessment.title}" ${failCount} times.`,
+        }, assessmentProgramId);
+      }
+    }
 
     return {
       success: true,

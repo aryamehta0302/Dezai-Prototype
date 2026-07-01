@@ -108,9 +108,9 @@ export class AssessmentService {
       });
       if (!faculty)
         throw new ForbiddenException("Faculty profile not found");
-      if (faculty.institutionId !== bank.institutionId) {
+      if (bank.facultyId !== faculty.id) {
         throw new ForbiddenException(
-          "Unauthorized: You do not belong to this question bank's institution"
+          "Unauthorized: You do not own this question bank"
         );
       }
       return true;
@@ -942,13 +942,103 @@ export class AssessmentService {
       throw new ForbiddenException('Faculty profile not found');
     }
 
-    if (program.facultyId !== faculty.id && program.institutionId !== faculty.institutionId) {
+    if (program.facultyId !== faculty.id) {
       throw new ForbiddenException(
         'You do not have access to this assessment',
       );
     }
 
     return true;
+  }
+
+  async validateAssessmentAccess(
+    assessmentId: string,
+    userId: string,
+    role: UserRole,
+  ): Promise<void> {
+    if (role === UserRole.DEZAI_ADMIN) return;
+
+    const assessment = await this.prisma.assessment.findUnique({
+      where: { id: assessmentId },
+      include: {
+        module: {
+          include: {
+            track: {
+              include: {
+                program: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!assessment) {
+      throw new NotFoundException(`Assessment with ID ${assessmentId} not found`);
+    }
+
+    const program = assessment.module.track.program;
+
+    if (role === UserRole.UNIVERSITY_ADMIN) {
+      const admin = await this.prisma.institutionAdmin.findUnique({
+        where: { userId },
+      });
+      if (!admin || admin.institutionId !== program.institutionId) {
+        throw new ForbiddenException('Unauthorized: Admin institution mismatch');
+      }
+    } else if (role === UserRole.FACULTY) {
+      const faculty = await this.prisma.facultyMember.findUnique({
+        where: { userId },
+      });
+      if (!faculty || program.facultyId !== faculty.id) {
+        throw new ForbiddenException('Unauthorized: You do not own this program');
+      }
+    } else {
+      throw new ForbiddenException('Unauthorized role');
+    }
+  }
+
+  async validateModuleAccess(
+    moduleId: string,
+    userId: string,
+    role: UserRole,
+  ): Promise<void> {
+    if (role === UserRole.DEZAI_ADMIN) return;
+
+    const moduleItem = await this.prisma.module.findUnique({
+      where: { id: moduleId },
+      include: {
+        track: {
+          include: {
+            program: true,
+          },
+        },
+      },
+    });
+
+    if (!moduleItem) {
+      throw new NotFoundException(`Module with ID ${moduleId} not found`);
+    }
+
+    const program = moduleItem.track.program;
+
+    if (role === UserRole.UNIVERSITY_ADMIN) {
+      const admin = await this.prisma.institutionAdmin.findUnique({
+        where: { userId },
+      });
+      if (!admin || admin.institutionId !== program.institutionId) {
+        throw new ForbiddenException('Unauthorized: Admin institution mismatch');
+      }
+    } else if (role === UserRole.FACULTY) {
+      const faculty = await this.prisma.facultyMember.findUnique({
+        where: { userId },
+      });
+      if (!faculty || program.facultyId !== faculty.id) {
+        throw new ForbiddenException('Unauthorized: You do not own this program');
+      }
+    } else {
+      throw new ForbiddenException('Unauthorized role');
+    }
   }
 
   // ─────────────────── RESULT ANALYTICS ───────────────────
