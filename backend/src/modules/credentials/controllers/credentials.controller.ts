@@ -12,7 +12,7 @@ import { Response } from 'express';
 
 import { VerificationRateLimitGuard } from '../guards/verification-rate-limit.guard';
 
-@Controller('api/credentials')
+@Controller('credentials')
 export class CredentialsController {
     constructor(
         private readonly credentialsService: CredentialsService,

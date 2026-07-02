@@ -10,8 +10,11 @@ export function StudentCredentialCenter({ userId }: { userId: string }) {
     const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
+        console.log("Fetching credentials for user:", userId);
         fetchStudentCredentials(userId);
     }, [userId, fetchStudentCredentials]);
+
+    console.log("Current credentials state:", credentials);
 
     const filteredCredentials = credentials.filter(c =>
         c.program?.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
