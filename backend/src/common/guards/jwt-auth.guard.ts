@@ -20,7 +20,7 @@ export class JwtAuthGuard implements CanActivate {
         throw new UnauthorizedException('Invalid token format. Use Bearer <token>');
       }
       token = headerToken;
-    } else if (request.query?.token) {
+    } else if (request.query?.token && request.headers.accept?.includes('text/event-stream')) {
       // SSE connections via browser EventSource cannot send custom headers,
       // so we accept the JWT as a query parameter fallback.
       token = request.query.token as string;
