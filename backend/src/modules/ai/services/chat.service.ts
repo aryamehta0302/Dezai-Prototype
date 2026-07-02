@@ -4,11 +4,11 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
-import { PrismaService } from '../../../database/prisma.service';
 import { ChatRepository } from '../repositories/chat.repository';
 import { AIProviderService } from './ai-provider.service';
 import { AuditService } from '../../audit/services/audit.service';
 import { AuditAction } from '@prisma/client';
+import { PromptBuilderService } from './prompt-builder.service';
 import {
   CreateChatSessionDto,
   SendMessageDto,
@@ -21,8 +21,8 @@ export class ChatService {
   constructor(
     private chatRepository: ChatRepository,
     private aiProviderService: AIProviderService,
-    private prisma: PrismaService,
     private auditService: AuditService,
+    private promptBuilderService: PromptBuilderService,
   ) {}
 
   async createSession(userId: string, dto: CreateChatSessionDto) {
@@ -97,12 +97,23 @@ export class ChatService {
       dto.content,
     );
 
-    const systemPrompt = await this.buildSystemPrompt(session);
-
-    const mentorResponseContent = await this.aiProviderService.generateResponse(
+    const systemPrompt = await this.promptBuilderService.buildChatPrompt(
+      session,
       dto.content,
-      systemPrompt,
     );
+
+    let mentorResponseContent: string;
+    try {
+      mentorResponseContent = await this.aiProviderService.generateResponse(
+        dto.content,
+        systemPrompt,
+      );
+    } catch (error) {
+      // Keep retries idempotent: a failed provider call must not leave an
+      // unanswered user message that will be duplicated by the UI retry.
+      await this.chatRepository.deleteMessage(userMessage.id);
+      throw error;
+    }
 
     const mentorMessage = await this.chatRepository.addMessage(
       sessionId,
@@ -151,97 +162,4 @@ export class ChatService {
     return this.chatRepository.updateSessionTitle(sessionId, dto);
   }
 
-  private async buildSystemPrompt(session: any): Promise<string> {
-    const contextParts: string[] = [];
-
-    const recentMessages = await this.prisma.chatMessage.findMany({
-      where: { sessionId: session.id },
-      orderBy: { createdAt: 'asc' },
-      take: 20,
-    });
-
-    if (recentMessages.length > 0) {
-      const history = recentMessages
-        .map((message) =>
-          `${message.sender === 'USER' ? 'Student' : 'Mentor'}: ${message.content}`,
-        )
-        .join('\n');
-
-      contextParts.push(`Conversation History:\n${history}`);
-    }
-
-    if (session.activeLessonId) {
-      try {
-        const lesson = await this.prisma.lesson.findUnique({
-          where: { id: session.activeLessonId },
-          include: {
-            module: {
-              include: {
-                track: {
-                  include: {
-                    program: true,
-                  },
-                },
-              },
-            },
-          },
-        });
-
-        if (lesson) {
-          if (lesson.module?.track?.program) {
-            contextParts.push(`Program: ${lesson.module.track.program.title}`);
-          }
-
-          if (lesson.module) {
-            contextParts.push(`Module: ${lesson.module.title}`);
-          }
-
-          contextParts.push(`Lesson: ${lesson.title}`);
-
-          if ((lesson as any).objectives) {
-            contextParts.push(
-              `Learning Objectives: ${(lesson as any).objectives}`,
-            );
-          }
-
-          if (lesson.content) {
-            const contentSummary = lesson.content.substring(0, 800);
-            contextParts.push(
-              `Lesson Content: ${contentSummary}${
-                lesson.content.length > 800 ? '...' : ''
-              }`,
-            );
-          }
-
-          if ((lesson as any).prerequisites) {
-            contextParts.push(`Prerequisites: ${(lesson as any).prerequisites}`);
-          }
-        }
-      } catch (error) {
-        console.warn('Error fetching lesson context:', error);
-      }
-    }
-
-    const basePrompt = `You are an AI Mentor for the Dezai educational platform.
-Your role is to help students learn effectively through:
-- Explaining concepts clearly and concisely
-- Breaking down complex topics into manageable parts
-- Providing relevant examples and analogies
-- Encouraging deeper understanding through questions
-- Supporting students in their learning journey
-
-${
-  contextParts.length > 0
-    ? `Current Learning Context:\n${contextParts.join(
-        '\n',
-      )}\n\nPlease tailor your responses to the student's current lesson, learning path, and conversation history. Focus on the lesson content and objectives provided above.`
-    : 'Help the student with any learning questions they have.'
-}
-
-Keep responses concise (2-3 paragraphs max) and encouraging.
-Use markdown for formatting when appropriate.
-If the student asks about topics outside the current lesson, gently redirect them back to their studies when possible.`;
-
-    return basePrompt;
-  }
 }
