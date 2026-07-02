@@ -6,6 +6,7 @@ import { XpService } from '../../src/modules/users/services/xp.service';
 import { AwardService } from '../../src/modules/achievements/services/award.service';
 import { AuditService } from '../../src/modules/audit/services/audit.service';
 import { XpType, AchievementCategory, AuditAction } from '@prisma/client';
+import { InsightsSseService } from '../../src/modules/analytics/services/insights-sse.service';
 
 describe('LearningService', () => {
   let service: LearningService;
@@ -30,7 +31,7 @@ describe('LearningService', () => {
     note: { findUnique: jest.fn(), upsert: jest.fn() },
     user: { findUnique: jest.fn(), update: jest.fn(), count: jest.fn() },
     resource: { findMany: jest.fn() },
-    enrollment: { count: jest.fn() },
+    enrollment: { count: jest.fn(), findUnique: jest.fn() },
     retryOnWakeup: jest.fn((fn: () => Promise<any>) => fn()),
     $transaction: jest.fn(),
   };
@@ -52,6 +53,10 @@ describe('LearningService', () => {
     logAction: jest.fn(),
   };
 
+  const mockInsightsSse = {
+    notifyFacultyOfStudentUpdate: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -63,10 +68,12 @@ describe('LearningService', () => {
         { provide: XpService, useValue: mockXpService },
         { provide: AwardService, useValue: mockAwardService },
         { provide: AuditService, useValue: mockAuditService },
+        { provide: InsightsSseService, useValue: mockInsightsSse },
       ],
     }).compile();
 
     service = module.get<LearningService>(LearningService);
+    mockPrisma.enrollment.findUnique.mockResolvedValue({ progress: 50 });
   });
 
   describe('completeLesson', () => {

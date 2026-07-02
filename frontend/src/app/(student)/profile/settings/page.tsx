@@ -155,7 +155,7 @@ function SecuritySettings() {
 
 function NotificationSettings() {
   const [prefs, setPrefs] = useState({
-    courseUpdates: true,
+    programUpdates: true,
     achievementUnlocks: true,
     assessmentReminders: true,
     newAnnouncements: true,
@@ -167,7 +167,7 @@ function NotificationSettings() {
   };
 
   const items = [
-    { key: "courseUpdates" as const, label: "Course updates", desc: "Notify me when course content changes" },
+    { key: "programUpdates" as const, label: "Program updates", desc: "Notify me when program content changes" },
     { key: "achievementUnlocks" as const, label: "Achievement unlocks", desc: "Celebrate when I earn a new achievement" },
     { key: "assessmentReminders" as const, label: "Assessment reminders", desc: "Remind me before an assessment deadline" },
     { key: "newAnnouncements" as const, label: "New announcements", desc: "Updates from instructors and admins" },

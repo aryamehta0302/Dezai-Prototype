@@ -7,6 +7,7 @@ import { AwardService } from '../../achievements/services/award.service';
 import { XpService } from '../../users/services/xp.service';
 import { AssessmentService } from './assessment.service';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { InsightsSseService } from '../../analytics/services/insights-sse.service';
 
 describe('AttemptService', () => {
   let service: AttemptService;
@@ -52,6 +53,10 @@ describe('AttemptService', () => {
     getAssessmentById: jest.fn(),
   };
 
+  const mockInsightsSseService = {
+    notifyFacultyOfStudentUpdate: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -62,6 +67,7 @@ describe('AttemptService', () => {
         { provide: AwardService, useValue: mockAward },
         { provide: XpService, useValue: mockXpService },
         { provide: AssessmentService, useValue: mockAssessmentService },
+        { provide: InsightsSseService, useValue: mockInsightsSseService },
       ],
     }).compile();
 

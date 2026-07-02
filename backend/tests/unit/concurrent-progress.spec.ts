@@ -6,6 +6,7 @@ import { XpService } from '../../src/modules/users/services/xp.service';
 import { AwardService } from '../../src/modules/achievements/services/award.service';
 import { AuditService } from '../../src/modules/audit/services/audit.service';
 import { XpType, AchievementCategory } from '@prisma/client';
+import { InsightsSseService } from '../../src/modules/analytics/services/insights-sse.service';
 
 describe('Concurrent Progress Requests', () => {
   let service: LearningService;
@@ -20,6 +21,7 @@ describe('Concurrent Progress Requests', () => {
 
   const mockPrisma = {
     progress: { findUnique: jest.fn() },
+    enrollment: { findUnique: jest.fn() },
     $transaction: jest.fn(),
   };
 
@@ -39,6 +41,10 @@ describe('Concurrent Progress Requests', () => {
     logAction: jest.fn(),
   };
 
+  const mockInsightsSse = {
+    notifyFacultyOfStudentUpdate: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -50,10 +56,12 @@ describe('Concurrent Progress Requests', () => {
         { provide: XpService, useValue: mockXpService },
         { provide: AwardService, useValue: mockAwardService },
         { provide: AuditService, useValue: mockAuditService },
+        { provide: InsightsSseService, useValue: mockInsightsSse },
       ],
     }).compile();
 
     service = module.get<LearningService>(LearningService);
+    mockPrisma.enrollment.findUnique.mockResolvedValue({ progress: 50 });
   });
 
   it('should handle multiple rapid completions of the same lesson', async () => {
