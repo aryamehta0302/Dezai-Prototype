@@ -36,6 +36,7 @@ export function useAttempt(assessmentId: string, accessToken?: string, slug?: st
   const [syncStatus, setSyncStatus] = useState<"saved" | "syncing" | "offline" | "error">("saved");
   const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryCountRef = useRef(0);
+  const flushSyncQueueRef = useRef<(() => Promise<void>) | null>(null);
 
   // Sprint 7: Flush sync queue with exponential backoff
   const flushSyncQueue = useCallback(async () => {
@@ -66,13 +67,17 @@ export function useAttempt(assessmentId: string, accessToken?: string, slug?: st
       if (retryCountRef.current <= 3) {
         const delay = 5000 * Math.pow(2, retryCountRef.current - 1); // 5s, 10s, 20s
         setSyncStatus("error");
-        retryTimeoutRef.current = setTimeout(() => flushSyncQueue(), delay);
+        retryTimeoutRef.current = setTimeout(() => flushSyncQueueRef.current?.(), delay);
       } else {
         setSyncStatus("error");
         retryCountRef.current = 0;
       }
     }
   }, [attempt, accessToken]);
+
+  useEffect(() => {
+    flushSyncQueueRef.current = flushSyncQueue;
+  }, [flushSyncQueue]);
 
   // Sync answers ref
   useEffect(() => {
@@ -167,8 +172,6 @@ export function useAttempt(assessmentId: string, accessToken?: string, slug?: st
 
     let activeAttemptId: string | null = null;
     setError(null);
-
-    let completedAttemptId: string | null = null;
 
     try {
       setSaveStatus("idle");

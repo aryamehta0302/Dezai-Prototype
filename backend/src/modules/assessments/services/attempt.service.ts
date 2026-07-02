@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import {
   Injectable,
   NotFoundException,
@@ -449,7 +450,7 @@ export class AttemptService {
         include: { track: { include: { program: true } } }
       });
       if (moduleInfo) {
-        const uniqueCode = require('crypto').randomBytes(9).toString('hex').toUpperCase();
+        const uniqueCode = randomBytes(9).toString('hex').toUpperCase();
         await this.prisma.credential.create({
           data: {
             userId,
@@ -554,7 +555,7 @@ export class AttemptService {
     const trackId = track.id;
 
     // Generate unique code
-    const uniqueCode = require('crypto').randomBytes(9).toString('hex').toUpperCase();
+    const uniqueCode = randomBytes(9).toString('hex').toUpperCase();
 
     // Create credential directly in DB
     const credential = await this.prisma.credential.create({
