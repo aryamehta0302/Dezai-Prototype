@@ -8,6 +8,16 @@ import { ChatWindow } from '../components/chat-window';
 import { MessageInput } from '../components/message-input';
 import { SessionSidebar } from '../components/session-sidebar';
 import { SmartButtons } from '../components/smart-buttons';
+import { Button } from '@/shared/ui/button';
+import { RefreshCw } from 'lucide-react';
+
+const friendlyMentorError = (error: unknown, fallback: string) => {
+  const message = error instanceof Error ? error.message : '';
+  if (/unavailable|429|rate.?limit|503|failed to fetch|network/i.test(message)) {
+    return 'The AI Mentor is taking a short break. Please try again in a moment.';
+  }
+  return fallback;
+};
 
 /**
  * ChatPage - Main AI Mentor chat interface
@@ -33,6 +43,7 @@ export default function ChatPage() {
 
   // Local state
   const [messageInput, setMessageInput] = React.useState('');
+  const [failedMessage, setFailedMessage] = React.useState<string | null>(null);
 
   // React Query hooks
   const sessionsQuery = useChatSessions();
@@ -66,7 +77,7 @@ export default function ChatPage() {
       setMessageInput('');
       clearError();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create session';
+      const message = friendlyMentorError(err, 'We could not start a new chat. Please try again.');
       setError(message);
       toast.error(message);
     } finally {
@@ -85,19 +96,21 @@ export default function ChatPage() {
       }
       toast.success('Chat deleted');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to delete session';
+      const message = friendlyMentorError(err, 'We could not delete this chat. Please try again.');
       setError(message);
       toast.error(message);
     }
   };
 
   // Handle send message
-  const handleSendMessage = async () => {
-    if (!currentSessionId || !messageInput.trim()) return;
+  const handleSendMessage = async (retryContent?: string) => {
+    const content = retryContent ?? messageInput;
+    if (!currentSessionId || !content.trim()) return;
 
-    const userInput = messageInput;
+    const userInput = content;
     setMessageInput('');
     setIsLoading(true);
+    setFailedMessage(null);
 
     try {
       const result = await sendMessageMutation.mutateAsync({
@@ -111,9 +124,12 @@ export default function ChatPage() {
 
       clearError();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to send message';
+      const message = friendlyMentorError(
+        err,
+        'The AI Mentor could not answer that just now. Please try again.',
+      );
       setError(message);
-      setMessageInput(userInput); // Restore input on error
+      setFailedMessage(userInput);
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -141,7 +157,10 @@ export default function ChatPage() {
       {currentSessionId ? (
         <div className="flex-1 flex flex-col">
           {/* Chat Window */}
-          <ChatWindow messages={currentMessages} isLoading={isLoading} />
+          <ChatWindow
+            messages={currentMessages}
+            isLoading={isLoading || sessionQuery.isLoading}
+          />
 
           {/* Smart Buttons */}
           <SmartButtons onSelect={handleSmartButton} disabled={isLoading} />
@@ -156,8 +175,20 @@ export default function ChatPage() {
 
           {/* Error Display */}
           {error && (
-            <div className="bg-destructive/10 border-t border-destructive/20 text-destructive px-4 py-2 text-sm">
-              {error}
+            <div className="flex items-center justify-between gap-3 bg-destructive/10 border-t border-destructive/20 text-destructive px-4 py-2 text-sm">
+              <span>{error}</span>
+              {failedMessage && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isLoading}
+                  onClick={() => handleSendMessage(failedMessage)}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Retry
+                </Button>
+              )}
             </div>
           )}
         </div>
