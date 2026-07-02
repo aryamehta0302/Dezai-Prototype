@@ -119,7 +119,9 @@ export function OnboardingPage() {
   // Load cities when state changes
   useEffect(() => {
     if (!selectedCountry || !selectedState) {
-      setCities([]); setSelectedCity(""); return;
+      setCities([]); setSelectedCity("");
+      setInstitutions([]); setSelectedInstitutionId("");
+      return;
     }
     setLoadingCities(true);
     apiClient
