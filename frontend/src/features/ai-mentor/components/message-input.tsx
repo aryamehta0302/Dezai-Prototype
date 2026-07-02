@@ -34,8 +34,9 @@ export const MessageInput = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        disabled={isLoading}
+      placeholder={placeholder}
+      disabled={isLoading}
+      maxLength={5000}
         rows={3}
         className="resize-none"
       />

@@ -10,6 +10,7 @@ import { RecommendationService } from '../../assessments/services/recommendation
 import { AttemptService } from '../../assessments/services/attempt.service';
 import { WeakTopicDetectionService } from '../../assessments/services/weak-topic-detection.service';
 import { AIProviderService } from './ai-provider.service';
+import { PromptBuilderService } from './prompt-builder.service';
 import type {
   LessonSummaryDto,
   MentorRecommendationDto,
@@ -17,8 +18,6 @@ import type {
   RemediationPlanDto,
   StudyNotesDto,
 } from '../dto/intelligence.dto';
-
-const MAX_ATTEMPTS = 3;
 
 @Injectable()
 export class MentorIntelligenceService {
@@ -30,6 +29,7 @@ export class MentorIntelligenceService {
     private readonly attemptService: AttemptService,
     private readonly weakTopicDetectionService: WeakTopicDetectionService,
     private readonly aiProviderService: AIProviderService,
+    private readonly promptBuilderService: PromptBuilderService,
   ) {}
 
   async getRecommendations(
@@ -128,6 +128,11 @@ export class MentorIntelligenceService {
             },
           },
         },
+        attemptAnswers: {
+          include: {
+            question: { select: { category: true, difficulty: true } },
+          },
+        },
       },
     });
 
@@ -143,26 +148,70 @@ export class MentorIntelligenceService {
       userId,
       attemptId,
     );
-    const weakTopics =
-      await this.weakTopicDetectionService.getStudentWeakTopics(
+    const [weakTopics, incorrectQuestions] = await Promise.all([
+      this.weakTopicDetectionService.getStudentWeakTopics(
         userId,
         attempt.assessmentId,
-      );
+      ),
+      this.weakTopicDetectionService.getIncorrectQuestionAnalysis(
+        userId,
+        attempt.assessmentId,
+      ),
+    ]);
     const attemptsUsed = await this.prisma.assessmentAttempt.count({
-      where: { userId, assessmentId: attempt.assessmentId },
+      where: {
+        userId,
+        assessmentId: attempt.assessmentId,
+        completedAt: { not: null },
+      },
     });
-    const weakOnly = weakTopics.filter((topic) => topic.isWeak);
+    const currentPerformance = new Map<
+      string,
+      { total: number; wrong: number }
+    >();
+    for (const answer of attempt.attemptAnswers) {
+      const category = answer.question.category ?? 'Uncategorised';
+      const bucket = currentPerformance.get(category) ?? { total: 0, wrong: 0 };
+      bucket.total++;
+      if (!answer.isCorrect) bucket.wrong++;
+      currentPerformance.set(category, bucket);
+    }
+    const weakOnly = weakTopics
+      .map((topic) => {
+        const current = currentPerformance.get(topic.category);
+        const currentWrongRate = current?.total
+          ? current.wrong / current.total
+          : topic.wrongRate;
+        const confidenceAdjustedHistory =
+          (topic.totalWrong + 1) / (topic.totalAnswered + 2);
+        return {
+          ...topic,
+          priorityScore:
+            currentWrongRate * 0.65 + confidenceAdjustedHistory * 0.35,
+          missedInCurrentAttempt: (current?.wrong ?? 0) > 0,
+        };
+      })
+      .filter(
+        (topic) =>
+          topic.priorityScore >= 0.4 &&
+          (topic.missedInCurrentAttempt || topic.totalWrong >= 2),
+      )
+      .sort((a, b) => b.priorityScore - a.priorityScore);
     const recommendedLessons = this.matchLessonsToWeakTopics(
       attempt.assessment.module.lessons,
       weakOnly.map((topic) => topic.category),
     );
     const studyPlan = this.buildStudyPlan(
-      weakOnly.map((topic) => topic.category),
-      recommendedLessons.map((lesson) => lesson.title),
+      weakOnly,
+      recommendedLessons,
     );
+    const misconceptionHints = incorrectQuestions
+      .slice(0, 3)
+      .map((question) => question.questionText)
+      .join('; ');
     const mentorAdvice = await this.generateMentorText(
-      `Create concise remediation advice for a student who scored ${result.percentage}% on "${result.assessmentTitle}". Weak topics: ${weakOnly.map((topic) => topic.category).join(', ') || 'none detected'}.`,
-      'You are an encouraging AI Mentor. Give practical remediation advice in 3 short bullet points.',
+      `Score: ${result.percentage}% on "${result.assessmentTitle}". Priority weak topics: ${weakOnly.map((topic) => `${topic.category} (${Math.round(topic.priorityScore * 100)}% risk)`).join(', ') || 'no repeated topic'}. Frequently missed questions: ${misconceptionHints || 'not enough evidence'}.`,
+      'Create exactly 3 concise remediation bullets: what to relearn, how to practice, and the evidence needed before retaking. Never reveal answer keys.',
       this.fallbackRemediationAdvice(result.percentage, weakOnly.length),
     );
 
@@ -183,8 +232,11 @@ export class MentorIntelligenceService {
       recommendedLessons,
       studyPlan,
       retakeGuidance: {
-        canRetake: attemptsUsed < MAX_ATTEMPTS,
-        attemptsRemaining: Math.max(0, MAX_ATTEMPTS - attemptsUsed),
+        canRetake: attemptsUsed < attempt.assessment.maxAttempts,
+        attemptsRemaining: Math.max(
+          0,
+          attempt.assessment.maxAttempts - attemptsUsed,
+        ),
         recommendedBeforeRetake: [
           'Review every incorrect answer and explain the correct option in your own words.',
           'Complete the recommended lessons before starting another timed attempt.',
@@ -199,9 +251,13 @@ export class MentorIntelligenceService {
     const lesson = await this.learningService.getLesson(lessonId);
     const keyConcepts = this.extractKeyConcepts(lesson.content, lesson.title);
     const takeaways = this.extractTakeaways(lesson.content);
+    const digest = this.promptBuilderService.buildContentDigest(
+      lesson.content,
+      `${lesson.title} ${keyConcepts.join(' ')}`,
+    );
     const summary = await this.generateMentorText(
-      `Summarize this lesson in 3 concise sentences.\n\nTitle: ${lesson.title}\n\nContent:\n${this.truncate(lesson.content, 4000)}`,
-      'You summarize lessons for students. Be direct, specific, and study-focused.',
+      `Title: ${lesson.title}\nKey concepts: ${keyConcepts.join(', ')}\nSelected lesson material:\n${digest}`,
+      'Write a cohesive 3-sentence lesson summary: core idea, how the concepts connect, and practical or assessment relevance. Be specific and do not invent details.',
       this.fallbackSummary(lesson.content, lesson.title),
     );
 
@@ -232,9 +288,15 @@ export class MentorIntelligenceService {
       keyConcepts: this.extractKeyConcepts(lesson.content, lesson.title),
       takeaways: this.extractTakeaways(lesson.content).slice(0, 2),
     }));
+    const moduleOutline = lessonSummaries
+      .map(
+        (lesson) =>
+          `${lesson.title}: ${lesson.keyConcepts.slice(0, 3).join(', ')}`,
+      )
+      .join('\n');
     const overview = await this.generateMentorText(
-      `Write a concise module overview for "${module.title}" using these lessons: ${module.lessons.map((lesson) => lesson.title).join(', ')}.`,
-      'You summarize modules for assessment preparation. Keep it under 120 words.',
+      `Module: ${module.title}\nLesson outline:\n${moduleOutline}`,
+      'Write a module overview under 120 words that explains progression across lessons and what the student should be able to connect for assessment. Use only the outline.',
       `${module.title} brings together ${module.lessons.length} lesson(s): ${module.lessons.map((lesson) => lesson.title).join(', ')}.`,
     );
 
@@ -263,9 +325,15 @@ export class MentorIntelligenceService {
     saveToNotes = false,
   ): Promise<StudyNotesDto> {
     const lesson = await this.learningService.getLesson(lessonId);
+    const concepts = this.extractKeyConcepts(lesson.content, lesson.title);
+    const digest = this.promptBuilderService.buildContentDigest(
+      lesson.content,
+      `${lesson.title} ${concepts.join(' ')}`,
+      3_000,
+    );
     const notes = await this.generateMentorText(
-      `Create structured study notes for this lesson with headings, bullets, definitions, and quick review questions.\n\nTitle: ${lesson.title}\n\nContent:\n${this.truncate(lesson.content, 5000)}`,
-      'You create clean, structured study notes for students. Use markdown.',
+      `Title: ${lesson.title}\nConcepts: ${concepts.join(', ')}\nSelected lesson material:\n${digest}`,
+      'Create markdown study notes using exactly these sections: Overview, Key Concepts, Important Details, Example/Application, and Self-Check (3 questions). Use concise bullets and only supplied material.',
       this.fallbackStudyNotes(lesson.content, lesson.title),
     );
 
@@ -328,17 +396,55 @@ export class MentorIntelligenceService {
     lessons: { id: string; moduleId: string; title: string; content: string }[],
     weakTopics: string[],
   ) {
-    const topics = weakTopics.map((topic) => topic.toLowerCase());
+    const topics = weakTopics.map((topic) => ({
+      label: topic,
+      words: this.topicWords(topic),
+    }));
     const matches = lessons
-      .filter((lesson) => {
-        const searchable = `${lesson.title} ${lesson.content}`.toLowerCase();
-        return topics.some((topic) => searchable.includes(topic));
+      .map((lesson) => {
+        const title = lesson.title.toLowerCase();
+        const headings = this.extractKeyConcepts(
+          lesson.content,
+          lesson.title,
+        )
+          .join(' ')
+          .toLowerCase();
+        const content = lesson.content.toLowerCase();
+        const matchedTopics = topics.filter(({ label, words }) => {
+          const normalizedLabel = label.toLowerCase();
+          return (
+            title.includes(normalizedLabel) ||
+            headings.includes(normalizedLabel) ||
+            words.filter(
+              (word) =>
+                title.includes(word) ||
+                headings.includes(word) ||
+                content.includes(word),
+            ).length >= Math.max(1, Math.ceil(words.length / 2))
+          );
+        });
+        const score = matchedTopics.reduce(
+          (total, topic) =>
+            total +
+            (title.includes(topic.label.toLowerCase()) ? 6 : 0) +
+            (headings.includes(topic.label.toLowerCase()) ? 4 : 0) +
+            topic.words.filter((word) => title.includes(word)).length * 2 +
+            topic.words.filter((word) => headings.includes(word)).length,
+          0,
+        );
+        return {
+          lesson,
+          matchedTopics,
+          score,
+        };
       })
-      .map((lesson) => ({
+      .filter(({ matchedTopics }) => matchedTopics.length > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(({ lesson, matchedTopics }) => ({
         lessonId: lesson.id,
         moduleId: lesson.moduleId,
         title: lesson.title,
-        reason: 'This lesson appears to cover one or more weak topics from the assessment.',
+        reason: `Targets: ${matchedTopics.map((topic) => topic.label).join(', ')}.`,
       }));
 
     if (matches.length > 0) return matches.slice(0, 5);
@@ -351,14 +457,24 @@ export class MentorIntelligenceService {
     }));
   }
 
-  private buildStudyPlan(weakTopics: string[], lessonTitles: string[]) {
+  private buildStudyPlan(
+    weakTopics: { category: string; wrongRate: number; difficulty: string }[],
+    lessons: { title: string }[],
+  ) {
+    const topicLabels = weakTopics.map((topic) => topic.category);
+    const severeTopics = weakTopics
+      .filter((topic) => topic.wrongRate >= 0.67)
+      .map((topic) => topic.category);
+    const lessonTitles = lessons.map((lesson) => lesson.title);
     return [
       {
         day: 1,
         title: 'Diagnose and Review',
         tasks: [
-          `Review weak topics: ${weakTopics.join(', ') || 'incorrect answers from the attempt'}.`,
-          'Write one-sentence explanations for each missed question.',
+          `Prioritize: ${topicLabels.join(', ') || 'incorrect answers from the attempt'}.`,
+          severeTopics.length > 0
+            ? `Start with high-risk topics: ${severeTopics.join(', ')}.`
+            : 'Write one-sentence explanations for each missed question.',
         ],
       },
       {
@@ -398,9 +514,9 @@ export class MentorIntelligenceService {
   }
 
   private fallbackSummary(content: string, title: string): string {
-    const takeaway = this.extractTakeaways(content)[0];
-    return takeaway
-      ? `${title}: ${takeaway}.`
+    const takeaways = this.extractTakeaways(content).slice(0, 2);
+    return takeaways.length > 0
+      ? `${title} focuses on ${takeaways.join('. ')}.`
       : `${title} introduces the main concepts and examples students should review before moving ahead.`;
   }
 
@@ -410,15 +526,21 @@ export class MentorIntelligenceService {
     return [
       `# ${title}`,
       '',
+      '## Overview',
+      this.fallbackSummary(content, title),
+      '',
       '## Key Concepts',
       ...concepts.map((concept) => `- ${concept}`),
       '',
-      '## Takeaways',
+      '## Important Details',
       ...(takeaways.length > 0
         ? takeaways.map((takeaway) => `- ${takeaway}`)
         : ['- Review the lesson content and note the core examples.']),
       '',
-      '## Quick Review',
+      '## Example/Application',
+      '- Connect the main concept to one example from the lesson.',
+      '',
+      '## Self-Check',
       '- What is the main idea of this lesson?',
       '- Which example best explains the concept?',
       '- What would you review before an assessment?',
@@ -438,9 +560,12 @@ export class MentorIntelligenceService {
     ].join('\n');
   }
 
-  private truncate(value: string, maxLength: number): string {
-    return value.length > maxLength
-      ? `${value.slice(0, maxLength)}...`
-      : value;
+  private topicWords(value: string): string[] {
+    return (
+      value
+        .toLowerCase()
+        .match(/[a-z0-9]{3,}/g)
+        ?.filter((word) => !['and', 'the', 'for', 'with'].includes(word)) ?? []
+    );
   }
 }
