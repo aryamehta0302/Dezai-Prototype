@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, Patch, Req, UseGuards, HttpCode, HttpStatus, Query } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Patch, Req, UseGuards, HttpCode, HttpStatus, Query, BadRequestException, Res } from '@nestjs/common';
 import { CredentialsService } from '../services/credentials.service';
 import { TemplateService } from '../services/template.service';
 import { CreateCredentialDto } from '../dto/CreateCredentialDto';
@@ -8,12 +8,16 @@ import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
+import { Response } from 'express';
+
+import { VerificationRateLimitGuard } from '../guards/verification-rate-limit.guard';
 
 @Controller('api/credentials')
 export class CredentialsController {
     constructor(
         private readonly credentialsService: CredentialsService,
-        private readonly templateService: TemplateService
+        private readonly templateService: TemplateService,
+        private readonly rateLimitGuard: VerificationRateLimitGuard
     ) { }
 
     @Post('issue')
@@ -33,14 +37,36 @@ export class CredentialsController {
     }
 
     @Get('verify/:code')
-    async verify(@Param('code') code: string) {
+    @UseGuards(VerificationRateLimitGuard)
+    async verify(@Param('code') code: string, @Req() req, @Res({ passthrough: true }) res: Response) {
+        // Input validation: code must be exactly 18 uppercase hex characters
+        if (!code || !/^[0-9A-F]{18}$/.test(code)) {
+            throw new BadRequestException('Invalid verification code format');
+        }
+
         const result = await this.credentialsService.verifyCredential(code);
+
+        // Set cache headers
+        if (result.valid && result.status === 'ACTIVE') {
+            res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300');
+        } else {
+            res.setHeader('Cache-Control', 'no-store, must-revalidate');
+        }
+
+        // If the code is completely invalid (does not exist in DB), record failure for brute force protection
+        if (!result.valid && result.message === 'Invalid Verification Code') {
+            const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+            this.rateLimitGuard.recordFailure(ip);
+        }
+
         return {
             success: result.valid,
             valid: result.valid,
             credential: result.data || null,
             data: result.data || null,
-            message: result.message
+            message: result.message,
+            status: result.status || null,
+            tampered: result.tampered || false,
         };
     }
 

@@ -282,3 +282,114 @@ body {
     @apply font-sans;
   }
 }
+
+/* ============================================================
+   PRINT STYLES — Credential Verification Page
+   ============================================================ */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 1.5cm;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide non-essential UI */
+  nav,
+  header,
+  footer,
+  .top-app-bar,
+  button,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Force show print-only elements */
+  .hidden.print\:block {
+    display: block !important;
+  }
+
+  /* Show main content as block */
+  .print\:block {
+    display: block !important;
+  }
+
+  .print\:p-0 {
+    padding: 0 !important;
+  }
+
+  .print\:max-w-4xl {
+    max-width: 100% !important;
+  }
+
+  .print\:w-full {
+    width: 100% !important;
+  }
+
+  .print\:bg-white {
+    background: white !important;
+  }
+
+  .print\:shadow-none {
+    box-shadow: none !important;
+  }
+
+  .print\:border-none {
+    border: none !important;
+  }
+
+  .print\:mx-auto {
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .print\:space-y-0 > * + * {
+    margin-top: 0 !important;
+  }
+
+  /* Preserve colors in print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Ensure watermark overlays are visible */
+  .animate-pulse {
+    animation: none !important;
+  }
+
+  /* Avoid page breaks inside credential cards */
+  .rounded-2xl {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Scale down large elements */
+  img {
+    max-width: 100% !important;
+  }
+}
+
+/* ============================================================
+   MOBILE RESPONSIVE — Verification Page
+   ============================================================ */
+@media (max-width: 640px) {
+  .verification-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .verification-details-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .verification-panel {
+    flex-direction: column !important;
+  }
+}
