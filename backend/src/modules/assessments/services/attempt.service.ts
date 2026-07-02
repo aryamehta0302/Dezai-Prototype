@@ -473,12 +473,14 @@ export class AttemptService {
 
     // Notify faculty in real-time about student activity (scoped to the correct program)
     const assessmentProgramId = attempt.assessment.module?.track?.programId;
-    this.insightsSseService.notifyFacultyOfStudentUpdate(userId, 'HEALTH_UPDATE', {
-      userId,
-      assessmentId: attempt.assessmentId,
-      passed,
-      score: percentage,
-    }, assessmentProgramId);
+    if (assessmentProgramId) {
+      this.insightsSseService.notifyFacultyOfStudentUpdate(userId, 'HEALTH_UPDATE', {
+        userId,
+        assessmentId: attempt.assessmentId,
+        passed,
+        score: percentage,
+      }, assessmentProgramId);
+    }
 
     if (!passed) {
       const failCount = await this.prisma.assessmentAttempt.count({
