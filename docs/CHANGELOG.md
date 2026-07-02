@@ -90,6 +90,30 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Sprint 5 — QA & Release Readiness Validation] — 2026-07-01
+
+**Developer:** Hitarth (QA & Release Readiness Lead)
+
+### Added
+- **E2E Playwright Suite** — Created 7 automated tests covering registration, onboarding, enrollment, assessments, proctoring violations, and credential revocation/verification.
+  - Directory: [frontend/tests/e2e/](file:///d:/DEZAI/Dezai-Prototype/frontend/tests/e2e/)
+- **Load Testing (k6)** — Created load test scripts for Assessment Attempts and Leaderboard queries under multiple virtual user profiles.
+  - Directory: [tests/load/](file:///d:/DEZAI/Dezai-Prototype/tests/load/)
+- **Audit Log Validation Report (V1)** — Audited database schema log actions against all active module triggers.
+  - File: [reports/audit-log-validation-v1.md](file:///d:/DEZAI/Dezai-Prototype/reports/audit-log-validation-v1.md)
+- **Documentation Audit Report (V1)** — Reconciled API references, architecture rules, and setup guides.
+  - File: [reports/documentation-audit-v1.md](file:///d:/DEZAI/Dezai-Prototype/reports/documentation-audit-v1.md)
+- **V1 Release Readiness Report** — Compiled final release sign-off dashboard and checklists.
+  - File: [reports/V1-Release-Readiness-Report.md](file:///d:/DEZAI/Dezai-Prototype/reports/V1-Release-Readiness-Report.md)
+
+### Changed
+- **`UpdateCredentialStatusDto` Validation** — Added `@IsEnum` validation to prevent NestJS whitelisting from stripping the credential status patch fields.
+  - File: [UpdateCredentialStatusDto.ts](file:///d:/DEZAI/Dezai-Prototype/backend/src/modules/credentials/dto/UpdateCredentialStatusDto.ts)
+- **`CredentialContext` State Stability** — Wrapped context actions in `useCallback` to prevent infinite render loops on dynamic fetches.
+  - File: [CredentialContext.tsx](file:///d:/DEZAI/Dezai-Prototype/frontend/src/features/credentials/context/CredentialContext.tsx)
+
+---
+
 ## [Sprint 6] — 2026-06-23
 
 ### Assessment Intelligence + Faculty Insights & Intervention System (Manan Panchal)

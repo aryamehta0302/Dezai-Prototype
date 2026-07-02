@@ -85,6 +85,10 @@ export class ChatRepository {
     });
   }
 
+  async deleteMessage(messageId: string) {
+    return this.prisma.chatMessage.delete({ where: { id: messageId } });
+  }
+
   /**
    * Get messages for a session with pagination
    */

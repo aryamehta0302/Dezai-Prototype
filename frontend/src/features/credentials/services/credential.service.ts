@@ -5,7 +5,7 @@ const BASE = '/api/credentials';
 
 export const CredentialService = {
 
-    verify: async (code: string): Promise<{ valid: boolean; data?: Credential; message?: string }> => {
+    verify: async (code: string): Promise<{ valid: boolean; data?: Credential; message?: string; status?: VerifyStatus; tampered?: boolean }> => {
         try {
             const res = await apiClient.get<any>(`${BASE}/verify/${code}`);
             return res;
@@ -132,9 +132,11 @@ export const credentialService = {
     },
     verifyCredential: async (code: string) => {
         const response = await CredentialService.verify(code);
-        if (!response.valid) {
-            throw new Error(response.message || "Credential not found");
-        }
-        return { credential: response.data || null };
+        return {
+            credential: response.data || null,
+            valid: response.valid,
+            status: response.status,
+            message: response.message
+        };
     },
 };

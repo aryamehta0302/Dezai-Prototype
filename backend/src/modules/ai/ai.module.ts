@@ -12,6 +12,8 @@ import { AIProviderService } from './services/ai-provider.service';
 import { MockProvider } from './services/providers/mock-provider';
 import { ClaudeProvider } from './services/providers/claude-provider';
 import { GeminiProvider } from './services/providers/gemini-provider';
+import { OpenAIProvider } from './services/providers/openai-provider';
+import { PromptBuilderService } from './services/prompt-builder.service';
 
 @Module({
   imports: [DatabaseModule, LearningModule, AssessmentsModule, AuditModule],
@@ -24,6 +26,8 @@ import { GeminiProvider } from './services/providers/gemini-provider';
     MockProvider,
     ClaudeProvider,
     GeminiProvider,
+    OpenAIProvider,
+    PromptBuilderService,
   ],
   exports: [ChatService, MentorIntelligenceService],
 })
