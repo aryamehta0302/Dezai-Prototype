@@ -239,8 +239,8 @@ export function FacultyDashboard() {
       const progListRes = await apiClient.get<any>("/analytics/faculty/programs");
       if (progListRes && progListRes.success && Array.isArray(progListRes.data)) {
         setTaughtPrograms(progListRes.data);
-        if (progListRes.data.length > 0 && !selectedProgramId) {
-          setSelectedProgramId(progListRes.data[0].id);
+        if (progListRes.data.length > 0) {
+          setSelectedProgramId((current) => current || progListRes.data[0].id);
         }
       }
     } catch (err: any) {
