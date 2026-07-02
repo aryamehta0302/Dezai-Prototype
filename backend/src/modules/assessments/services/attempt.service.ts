@@ -490,7 +490,7 @@ export class AttemptService {
           passed: false,
         },
       });
-      if (failCount >= 2) {
+      if (failCount >= 2 && assessmentProgramId) {
         this.insightsSseService.notifyFacultyOfStudentUpdate(userId, 'AT_RISK_ALERT', {
           userId,
           assessmentId: attempt.assessmentId,
