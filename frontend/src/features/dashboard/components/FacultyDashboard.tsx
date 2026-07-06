@@ -26,6 +26,8 @@ import {
 import { apiClient } from "@/core/api/client";
 import { useAuthStore } from "@/lib/stores/auth.store";
 import { toast } from "sonner";
+import { PageSkeleton } from "@/shared/components/loading-skeleton";
+import { useFacultyInsightsStream } from "../hooks/useFacultyInsightsStream";
 
 // --- Interfaces ---
 interface DashboardStats {
@@ -454,18 +456,9 @@ export function FacultyDashboard() {
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const { connectionState, latestEvent, error: streamError } = useFacultyInsightsStream();
 
-  if (loading) {
-    return (
-      <div className="flex h-[calc(100vh-80px)] w-full items-center justify-center bg-surface-lowest">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
-          <span className="text-sm font-semibold text-muted">Retrieving dashboard consoles...</span>
-        </div>
-      </div>
-    );
-  }
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <div className="relative min-h-[calc(100vh-64px)] bg-neutral-50/50 flex">
@@ -598,6 +591,10 @@ export function FacultyDashboard() {
 
         {/* Scrollable Panel */}
         <main className="flex-1 p-6 overflow-y-auto space-y-6 max-w-7xl w-full mx-auto">
+          {loading ? (
+            <PageSkeleton />
+          ) : (
+            <>
 
           {/* --- TAB 1: OVERVIEW --- */}
           {activeTab === "overview" && (
@@ -796,7 +793,7 @@ export function FacultyDashboard() {
                       <p className="text-2xs text-muted text-center py-6">No cohort data available.</p>
                     ) : (
                       analytics.topStudents.map((student, idx) => (
-                        <div key={student.userId} className="flex items-center justify-between p-3 bg-neutral-50/50 border border-neutral-100 rounded-xl">
+                        <div key={`${student.userId}-${student.programTitle}`} className="flex items-center justify-between p-3 bg-neutral-50/50 border border-neutral-100 rounded-xl">
                           <div className="flex items-center gap-2.5 min-w-0">
                             <span className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
                               idx === 0 ? 'bg-warning/20 text-warning border border-warning/30' :
@@ -831,7 +828,7 @@ export function FacultyDashboard() {
                       <p className="text-2xs text-muted text-center py-6">All students performing stably.</p>
                     ) : (
                       analytics.weakStudents.map((student) => (
-                        <div key={student.userId} className="flex items-center justify-between p-3 bg-danger/5 border border-danger/10 rounded-xl">
+                        <div key={`${student.userId}-${student.programTitle}`} className="flex items-center justify-between p-3 bg-danger/5 border border-danger/10 rounded-xl">
                           <div className="min-w-0">
                             <p className="text-xs font-bold text-on-surface truncate">{student.name}</p>
                             <span className="text-3xs text-muted truncate block">{student.programTitle}</span>
@@ -1211,6 +1208,64 @@ export function FacultyDashboard() {
                     </div>
                   </div>
 
+                  {/* Live Stream Panel */}
+                  <div className="bg-white border border-border-light rounded-2xl p-5 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-2">
+                        <span className="relative flex h-2 w-2">
+                          {connectionState === "connected" && (
+                            <>
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                            </>
+                          )}
+                          {(connectionState === "connecting" || connectionState === "reconnecting") && (
+                            <>
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-warning"></span>
+                            </>
+                          )}
+                          {(connectionState === "error" || connectionState === "disconnected") && (
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-danger"></span>
+                          )}
+                        </span>
+                        Live Academic Risk Stream 
+                        <span className="text-3xs text-muted font-semibold uppercase tracking-widest">
+                          ({connectionState})
+                        </span>
+                      </h4>
+                      {streamError && (
+                        <span className="text-3xs text-danger font-semibold bg-danger/10 px-2 py-0.5 rounded-lg">
+                          {streamError}
+                        </span>
+                      )}
+                    </div>
+
+                    {!latestEvent || latestEvent.alerts.length === 0 ? (
+                      <p className="text-2xs text-muted text-center py-6">No real-time risk alerts received.</p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {latestEvent.alerts.map((alert, idx) => (
+                          <div key={`${alert.userId}-${alert.type}-${idx}`} className="p-3 bg-neutral-50/50 border border-neutral-100 rounded-xl space-y-2 hover:bg-neutral-50 transition-all">
+                            <div className="flex justify-between items-start gap-2">
+                              <div>
+                                <p className="text-xs font-bold text-on-surface truncate">{alert.userName}</p>
+                                <span className={`px-2 py-0.5 rounded-full text-3xs font-extrabold ${
+                                  alert.type === "AT_RISK" ? 'bg-danger/10 text-danger' : 'bg-warning/10 text-warning'
+                                }`}>
+                                  {alert.type}
+                                </span>
+                              </div>
+                              <span className="text-3xs text-muted leading-relaxed">
+                                {alert.detail}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Flagged At-Risk List */}
                   <div className="bg-white border border-border-light rounded-2xl shadow-sm overflow-hidden flex flex-col">
                     <div className="p-5 border-b border-border-light flex items-center justify-between">
@@ -1446,6 +1501,8 @@ export function FacultyDashboard() {
                 </div>
               </div>
             </div>
+          )}
+            </>
           )}
 
         </main>

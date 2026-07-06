@@ -1218,4 +1218,145 @@ export class AssessmentService {
       questions,
     };
   }
+
+  async getFacultyInsightsStreamData(userId: string, role: UserRole) {
+    let programIds: string[] = [];
+
+    if (role === UserRole.DEZAI_ADMIN) {
+      const programs = await this.prisma.program.findMany({ select: { id: true } });
+      programIds = programs.map((p) => p.id);
+    } else if (role === UserRole.UNIVERSITY_ADMIN) {
+      const admin = await this.prisma.institutionAdmin.findUnique({
+        where: { userId },
+      });
+      if (admin) {
+        const programs = await this.prisma.program.findMany({
+          where: { institutionId: admin.institutionId },
+          select: { id: true },
+        });
+        programIds = programs.map((p) => p.id);
+      }
+    } else if (role === UserRole.FACULTY) {
+      const faculty = await this.prisma.facultyMember.findUnique({
+        where: { userId },
+      });
+      if (faculty) {
+        const programs = await this.prisma.program.findMany({
+          where: { facultyId: faculty.id },
+          select: { id: true },
+        });
+        programIds = programs.map((p) => p.id);
+      }
+    }
+
+    if (programIds.length === 0) {
+      return {
+        timestamp: new Date().toISOString(),
+        summary: {
+          totalAtRisk: 0,
+          totalLowProgress: 0,
+          totalInactive: 0,
+          totalStudentsMonitored: 0,
+        },
+        alerts: [],
+      };
+    }
+
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: { programId: { in: programIds } },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            lastActiveAt: true,
+            attempts: {
+              select: {
+                assessmentId: true,
+                passed: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    let totalAtRisk = 0;
+    let totalLowProgress = 0;
+    let totalInactive = 0;
+    const alerts: any[] = [];
+
+    for (const e of enrollments) {
+      const isInactive = !e.user.lastActiveAt || e.user.lastActiveAt < sevenDaysAgo;
+      const isLowProgress = e.progress < 25;
+
+      const failuresPerAssessment = new Map<string, number>();
+      e.user.attempts.forEach((att) => {
+        if (!att.passed) {
+          failuresPerAssessment.set(att.assessmentId, (failuresPerAssessment.get(att.assessmentId) ?? 0) + 1);
+        }
+      });
+
+      let hasRepeatedFailures = false;
+      failuresPerAssessment.forEach((count) => {
+        if (count >= 2) {
+          hasRepeatedFailures = true;
+        }
+      });
+
+      const reasons: string[] = [];
+      if (isInactive) {
+        reasons.push("inactivity");
+        totalInactive++;
+        alerts.push({
+          type: "INACTIVE",
+          userId: e.user.id,
+          userName: e.user.name || "Unknown Student",
+          detail: `Inactive for ${
+            e.user.lastActiveAt
+              ? Math.floor((Date.now() - e.user.lastActiveAt.getTime()) / (1000 * 60 * 60 * 24))
+              : "many"
+          } days`,
+        });
+      }
+      if (isLowProgress) {
+        reasons.push("low progress");
+        totalLowProgress++;
+        alerts.push({
+          type: "LOW_PROGRESS",
+          userId: e.user.id,
+          userName: e.user.name || "Unknown Student",
+          detail: `Low syllabus progress (${e.progress}%)`,
+        });
+      }
+
+      const isAtRisk = hasRepeatedFailures || reasons.length > 1;
+      if (isAtRisk) {
+        totalAtRisk++;
+        alerts.push({
+          type: "AT_RISK",
+          userId: e.user.id,
+          userName: e.user.name || "Unknown Student",
+          detail: hasRepeatedFailures
+            ? "Repeated quiz failures (2+ attempts)"
+            : "Multiple risk factors (inactive and low progress)",
+        });
+      }
+    }
+
+    return {
+      timestamp: new Date().toISOString(),
+      summary: {
+        totalAtRisk,
+        totalLowProgress,
+        totalInactive,
+        totalStudentsMonitored: enrollments.length,
+      },
+      alerts,
+    };
+  }
 }

@@ -11,7 +11,12 @@ import {
   HttpCode,
   HttpStatus,
   Query,
+  Sse,
+  MessageEvent,
+  UseInterceptors,
 } from "@nestjs/common";
+import { Observable, interval, from } from "rxjs";
+import { switchMap, map, startWith } from "rxjs/operators";
 import { AssessmentService } from "../services/assessment.service";
 import { QuestionSelectionService } from "../services/question-selection.service";
 import { RecommendationService } from "../services/recommendation.service";
@@ -19,6 +24,7 @@ import { JwtAuthGuard } from "../../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../../common/guards/roles.guard";
 import { Roles } from "../../../common/decorators/roles.decorator";
 import { UserRole, ViolationType } from "@prisma/client";
+import { FacultyDataAccessInterceptor } from "../../../common/interceptors/faculty-data-access.interceptor";
 import {
   CreateQuestionBankDto,
   UpdateQuestionBankDto,
@@ -29,6 +35,7 @@ import {
 } from "../dto/assessment.dto";
 
 @Controller("assessments")
+@UseInterceptors(FacultyDataAccessInterceptor)
 export class AssessmentController {
   constructor(
     private readonly assessmentService: AssessmentService,
@@ -320,5 +327,19 @@ export class AssessmentController {
   @Roles(UserRole.STUDENT)
   async getRecommendedAssessments(@Req() req) {
     return this.recommendationService.getRecommendedAssessments(req.user.id);
+  }
+
+  @Sse("faculty-insights/stream")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
+  sseFacultyInsights(@Req() req): Observable<MessageEvent> {
+    const userId = req.user.id;
+    const role = req.user.role as UserRole;
+
+    return interval(10000).pipe(
+      startWith(0),
+      switchMap(() => from(this.assessmentService.getFacultyInsightsStreamData(userId, role))),
+      map((data) => ({ data })),
+    );
   }
 }
