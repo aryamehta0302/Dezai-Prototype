@@ -11,6 +11,7 @@ export function useCredentialVerify(code: string) {
 
   useEffect(() => {
     if (!code) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false);
       return;
     }
@@ -20,7 +21,15 @@ export function useCredentialVerify(code: string) {
         setLoading(true);
         setError(null);
         const response = await credentialService.verifyCredential(code);
-        setCredential(response.credential);
+        if (response.credential) {
+          setCredential(response.credential);
+          if (!response.valid) {
+            setError(response.message || 'Credential is not active');
+          }
+        } else {
+          setError(response.message || 'Credential not found');
+          setCredential(null);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Credential not found');
         setCredential(null);

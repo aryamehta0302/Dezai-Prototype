@@ -1,14 +1,11 @@
-import { CredentialTier } from '@prisma/client';
-import { CredentialType } from './TemplateDto';
+import { CredentialTier, CredentialType } from '@prisma/client';
 
 export class CreateCredentialDto {
     userId!: string;
     programId!: string;
     institutionId!: string;
-    issuedById!: string; // Faculty or System ID
-    tier!: CredentialTier; // FORGE, ARENA, CITADEL
-    
-    // New Template Integration Fields
+    issuedById!: string;
+    tier!: CredentialTier;
     templateId!: string;
     credentialType!: CredentialType;
 }

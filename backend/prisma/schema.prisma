@@ -37,6 +37,7 @@ model User {
   uploads        Upload[]
   auditLogs      AuditLog[]
   examSessions   ExamSession[]
+  userAchievements UserAchievement[]
 
   facultyInfo   FacultyMember?
   instAdminInfo InstitutionAdmin?
@@ -107,6 +108,7 @@ model Program {
   id            String   @id @default(uuid())
   title         String
   description   String
+  thumbnail     String?
   institutionId String
   facultyId     String?
   createdAt     DateTime @default(now())
@@ -142,12 +144,19 @@ enum TrackType {
   EDGE
 }
 
+enum EnrollmentStatus {
+  ACTIVE
+  DROPPED
+  COMPLETED
+}
+
 model Enrollment {
-  id          String    @id @default(uuid())
+  id          String            @id @default(uuid())
   userId      String
   programId   String
-  createdAt   DateTime  @default(now())
-  progress    Int       @default(0)
+  createdAt   DateTime          @default(now())
+  progress    Int               @default(0)
+  status      EnrollmentStatus  @default(ACTIVE)
   completedAt DateTime?
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -287,15 +296,18 @@ model QuestionOption {
 }
 
 model Assessment {
-  id             String   @id @default(uuid())
-  moduleId       String
-  questionBankId String
-  title          String
-  passingScore   Int      @default(80) // Passing percentage
-  sampleSize     Int      @default(15) // Dynamic question pull count
-  timeLimit      Int      @default(1800) // Total exam duration in seconds (default 30 min)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id               String   @id @default(uuid())
+  moduleId         String
+  questionBankId   String
+  title            String
+  passingScore     Int      @default(80) // Passing percentage
+  sampleSize       Int      @default(15) // Dynamic question pull count
+  timeLimit        Int      @default(1800) // Total exam duration in seconds (default 30 min)
+  timeLimitEnabled Boolean  @default(true) // Whether time limit is enforced
+  maxAttempts      Int      @default(8) // Max attempts allowed (faculty configurable)
+  allowResume      Boolean  @default(true) // Whether students can resume interrupted attempts
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   module       Module              @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   questionBank QuestionBank        @relation(fields: [questionBankId], references: [id])
@@ -374,6 +386,53 @@ enum XpType {
   DAILY_STREAK
   MODULE_COMPLETION
   ASSESSMENT_PASS
+  ACHIEVEMENT_REWARD
+}
+
+model Achievement {
+  id          String              @id @default(uuid())
+  key         String              @unique
+  title       String
+  description String
+  category    AchievementCategory
+  rarity      AchievementRarity
+  icon        String
+  xpReward    Int                 @default(0)
+  criteria    Json
+
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+enum AchievementCategory {
+  STREAK
+  XP
+  COMPLETION
+  ASSESSMENT
+  ENGAGEMENT
+}
+
+enum AchievementRarity {
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+model UserAchievement {
+  id            String    @id @default(uuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime  @default(now())
+  progress      Int       @default(0)
+  current       Int       @default(0)
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
 }
 
 model Credential {
@@ -430,10 +489,12 @@ model Upload {
 model ChatSession {
   id              String   @id @default(uuid())
   userId          String
+  title           String?
   activeProgramId String?
   activeModuleId  String?
   activeLessonId  String?
   createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   program  Program?      @relation(fields: [activeProgramId], references: [id])
@@ -491,11 +552,39 @@ enum AuditAction {
   ASSESSMENT_PUBLISHED
   CREDENTIAL_ISSUED
   ROLE_CHANGED
+  PROFILE_UPDATED
+  INSTITUTION_CREATED
+  INSTITUTION_UPDATED
+  FACULTY_VERIFIED
+  ENROLLMENT_CREATED
+  ENROLLMENT_DROPPED
+  LESSON_CREATED
+  LESSON_UPDATED
+  LESSON_COMPLETED
+  CHAT_SESSION_CREATED
+  CHAT_SESSION_DELETED
+  NOTIFICATION_SENT
+  XP_AWARDED
+  BOOKMARK_TOGGLED
+  NOTE_CREATED
+  PROCTORING_VIOLATION
+  XP_TRANSACTION
+  XP_THRESHOLD_UNLOCKED
+  PAYMENT_RECEIVED
+  ACCESS_GRANTED
+  LEADERBOARD_FROZEN
+  VOUCHER_ISSUED
+  EXAM_LOCKOUT_TRIGGERED
+  QUESTION_BANK_CREATED
+  QUESTION_BANK_UPDATED
+  QUESTION_BANK_DELETED
 }
 
 model AuditLog {
   id        String      @id @default(uuid())
   userId    String?
+  userHash  String      @default("")
+  userRole  UserRole    @default(STUDENT)
   action    AuditAction
   details   String? // Description or JSON metadata
   ipAddress String?
@@ -563,6 +652,8 @@ model CredentialTemplate {
   id            String         @id @default(uuid())
   name          String
   type          CredentialType
+  description   String?
+  defaultTier   CredentialTier @default(CITADEL)
   institutionId String
   designUrl     String?
   createdAt     DateTime       @default(now())

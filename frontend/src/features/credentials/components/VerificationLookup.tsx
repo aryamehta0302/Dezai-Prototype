@@ -39,12 +39,21 @@ export function VerificationLookup({ isFaculty }: Props) {
     const handleStatusChange = async (newStatus: VerifyStatus) => {
         if (!result?.data?.id || !isFaculty) return;
         
+        let reason = '';
+        if (newStatus !== 'ACTIVE') {
+            reason = window.prompt(`Enter the reason for marking this credential as ${newStatus}:`) || '';
+            if (!reason.trim()) {
+                alert('A reason is required to change status.');
+                return;
+            }
+        }
+
         const confirmMsg = `Are you absolutely sure you want to ${newStatus} this credential? This action is logged.`;
         if (!window.confirm(confirmMsg)) return;
 
         setActionLoading(true);
         try {
-            const updated = await CredentialService.updateCredentialStatus(result.data.id, newStatus);
+            const updated = await CredentialService.updateCredentialStatus(result.data.id, newStatus, reason);
             setResult({ valid: newStatus === 'ACTIVE', data: updated, message: `Credential has been ${newStatus}.` });
             alert(`Successfully marked as ${newStatus}`);
         } catch (error) {
@@ -118,7 +127,7 @@ export function VerificationLookup({ isFaculty }: Props) {
                                     <div>
                                         <div className="flex items-center gap-3 mb-2">
                                             <h2 className="text-2xl font-bold text-on-surface">
-                                                {result.data!.template?.name || result.data!.program?.title}
+                                                {result.data!.credentialTemplate?.name || result.data!.program?.title}
                                             </h2>
                                             <Badge variant={result.data!.verificationStatus === 'ACTIVE' ? 'default' : 'destructive'} className="uppercase">
                                                 {result.data!.verificationStatus}
@@ -143,6 +152,50 @@ export function VerificationLookup({ isFaculty }: Props) {
                                         <p className="text-sm font-medium text-on-surface">{result.data!.institution?.name}</p>
                                     </div>
                                 </div>
+
+                                {(() => {
+                                    if (!result.data!.metadata) return null;
+                                    try {
+                                        const meta = JSON.parse(result.data!.metadata);
+                                        if (meta.statusReason || (meta.statusHistory && meta.statusHistory.length > 0)) {
+                                            return (
+                                                <div className="mb-8 p-5 rounded-2xl bg-amber-500/5 border border-amber-500/10 space-y-4">
+                                                    {meta.statusReason && (
+                                                        <div>
+                                                            <p className="text-[10px] uppercase font-bold text-amber-600 mb-1">Current Status Reason</p>
+                                                            <p className="text-sm font-medium text-slate-800">{meta.statusReason}</p>
+                                                        </div>
+                                                    )}
+                                                    {meta.statusHistory && meta.statusHistory.length > 0 && (
+                                                        <div>
+                                                            <p className="text-[10px] uppercase font-bold text-slate-500 mb-2">Audit Status History</p>
+                                                            <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                                                                {meta.statusHistory.map((h: any, idx: number) => (
+                                                                    <div key={idx} className="text-xs flex justify-between items-start border-b border-slate-100 pb-2 last:border-0 last:pb-0">
+                                                                        <div>
+                                                                            <span className={cn(
+                                                                                "font-bold uppercase text-[9px] px-1.5 py-0.5 rounded mr-1.5",
+                                                                                h.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800' : h.status === 'SUSPENDED' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'
+                                                                            )}>
+                                                                                {h.status}
+                                                                            </span>
+                                                                            <span className="text-slate-600">{h.reason}</span>
+                                                                        </div>
+                                                                        <div className="text-right text-[10px] text-muted shrink-0 ml-4">
+                                                                            <div>by {h.changedBy.substring(0, 8)}</div>
+                                                                            <div>{new Date(h.date).toLocaleDateString()}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        }
+                                    } catch (e) {}
+                                    return null;
+                                })()}
 
                                 {/* FACULTY RESTRICTED AREA */}
                                 {isFaculty && (

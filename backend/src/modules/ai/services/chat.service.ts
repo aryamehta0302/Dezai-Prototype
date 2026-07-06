@@ -4,34 +4,39 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
-import { PrismaService } from '../../../database/prisma.service';
 import { ChatRepository } from '../repositories/chat.repository';
 import { AIProviderService } from './ai-provider.service';
-import { CreateChatSessionDto, SendMessageDto, UpdateSessionContextDto } from '../dto/chat.dto';
+import { AuditService } from '../../audit/services/audit.service';
+import { AuditAction } from '@prisma/client';
+import { PromptBuilderService } from './prompt-builder.service';
+import {
+  CreateChatSessionDto,
+  SendMessageDto,
+  UpdateSessionContextDto,
+  UpdateSessionTitleDto,
+} from '../dto/chat.dto';
 
-/**
- * ChatService handles business logic for chat sessions and messaging.
- * Uses AIProviderService for generating mentor responses.
- * Injects lesson/module/program context into prompts.
- */
 @Injectable()
 export class ChatService {
   constructor(
     private chatRepository: ChatRepository,
     private aiProviderService: AIProviderService,
-    private prisma: PrismaService,
+    private auditService: AuditService,
+    private promptBuilderService: PromptBuilderService,
   ) {}
 
-  /**
-   * Create a new chat session for the user
-   */
   async createSession(userId: string, dto: CreateChatSessionDto) {
-    return this.chatRepository.createSession(userId, dto);
+    const session = await this.chatRepository.createSession(userId, dto);
+
+    await this.auditService.logAction(
+      userId,
+      AuditAction.CHAT_SESSION_CREATED,
+      `Chat session ${session.id} created`,
+    );
+
+    return session;
   }
 
-  /**
-   * Get a specific session by ID, ensuring the requesting user owns it
-   */
   async getSession(sessionId: string, userId: string) {
     const session = await this.chatRepository.getSessionById(sessionId);
 
@@ -46,18 +51,15 @@ export class ChatService {
     return session;
   }
 
-  /**
-   * Get all chat sessions for the authenticated user
-   */
   async getUserSessions(userId: string, limit: number = 50, offset: number = 0) {
     return this.chatRepository.getUserSessions(userId, limit, offset);
   }
 
-  /**
-   * Delete a chat session, ensuring the requesting user owns it
-   */
   async deleteSession(sessionId: string, userId: string) {
-    const isOwner = await this.chatRepository.verifySessionOwnership(sessionId, userId);
+    const isOwner = await this.chatRepository.verifySessionOwnership(
+      sessionId,
+      userId,
+    );
 
     if (!isOwner) {
       throw new ForbiddenException('You do not have access to this chat session');
@@ -65,15 +67,16 @@ export class ChatService {
 
     await this.chatRepository.deleteSession(sessionId);
 
+    await this.auditService.logAction(
+      userId,
+      AuditAction.CHAT_SESSION_DELETED,
+      `Chat session ${sessionId} deleted`,
+    );
+
     return { success: true, message: 'Chat session deleted successfully' };
   }
 
-  /**
-   * Send a message in a session and get an AI mentor response
-   * Returns both the user message and the mentor response
-   */
   async sendMessage(sessionId: string, userId: string, dto: SendMessageDto) {
-    // Verify session exists and belongs to user
     const session = await this.chatRepository.getSessionById(sessionId);
 
     if (!session) {
@@ -88,23 +91,30 @@ export class ChatService {
       throw new BadRequestException('Message content cannot be empty');
     }
 
-    // Save user message
     const userMessage = await this.chatRepository.addMessage(
       sessionId,
       'USER',
       dto.content,
     );
 
-    // Build system prompt with context injection
-    const systemPrompt = await this.buildSystemPrompt(session);
-
-    // Generate AI mentor response using configured provider
-    const mentorResponseContent = await this.aiProviderService.generateResponse(
+    const systemPrompt = await this.promptBuilderService.buildChatPrompt(
+      session,
       dto.content,
-      systemPrompt,
     );
 
-    // Save mentor message
+    let mentorResponseContent: string;
+    try {
+      mentorResponseContent = await this.aiProviderService.generateResponse(
+        dto.content,
+        systemPrompt,
+      );
+    } catch (error) {
+      // Keep retries idempotent: a failed provider call must not leave an
+      // unanswered user message that will be duplicated by the UI retry.
+      await this.chatRepository.deleteMessage(userMessage.id);
+      throw error;
+    }
+
     const mentorMessage = await this.chatRepository.addMessage(
       sessionId,
       'MENTOR',
@@ -118,16 +128,15 @@ export class ChatService {
     };
   }
 
-  /**
-   * Update the active context for a session
-   * (useful when user navigates to a different lesson/module)
-   */
   async updateSessionContext(
     sessionId: string,
     userId: string,
     dto: UpdateSessionContextDto,
   ) {
-    const isOwner = await this.chatRepository.verifySessionOwnership(sessionId, userId);
+    const isOwner = await this.chatRepository.verifySessionOwnership(
+      sessionId,
+      userId,
+    );
 
     if (!isOwner) {
       throw new ForbiddenException('You do not have access to this chat session');
@@ -136,70 +145,21 @@ export class ChatService {
     return this.chatRepository.updateSessionContext(sessionId, dto);
   }
 
-  /**
-   * Build a system prompt with context injection
-   * Includes lesson/module/program information for RAG
-   */
-  private async buildSystemPrompt(session: any): Promise<string> {
-    const contextParts: string[] = [];
+  async updateSessionTitle(
+    sessionId: string,
+    userId: string,
+    dto: UpdateSessionTitleDto,
+  ) {
+    const isOwner = await this.chatRepository.verifySessionOwnership(
+      sessionId,
+      userId,
+    );
 
-    // Add lesson context
-    if (session.activeLessonId) {
-      try {
-        const lesson = await this.prisma.lesson.findUnique({
-          where: { id: session.activeLessonId },
-          include: {
-            module: {
-              include: {
-                track: {
-                  include: {
-                    program: true,
-                  },
-                },
-              },
-            },
-          },
-        });
-
-        if (lesson) {
-          contextParts.push(`Lesson: ${lesson.title}`);
-          if (lesson.module) {
-            contextParts.push(`Module: ${lesson.module.title}`);
-            if (lesson.module.track && lesson.module.track.program) {
-              contextParts.push(`Program: ${lesson.module.track.program.title}`);
-            }
-          }
-          if (lesson.content) {
-            // Include lesson content summary (first 500 chars as context)
-            const contentSummary = lesson.content.substring(0, 500);
-            contextParts.push(`Lesson Content Preview: ${contentSummary}...`);
-          }
-        }
-      } catch (error) {
-        // Silently fail context injection, continue with user message
-        console.warn('Error fetching lesson context:', error);
-      }
+    if (!isOwner) {
+      throw new ForbiddenException('You do not have access to this chat session');
     }
 
-    // Build final system prompt
-    const basePrompt = `You are an AI Mentor for the Dezai educational platform. 
-Your role is to help students learn effectively through:
-- Explaining concepts clearly and concisely
-- Breaking down complex topics into manageable parts
-- Providing relevant examples and analogies
-- Encouraging deeper understanding through questions
-- Supporting students in their learning journey
-
-${
-  contextParts.length > 0
-    ? `Current Learning Context:\n${contextParts.join('\n')}\n\nPlease tailor your responses to the student's current lesson and learning path.`
-    : 'Help the student with any learning questions they have.'
-}
-
-Keep responses concise (2-3 paragraphs max) and encouraging.
-Use markdown for formatting when appropriate.
-If the student asks about topics outside the current lesson, gently redirect them back to their studies when possible.`;
-
-    return basePrompt;
+    return this.chatRepository.updateSessionTitle(sessionId, dto);
   }
+
 }

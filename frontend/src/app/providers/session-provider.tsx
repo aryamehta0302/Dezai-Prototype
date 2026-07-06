@@ -11,5 +11,9 @@ interface Props {
  * Placed in app/providers/ and composed in the root providers file.
  */
 export function SessionProvider({ children }: Props) {
-  return <NextAuthSessionProvider>{children}</NextAuthSessionProvider>;
+  return (
+    <NextAuthSessionProvider refetchInterval={0} refetchOnWindowFocus={false}>
+      {children}
+    </NextAuthSessionProvider>
+  );
 }

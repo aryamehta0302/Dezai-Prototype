@@ -21,6 +21,17 @@ export function LessonVideoPlayer({ title, videoUrl, className }: LessonVideoPla
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Watch fullscreen change event
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === containerRef.current);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
   // Don't render if no URL is provided
   if (!videoUrl) return null;
 
@@ -95,17 +106,6 @@ export function LessonVideoPlayer({ title, videoUrl, className }: LessonVideoPla
       }).catch(() => {});
     }
   };
-
-  // Watch fullscreen change event
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(document.fullscreenElement === containerRef.current);
-    };
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-    };
-  }, []);
 
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
 

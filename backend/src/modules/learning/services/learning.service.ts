@@ -2,14 +2,20 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { EnrollmentService } from '../../programs/services/enrollment.service';
 import { XpService } from '../../users/services/xp.service';
-import { XpType } from '@prisma/client';
+import { AwardService } from '../../achievements/services/award.service';
+import { AuditService } from '../../audit/services/audit.service';
+import { XpType, AchievementCategory, AuditAction } from '@prisma/client';
+
+type TxClient = Omit<PrismaService, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
 
 @Injectable()
 export class LearningService {
   constructor(
     private prisma: PrismaService,
     private enrollmentService: EnrollmentService,
-    private xpService: XpService
+    private xpService: XpService,
+    private awardService: AwardService,
+    private auditService: AuditService,
   ) { }
 
   /**
@@ -56,8 +62,8 @@ export class LearningService {
   /**
    * Create a new lesson. Gated by program ownership validation.
    */
-  async createLesson(moduleId: string, data: { title: string; content: string; videoUrl?: string; order: number }) {
-    return this.prisma.lesson.create({
+   async createLesson(userId: string, moduleId: string, data: { title: string; content: string; videoUrl?: string; order: number }) {
+    const lesson = await this.prisma.lesson.create({
       data: {
         moduleId,
         title: data.title,
@@ -66,81 +72,182 @@ export class LearningService {
         order: data.order,
       },
     });
+
+    await this.auditService.logAction(
+      userId,
+      AuditAction.LESSON_CREATED,
+      `Lesson "${lesson.title}" (ID: ${lesson.id}) created in module ${moduleId}`,
+    );
+
+    return lesson;
   }
 
   /**
    * Update lesson content.
    */
-  async updateLesson(id: string, data: { title?: string; content?: string; videoUrl?: string; order?: number }) {
-    return this.prisma.lesson.update({
+   async updateLesson(userId: string, id: string, data: { title?: string; content?: string; videoUrl?: string; order?: number }) {
+    const lesson = await this.prisma.lesson.update({
       where: { id },
       data,
     });
+
+    await this.auditService.logAction(
+      userId,
+      AuditAction.LESSON_UPDATED,
+      `Lesson "${lesson.title}" (ID: ${id}) updated`,
+    );
+
+    return lesson;
   }
 
   /**
    * Mark a lesson as completed by the student.
+   * Wraps critical path in Prisma $transaction for race-condition safety.
    * If all lessons in the module are completed, awards MODULE_COMPLETION XP.
+   * Also updates daily streak and lastActiveAt.
    */
   async completeLesson(userId: string, lessonId: string) {
+    // Early exit if already completed (outside transaction for fast path)
     const existing = await this.prisma.progress.findUnique({
-      where: {
-        userId_lessonId: { userId, lessonId },
-      },
+      where: { userId_lessonId: { userId, lessonId } },
     });
-
     if (existing) {
       return { success: true, alreadyCompleted: true };
     }
 
-    const progress = await this.prisma.progress.create({
-      data: {
-        userId,
-        lessonId,
-      },
-    });
+    // Wrap critical operations in a transaction for serialised isolation
+    const { progress, xpResult: xpAwarded, programId, _conflict } = await this.prisma.$transaction(async (tx) => {
+      const txExisting = await tx.progress.findUnique({
+        where: { userId_lessonId: { userId, lessonId } },
+      });
+      if (txExisting) {
+        return { progress: null, xpResult: null, programId: null, _conflict: true };
+      }
 
-    // Resolve the program ID to update the enrollment progress percentages
-    const lesson = await this.prisma.lesson.findUnique({
-      where: { id: lessonId },
-      include: {
-        module: {
-          include: {
-            lessons: { select: { id: true } },
-            track: { select: { programId: true } },
+      const p = await tx.progress.create({
+        data: { userId, lessonId },
+      });
+
+      await this.updateStreakTx(tx as any as TxClient, userId);
+
+      const lesson = await tx.lesson.findUnique({
+        where: { id: lessonId },
+        include: {
+          module: {
+            include: {
+              lessons: { select: { id: true } },
+              track: { select: { programId: true } },
+            },
           },
         },
-      },
+      });
+
+      if (!lesson) {
+        return { progress: p, xpResult: null, programId: null, _conflict: false };
+      }
+
+      const pid = lesson.module.track.programId;
+
+      await this.enrollmentService.updateEnrollmentProgress(
+        userId, pid, tx as any as TxClient,
+      );
+
+      const allLessonIds = lesson.module.lessons.map((l) => l.id);
+      const completedCount = await tx.progress.count({
+        where: { userId, lessonId: { in: allLessonIds } },
+      });
+
+      let xp = null;
+      if (completedCount === allLessonIds.length) {
+        xp = await this.awardXpInTx(tx as any as TxClient, userId, XpType.MODULE_COMPLETION);
+      }
+
+      return { progress: p, xpResult: xp, programId: pid, _conflict: false };
     });
 
-    if (!lesson) {
-      return { success: true, progress };
+    if (_conflict) {
+      return { success: true, alreadyCompleted: true };
     }
 
-    const programId = lesson.module.track.programId;
+    // Side-effects outside transaction
+    await this.awardService.checkAndAward(userId, AchievementCategory.STREAK);
+    await this.awardService.checkAndAward(userId, AchievementCategory.COMPLETION);
+    await this.awardService.checkAndAward(userId, AchievementCategory.XP);
 
-    // Trigger update progress recalculation
-    await this.enrollmentService.updateEnrollmentProgress(userId, programId);
+    await this.auditService.logAction(
+      userId,
+      AuditAction.LESSON_COMPLETED,
+      `Lesson ${lessonId} completed by user ${userId} in program ${programId}`,
+    );
 
-    // Centralized XP Logic: Check if all lessons in the module are completed
-    const allLessonIds = lesson.module.lessons.map((l) => l.id);
-    const completedCount = await this.prisma.progress.count({
-      where: {
-        userId,
-        lessonId: { in: allLessonIds },
-      },
+    return { success: true, progress, xpResult: xpAwarded };
+  }
+
+  /**
+   * Award XP within a transaction, using tx client directly.
+   */
+  private async awardXpInTx(tx: TxClient, userId: string, type: XpType, customAmount?: number) {
+    const amount = customAmount ?? this.XP_VALUES[type] ?? 0;
+    if (amount <= 0) return null;
+
+    const user = await tx.user.update({
+      where: { id: userId },
+      data: { xp: { increment: amount } },
     });
 
-    let xpResult = null;
-    if (completedCount === allLessonIds.length) {
-      xpResult = await this.xpService.awardXp(userId, XpType.MODULE_COMPLETION);
+    await tx.xpTransaction.create({
+      data: { userId, amount, type },
+    });
+
+    return { success: true, currentXp: user.xp, amountAwarded: amount };
+  }
+
+  private readonly XP_VALUES: Record<XpType, number> = {
+    [XpType.DAILY_STREAK]: 10,
+    [XpType.MODULE_COMPLETION]: 50,
+    [XpType.ASSESSMENT_PASS]: 100,
+    [XpType.ACHIEVEMENT_REWARD]: 0,
+  };
+
+  /**
+   * Update daily streak within a transaction.
+   */
+  private async updateStreakTx(tx: TxClient, userId: string) {
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: { streakCount: true, lastActiveAt: true },
+    });
+
+    if (!user) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const lastActive = user.lastActiveAt ? new Date(user.lastActiveAt) : null;
+    if (lastActive) lastActive.setHours(0, 0, 0, 0);
+
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    let newStreak = user.streakCount;
+    let shouldAwardXp = false;
+
+    if (lastActive && lastActive.getTime() === yesterday.getTime()) {
+      newStreak += 1;
+      shouldAwardXp = true;
+    } else if (!lastActive || lastActive.getTime() < yesterday.getTime()) {
+      newStreak = 1;
+      shouldAwardXp = true;
     }
 
-    return {
-      success: true,
-      progress,
-      xpResult,
-    };
+    await tx.user.update({
+      where: { id: userId },
+      data: { lastActiveAt: new Date(), streakCount: newStreak },
+    });
+
+    if (shouldAwardXp) {
+      await this.awardXpInTx(tx, userId, XpType.DAILY_STREAK);
+    }
   }
 
   /**
@@ -198,6 +305,9 @@ export class LearningService {
       },
     });
 
+    await this.awardService.checkAndAward(userId, AchievementCategory.ENGAGEMENT);
+    await this.auditService.logAction(userId, AuditAction.BOOKMARK_TOGGLED, `Lesson ${lessonId} bookmarked by user ${userId}`);
+
     return { success: true, bookmarked: true };
   }
 
@@ -205,24 +315,39 @@ export class LearningService {
    * Upsert notes for a lesson.
    */
   async upsertNote(userId: string, lessonId: string, content: string) {
-    return this.prisma.note.upsert({
-      where: {
-        userId_lessonId: { userId, lessonId },
-      },
-      update: { content },
-      create: { userId, lessonId, content },
-    });
+    const existing = await this.prisma.retryOnWakeup(() =>
+      this.prisma.note.findUnique({
+        where: { userId_lessonId: { userId, lessonId } },
+      }),
+    );
+
+    const note = await this.prisma.retryOnWakeup(() =>
+      this.prisma.note.upsert({
+        where: { userId_lessonId: { userId, lessonId } },
+        update: { content },
+        create: { userId, lessonId, content },
+      }),
+    );
+
+    if (!existing) {
+      await this.awardService.checkAndAward(userId, AchievementCategory.ENGAGEMENT);
+      await this.auditService.logAction(userId, AuditAction.NOTE_CREATED, `Note created for lesson ${lessonId} by user ${userId}`);
+    }
+
+    return note;
   }
 
   /**
    * Retrieve notes for a lesson.
    */
   async getNote(userId: string, lessonId: string) {
-    return this.prisma.note.findUnique({
-      where: {
-        userId_lessonId: { userId, lessonId },
-      },
-    });
+    return this.prisma.retryOnWakeup(() =>
+      this.prisma.note.findUnique({
+        where: {
+          userId_lessonId: { userId, lessonId },
+        },
+      }),
+    );
   }
 
   /**

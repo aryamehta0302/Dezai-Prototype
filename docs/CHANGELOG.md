@@ -2,6 +2,113 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Sprint 7] — 2026-06-30
+
+### Assessment Hardening & Production Readiness (Antigravity AI)
+
+#### Added
+- **Docker Compose for Redis** — Added local Redis 7 Alpine configuration with AOF persistence.
+- **PATCH /api/assessments/attempts/sync** — Batch synchronization endpoint for offline answers.
+- **Offline Sync Queue** — React hook integration with connection state monitoring, automatic retry queue (exponential backoff), and `navigator.sendBeacon` fallback.
+- **Sync Status Badge** — Dynamic status badge (`Saved`, `Syncing...`, `Offline`, `Sync Error`) in the assessment player interface.
+- **Unit Tests** — Added 3 test suites covering Question Selection caching, Sync attempt constraints, and Analytics validation logic.
+
+#### Changed
+- **Redis Cache-Aside** — Integrated cache-aside caching for QuestionSelectionService (5-minute TTL) with automatic invalidation hooks on question banks and questions modifications.
+- **Tenant Isolation** — Added strict program/faculty validation to cohort weak topic detection and analytics queries to prevent cross-tenant data leaks.
+- **Attempt Count Validation Fix** — Corrected `submitSession` attempt count query to filter exclusively by completed attempts (`completedAt !== null`), preventing active attempts from counting towards the maximum limit.
+
+---
+
+## [Sprint 6.6] — 2026-06-25
+
+### Auth, DB Resilience & Performance Stabilization + Seed Fixes (Ansh Dhanani)
+
+#### Fixed
+- **Auth.js ClientFetchError** — Changed `[...nextauth]/route.ts` from `export const { GET, POST } = handlers;` to explicit `export async function GET(request)` wrappers. Next.js 16 serves HTML for catch-all dynamic routes with the destructured export pattern because it passes 2 args (request + params Promise) but NextAuth v5 handlers expect only 1. Explicit wrappers fix `"<!DOCTYPE html>"` errors from `/api/auth/session`.
+- **Neon DB Auto-Suspend (P1001)** — Added `connect_timeout=15` to `DATABASE_URL`, removed non-standard `connection_lifetime=300`. Added `retryOnWakeup()` method to `PrismaService` that catches P1001 at query time and retries 2x with 3s delay. Wrapped `authenticateUser`, `getNote`, `upsertNote` with retry.
+- **Seed Data Underpopulated Banks** — `qb-genai-leaders` had only 8 questions (from old Sprint 5 seed), `qb-product-design` had only 1 (partial run). The seed's `if (!existingQb)` skip left stale banks untouched. Rewrote to check actual question count vs pool size — existing banks with wrong counts are automatically repopulated with fresh questions. Added stale attempt/session cleanup before bank repopulation to avoid FK constraint violations.
+
+#### Changed
+- **Lesson Completion Timing** — Reordered `handleClick` in `mark-complete-button.tsx`: `onComplete?.()` fires first (immediate video transition), toast shows only after API succeeds. `markLessonComplete` changed from `.then()` fire-and-forget to `await` + re-throw so error suppresses toast.
+- **Video Player Performance** — Video reads `videoUrl` from `currentLesson` (course data, pre-loaded) instead of waiting for `lessonDetail?.videoUrl`. Added `key={currentLessonId}` to force `<video>` remount on navigation. Content area shows `animate-pulse` skeleton while `lessonDetail` loads.
+- **Progress Bar Speed** — Derived from `enrollment.lessonsCompleted.length / allLessons.length` (Zustand local state, optimistically updated) instead of server-provided `enrollment?.progress` which required POST → response → `fetchEnrollments()` chain.
+
+#### Added
+- **AGENTS.md** — Documented Next.js 16 + Auth.js patterns for future sessions.
+
+#### Fixed
+- **Question Set Mismatch Bug** — `startAttempt` was calling both `createSession` (stores `generateQuestionSet` output as set B) and `selectQuestions` (returns independent set A to the frontend). Both methods independently shuffle and sample from the same bank, producing different question sets. The user answered questions from set A, but the review/result page scored against set B — causing `"Unanswered"` for Q2–Q5 when the IDs didn't overlap. Removed the `selectQuestions` call entirely; `startAttempt` now reads `session.questionSet` directly and formats it for the frontend response. Also removed the unused `QuestionSelectionService` injection from `AttemptService`.
+
+---
+
+## [Sprint 6.5] — 2026-06-24
+
+### Assessment Settings + Progressive Dashboard + Seed Overhaul (Ansh Dhanani)
+
+#### Added
+- **Per-Assessment Settings** — `maxAttempts`, `timeLimitEnabled`, `allowResume` fields on Assessment model (Prisma schema + DTOs + service enforcement). Faculty can now configure attempt limits, timed/untimed mode, and resume policy per assessment.
+- **Seed Overhaul** — 12 question banks (1 per program, 12 questions each from AI/Business/Design pools) + assessments for ALL 120 modules with varied settings (strict/moderate/relaxed/challenging/practice configs based on module order).
+- **Resume Attempt Enhancements** — Pre-take screen shows active session banner with answer count + remaining time; button text changes to "Resume Assessment". Backend returns `maxAttempts`, `timeLimitEnabled`, `allowResume` in attempt responses.
+- **Faculty Publish Modal** — New fields: max attempts input, time limit toggle + seconds input, allow resume checkbox.
+
+#### Changed
+- **Proctoring Overlay Removed** — Stripped full-screen "Assessment In Progress" overlay + sticky "Exam in progress" banner from student layout. Assessments are online course quizzes, not formal exams.
+- **Progressive Dashboard Rendering** — Replaced single `showSkeleton` gate with per-section loading states. Greeting renders instantly, enrollment-dependent sections wait for both stores, independent sections use their own loading states.
+- **Empty State Logic** — Empty states only show after BOTH enrollment and program stores confirm no data (fixes race where "No enrollments" flashed before programs loaded).
+- **Milestone Service** — Fixed Prisma 6 `NOT: { completedAt: null }` error by removing NOT filter and filtering in JS.
+
+#### Fixed
+- `PrismaClientValidationError` in `LearningMilestoneService.getMilestones` — Argument `completedAt` must not be null.
+- `getAttemptResult` re-queried `selectQuestions` 3 redundant times (now uses `session.questionSet`).
+- CORS — Backend now allows both `http://localhost:3000` and `http://127.0.0.1:3000`.
+
+---
+
+## [Sprint 5 — QA & Release Readiness Validation] — 2026-07-01
+
+**Developer:** Hitarth (QA & Release Readiness Lead)
+
+### Added
+- **E2E Playwright Suite** — Created 7 automated tests covering registration, onboarding, enrollment, assessments, proctoring violations, and credential revocation/verification.
+  - Directory: [frontend/tests/e2e/](file:///d:/DEZAI/Dezai-Prototype/frontend/tests/e2e/)
+- **Load Testing (k6)** — Created load test scripts for Assessment Attempts and Leaderboard queries under multiple virtual user profiles.
+  - Directory: [tests/load/](file:///d:/DEZAI/Dezai-Prototype/tests/load/)
+- **Audit Log Validation Report (V1)** — Audited database schema log actions against all active module triggers.
+  - File: [reports/audit-log-validation-v1.md](file:///d:/DEZAI/Dezai-Prototype/reports/audit-log-validation-v1.md)
+- **Documentation Audit Report (V1)** — Reconciled API references, architecture rules, and setup guides.
+  - File: [reports/documentation-audit-v1.md](file:///d:/DEZAI/Dezai-Prototype/reports/documentation-audit-v1.md)
+- **V1 Release Readiness Report** — Compiled final release sign-off dashboard and checklists.
+  - File: [reports/V1-Release-Readiness-Report.md](file:///d:/DEZAI/Dezai-Prototype/reports/V1-Release-Readiness-Report.md)
+
+### Changed
+- **`UpdateCredentialStatusDto` Validation** — Added `@IsEnum` validation to prevent NestJS whitelisting from stripping the credential status patch fields.
+  - File: [UpdateCredentialStatusDto.ts](file:///d:/DEZAI/Dezai-Prototype/backend/src/modules/credentials/dto/UpdateCredentialStatusDto.ts)
+- **`CredentialContext` State Stability** — Wrapped context actions in `useCallback` to prevent infinite render loops on dynamic fetches.
+  - File: [CredentialContext.tsx](file:///d:/DEZAI/Dezai-Prototype/frontend/src/features/credentials/context/CredentialContext.tsx)
+
+---
+
+## [Sprint 6] — 2026-06-23
+
+### Assessment Intelligence + Faculty Insights & Intervention System (Manan Panchal)
+
+#### Added
+- WeakTopicDetectionService: per-student and aggregated weak topic detection (40% threshold)
+- Topic Accuracy Timeline & Improvement tracking per student
+- IncorrectQuestionAnalysis: most-missed questions with distractor analysis
+- AssessmentAnalyticsService: difficulty breakdown, trend analysis, performance reports
+- Faculty Insight Summary & Institution Assessment Summary aggregations
+- FacultyInsightService: at-risk, low-progress, and inactive student detection
+- Repeated failure detection with consecutive failure streaks
+- Student Academic Health Score (0-100 composite with risk level)
+- Faculty Insight Dashboard: unified at-risk monitoring endpoint
+- Student Detail Insight: full per-student view for faculty
+- 2 new controllers: IntelligenceController, FacultyInsightsController
+- 3 new services: WeakTopicDetectionService, AssessmentAnalyticsService, FacultyInsightService
+
+### Developer: Manan Panchal · Branch: feature/assessment-intelligence
+
 ---
 
 ## [Sprint 7] — 2026-07-06
@@ -383,8 +490,45 @@ frontend/src/app/(student)/chat/page.tsx (NEW)
 - Curriculum & Program Management (Manan Panchal)
 - See [IMPLEMENTED.md](file:///d:/git/dezai/Dezai-Prototype/docs/IMPLEMENTED.md) Sections 5–7.
 
+--
+## [Sprint 7] - Production Readiness(Krish Parmar) 2026-06-29
 
+### Added
+
+- Global HTTP exception filter for standardized backend error responses.
+
+### Changed
+
+- Registered global exception filter during application bootstrap.
+- Restored analytics barrel exports for chart components.
+
+### Notes
+
+- No new features introduced.
+- No database changes.
+- No API contract changes.
+- Production hardening only.
 ---
+
+## [Sprint 6] — 2026-06-23
+
+**Developer:** Krish Parmar 
+
+### Analytics Completion
+
+#### Added
+
+- **Faculty Analytics Dashboard Enhancements** — Integrated `ModuleCompletionChart` and `ProgramPerformanceChart` directly into the existing `FacultyDashboard.tsx` "Analytics" tab, pulling data from existing endpoints without backend modification.
+- **Program Performance & Assessment Analytics UI** — Implemented Recharts-based horizontal bar charts for module success rates and comparative grouped bar charts for student XP vs. progress metrics.
+- **XP Growth & Achievement Analytics** — Created `XpGrowthChart` (an area chart mapping a student's XP level journey from 1 to 10) and injected it into the `AchievementsPage.tsx`.
+- **Leaderboard Movement Analytics** — Added a dynamic rank movement delta (↑/↓) to the `StudentRankingCard` on the student dashboard, comparing all-time vs weekly leaderboard queries.
+- **Institution Analytics Widgets** — Created a dedicated `InstitutionDashboardPage.tsx` using existing `leaderboards/universities` data to show global institution rank, active students, total XP, and program counts for university administrators.
+- **Analytics Service & Types** — Centralized `analyticsService` wrapping `apiClient` and added complete TypeScript definitions for analytics payload shapes.
+
+#### Changed
+
+- **No Backend Changes Required** — All Sprint 6 requirements were successfully delivered as a frontend-only implementation, utilizing pre-existing endpoints.
+- **StudentDashboardPage** — Updated to fetch the student widget on mount and pass the weekly rank prop down.
 
 ---
 

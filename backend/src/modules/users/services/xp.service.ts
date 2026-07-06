@@ -10,6 +10,7 @@ export class XpService {
     [XpType.DAILY_STREAK]: 10,
     [XpType.MODULE_COMPLETION]: 50,
     [XpType.ASSESSMENT_PASS]: 100,
+    [XpType.ACHIEVEMENT_REWARD]: 0,
   };
 
   /**
@@ -47,6 +48,22 @@ export class XpService {
   }
 
   /**
+   * Level system: 1000 XP per level.
+   */
+  computeLevel(xp: number) {
+    const XP_PER_LEVEL = 1000;
+    const level = Math.floor(xp / XP_PER_LEVEL) + 1;
+    const currentLevelXp = xp % XP_PER_LEVEL;
+    return {
+      level,
+      currentLevelXp,
+      nextLevelXp: XP_PER_LEVEL,
+      progress: Math.min(100, Math.round((currentLevelXp / XP_PER_LEVEL) * 100)),
+      totalXp: xp,
+    };
+  }
+
+  /**
    * Optional helper to fetch a user's total XP and transactions.
    */
   async getUserXpDetails(userId: string) {
@@ -61,9 +78,12 @@ export class XpService {
       take: 10,
     });
 
+    const xp = user?.xp ?? 0;
+
     return {
-      xp: user?.xp ?? 0,
+      xp,
       streakCount: user?.streakCount ?? 0,
+      level: this.computeLevel(xp),
       recentTransactions: transactions,
     };
   }

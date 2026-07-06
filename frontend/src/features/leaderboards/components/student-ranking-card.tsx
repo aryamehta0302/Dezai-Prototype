@@ -1,6 +1,6 @@
 "use client";
 
-import { Trophy, Flame, Zap, TrendingUp } from "lucide-react";
+import { Trophy, Flame, Zap, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface StudentRankingCardProps {
@@ -8,6 +8,8 @@ interface StudentRankingCardProps {
   xp: number;
   streakCount: number;
   totalStudents?: number;
+  /** Optional: student's rank in weekly leaderboard. Used to compute movement delta. */
+  weeklyRank?: number | null;
 }
 
 function getRankStyle(rank: number): {
@@ -51,8 +53,12 @@ export function StudentRankingCard({
   xp,
   streakCount,
   totalStudents,
+  weeklyRank,
 }: StudentRankingCardProps) {
   const style = getRankStyle(rank);
+
+  // Movement delta: positive = climbed (weekly rank < all-time rank = better position)
+  const delta = weeklyRank != null ? rank - weeklyRank : null;
 
   return (
     <motion.div
@@ -114,6 +120,35 @@ export function StudentRankingCard({
               {streakCount}d streak
             </span>
           </div>
+          {/* Sprint 6 — Leaderboard Movement Analytics */}
+          {delta !== null && delta !== 0 && (
+            <>
+              <div className="w-1 h-1 rounded-full bg-muted/30" />
+              <div className="flex items-center gap-1">
+                {delta > 0 ? (
+                  <TrendingUp className="h-3.5 w-3.5 text-success" />
+                ) : (
+                  <TrendingDown className="h-3.5 w-3.5 text-danger" />
+                )}
+                <span
+                  className={`text-xs font-bold ${
+                    delta > 0 ? "text-success" : "text-danger"
+                  }`}
+                >
+                  {delta > 0 ? `+${delta}` : delta} this week
+                </span>
+              </div>
+            </>
+          )}
+          {delta === 0 && (
+            <>
+              <div className="w-1 h-1 rounded-full bg-muted/30" />
+              <div className="flex items-center gap-1">
+                <Minus className="h-3 w-3 text-muted" />
+                <span className="text-xs font-semibold text-muted">stable</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </motion.div>

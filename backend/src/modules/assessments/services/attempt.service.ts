@@ -4,9 +4,11 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import {
+  AchievementCategory,
   AuditAction,
   ExamStatus,
   NotificationType,
@@ -15,8 +17,8 @@ import {
 } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { XpService } from '../../users/services/xp.service';
+import { AwardService } from '../../achievements/services/award.service';
 import { AssessmentService } from './assessment.service';
-import { QuestionSelectionService } from './question-selection.service';
 import {
   PassFailEvaluationService,
   AttemptAnswerWithRelations,
@@ -27,68 +29,71 @@ import type {
   MyHistoryResponseDto,
   AttemptStatusResponseDto,
 } from '../dto/result.dto';
+import type { SyncAnswersDto, SyncResponseDto } from '../dto/sync.dto';
 
-/** Maximum number of attempts allowed per assessment per student. */
-const MAX_ATTEMPTS_DEFAULT = 3;
+interface QuestionSetItem {
+  questionId: string;
+  text: string;
+  options: { optionId: string; text: string }[];
+}
 
 @Injectable()
 export class AttemptService {
+  private readonly logger = new Logger(AttemptService.name);
+
   constructor(
     private prisma: PrismaService,
     private auditService: AuditService,
     private xpService: XpService,
+    private awardService: AwardService,
     private assessmentService: AssessmentService,
-    private questionSelectionService: QuestionSelectionService,
     private passFailEvaluationService: PassFailEvaluationService,
-  ) {}
+  ) { }
 
-  // ─────────────────── START ATTEMPT ───────────────────
-
-  /**
-   * Start a new attempt or return an active one if it already exists.
-   * Enforces attempt limits (MAX_ATTEMPTS_DEFAULT = 3) and blocks if
-   * an in-progress attempt already exists.
-   */
   async startAttempt(userId: string, assessmentId: string) {
-    // Sprint 5 Task 2: Enforce attempt limits before proceeding
+    const assessment = await this.prisma.assessment.findUnique({
+      where: { id: assessmentId },
+    });
+    if (!assessment) {
+      throw new NotFoundException('Assessment not found');
+    }
+
     const existingAttempts = await this.prisma.assessmentAttempt.findMany({
       where: { userId, assessmentId },
     });
 
     const active = existingAttempts.find((a) => !a.completedAt);
     if (active) {
-      throw new ConflictException(
-        'An active attempt already exists. Resume it.',
-      );
+      if (assessment.allowResume) {
+        throw new ConflictException('An active attempt already exists. Resume it.');
+      }
+      // Stale attempt with allowResume=false — delete it entirely so it doesn't count against maxAttempts
+      await this.prisma.attemptAnswer.deleteMany({ where: { attemptId: active.id } });
+      await this.prisma.violationLog.deleteMany({ where: { attemptId: active.id } });
+      await this.prisma.assessmentAttempt.delete({ where: { id: active.id } });
     }
 
-    if (existingAttempts.length >= MAX_ATTEMPTS_DEFAULT) {
-      throw new ForbiddenException(
-        'Maximum attempts reached for this assessment.',
-      );
+    const completedCount = await this.prisma.assessmentAttempt.count({
+      where: { userId, assessmentId, completedAt: { not: null } },
+    });
+    if (completedCount >= assessment.maxAttempts) {
+      throw new ForbiddenException('Maximum attempts reached for this assessment.');
     }
 
-    // 1. Create or get the active proctoring session using AssessmentService
-    const session = await this.assessmentService.createSession(
-      userId,
-      assessmentId,
-    );
+    const session = await this.assessmentService.createSession(userId, assessmentId);
 
-    // 2. Create a new in-progress attempt
     const attempt = await this.prisma.assessmentAttempt.create({
-      data: {
-        userId,
-        assessmentId,
-        score: 0,
-        passed: false,
-      },
+      data: { userId, assessmentId, score: 0, passed: false },
     });
 
-    // 3. Select randomized questions using attempt.id as a persistent seed
-    const selection = await this.questionSelectionService.selectQuestions(
-      assessmentId,
-      attempt.id,
-    );
+    // Use the SAME questionSet from the session — NOT a fresh selectQuestions call,
+    // which would independently shuffle and potentially return different questions.
+    const questionSet = (session.questionSet ?? []) as unknown as QuestionSetItem[];
+    const questions = questionSet.map(q => ({
+      id: q.questionId,
+      text: q.text,
+      options: (q.options ?? []).map(o => ({ id: o.optionId, text: o.text })),
+    }));
 
     return {
       success: true,
@@ -99,15 +104,19 @@ export class AttemptService {
       scoreDeduction: session.scoreDeduction,
       lockoutUntil: session.lockoutUntil,
       status: session.status,
-      ...selection,
+      assessmentId: attempt.assessmentId,
+      assessmentTitle: assessment.title,
+      passingScore: assessment.passingScore,
+      timeLimit: assessment.timeLimit,
+      sampleSize: assessment.sampleSize,
+      totalAvailable: questionSet.length,
+      questions,
+      maxAttempts: assessment.maxAttempts,
+      timeLimitEnabled: assessment.timeLimitEnabled,
+      allowResume: assessment.allowResume,
     };
   }
 
-  // ─────────────────── RESUME ATTEMPT ───────────────────
-
-  /**
-   * Resume an in-progress attempt.
-   */
   async resumeAttempt(userId: string, attemptId: string) {
     const attempt = await this.prisma.assessmentAttempt.findUnique({
       where: { id: attemptId },
@@ -122,43 +131,56 @@ export class AttemptService {
       throw new BadRequestException('Attempt is already completed');
     }
 
-    // Find the corresponding active proctoring session
-    const session = await this.prisma.examSession.findFirst({
-      where: {
-        userId,
-        assessmentId: attempt.assessmentId,
-        status: ExamStatus.ACTIVE,
-      },
+    let session = await this.prisma.examSession.findFirst({
+      where: { userId, assessmentId: attempt.assessmentId, status: ExamStatus.ACTIVE },
     });
 
     if (!session) {
-      throw new NotFoundException(
-        'No active proctoring session found for this attempt',
-      );
+      const questionSet = await this.assessmentService.generateQuestionSet(attempt.assessmentId);
+      session = await this.prisma.examSession.create({
+        data: {
+          userId,
+          assessmentId: attempt.assessmentId,
+          status: ExamStatus.ACTIVE,
+          warningsCount: 0,
+          scoreDeduction: 0,
+          questionSet,
+        },
+      });
     }
 
-    // Regenerate identical questions using the same seed (attempt.id)
-    const selection = await this.questionSelectionService.selectQuestions(
-      attempt.assessmentId,
-      attempt.id,
-    );
+    if (!attempt.assessment.allowResume) {
+      throw new ForbiddenException('Resuming is not allowed for this assessment.');
+    }
 
-    // Get currently saved answers
+    const questionSet = (session.questionSet ?? []) as unknown as QuestionSetItem[];
+    const selection = {
+      assessmentId: attempt.assessmentId,
+      assessmentTitle: attempt.assessment.title,
+      passingScore: attempt.assessment.passingScore,
+      timeLimit: attempt.assessment.timeLimit,
+      sampleSize: questionSet.length,
+      totalAvailable: questionSet.length,
+      questions: questionSet.map((q) => ({
+        id: q.questionId,
+        text: q.text,
+        options: q.options.map((o) => ({ id: o.optionId, text: o.text })),
+      })),
+    };
+
     const savedAnswers = await this.prisma.attemptAnswer.findMany({
       where: { attemptId },
       select: { questionId: true, selectedOptionId: true },
     });
 
-    const answersRecord: Record<string, string> = {};
-    for (const ans of savedAnswers) {
-      answersRecord[ans.questionId] = ans.selectedOptionId;
-    }
+    const answersRecord: Record<string, string> = Object.fromEntries(
+      savedAnswers.map((a) => [a.questionId, a.selectedOptionId]),
+    );
 
-    // Recalculate remaining time (30 minutes default duration)
     const elapsedSeconds = Math.floor(
       (Date.now() - new Date(session.startedAt).getTime()) / 1000,
     );
-    const durationSeconds = 1800; // 30 minutes
+    const durationSeconds = attempt.assessment.timeLimit;
     const remainingTime = Math.max(0, durationSeconds - elapsedSeconds);
 
     return {
@@ -173,15 +195,12 @@ export class AttemptService {
       remainingTime,
       answers: answersRecord,
       ...selection,
+      maxAttempts: attempt.assessment.maxAttempts,
+      timeLimitEnabled: attempt.assessment.timeLimitEnabled,
+      allowResume: attempt.assessment.allowResume,
     };
   }
 
-  // ─────────────────── AUTO-SAVE ANSWERS ───────────────────
-
-  /**
-   * Save student's current answers. Programmatically upsert answers
-   * to avoid creating duplicate rows since AttemptAnswer lacks a unique constraint.
-   */
   async autoSaveAnswers(
     userId: string,
     attemptId: string,
@@ -214,7 +233,6 @@ export class AttemptService {
 
     const questions = attempt.assessment.questionBank.questions;
 
-    // Process answers sequentially to update or create
     for (const [questionId, selectedOptionId] of Object.entries(answers)) {
       const dbQuestion = questions.find((q) => q.id === questionId);
       if (!dbQuestion) continue;
@@ -223,30 +241,17 @@ export class AttemptService {
       const isCorrect = selectedOptionId === correctOption?.id;
 
       const existingAnswer = await this.prisma.attemptAnswer.findFirst({
-        where: {
-          attemptId,
-          questionId,
-        },
+        where: { attemptId, questionId },
       });
 
       if (existingAnswer) {
         await this.prisma.attemptAnswer.update({
           where: { id: existingAnswer.id },
-          data: {
-            selectedOptionId,
-            isCorrect,
-            answeredAt: new Date(),
-          },
+          data: { selectedOptionId, isCorrect, answeredAt: new Date() },
         });
       } else {
         await this.prisma.attemptAnswer.create({
-          data: {
-            attemptId,
-            questionId,
-            selectedOptionId,
-            isCorrect,
-            answeredAt: new Date(),
-          },
+          data: { attemptId, questionId, selectedOptionId, isCorrect, answeredAt: new Date() },
         });
       }
     }
@@ -254,13 +259,44 @@ export class AttemptService {
     return { success: true };
   }
 
-  // ─────────────────── SUBMIT ATTEMPT ───────────────────
+  // ─────────────────── SPRINT 7: SYNC ANSWERS ───────────────────
 
   /**
-   * Submit and grade the attempt. Applies proctoring deductions, awards XP
-   * on first pass, fires audit logs, and checks credential eligibility.
+   * PATCH /api/assessments/attempts/sync
+   *
+   * Validates the attempt, rejects completed ones, and delegates
+   * persistence to autoSaveAnswers. Returns synced count + server timestamp.
    */
-  async submitAttempt(userId: string, attemptId: string) {
+  async syncAnswers(userId: string, dto: SyncAnswersDto): Promise<SyncResponseDto> {
+    const attempt = await this.prisma.assessmentAttempt.findUnique({
+      where: { id: dto.attemptId },
+    });
+
+    if (!attempt || attempt.userId !== userId) {
+      throw new NotFoundException('Attempt not found');
+    }
+
+    if (attempt.completedAt) {
+      throw new BadRequestException('Cannot sync answers for a completed attempt');
+    }
+
+    await this.autoSaveAnswers(userId, dto.attemptId, dto.answers);
+
+    this.logger.debug(
+      `Synced ${Object.keys(dto.answers).length} answers for attempt ${dto.attemptId}`,
+    );
+
+    return {
+      syncedCount: Object.keys(dto.answers).length,
+      serverTimestamp: Date.now(),
+    };
+  }
+
+  async submitAttempt(
+    userId: string,
+    attemptId: string,
+    answers?: Record<string, string>,
+  ) {
     const attempt = await this.prisma.assessmentAttempt.findUnique({
       where: { id: attemptId },
       include: {
@@ -287,27 +323,51 @@ export class AttemptService {
       throw new BadRequestException('Attempt is already completed');
     }
 
-    // Retrieve corresponding active proctoring session
+    // If answers provided, upsert them before grading
+    if (answers) {
+      for (const [questionId, selectedOptionId] of Object.entries(answers)) {
+        const question = attempt.assessment.questionBank.questions.find(
+          (q) => q.id === questionId,
+        );
+        if (!question) continue;
+        const correctOption = question.options.find((o) => o.isCorrect);
+        const isCorrect = selectedOptionId === correctOption?.id;
+        const existing = attempt.attemptAnswers.find(
+          (a) => a.questionId === questionId,
+        );
+        if (existing) {
+          await this.prisma.attemptAnswer.update({
+            where: { id: existing.id },
+            data: { selectedOptionId, isCorrect, answeredAt: new Date() },
+          });
+        } else {
+          await this.prisma.attemptAnswer.create({
+            data: {
+              attemptId,
+              questionId,
+              selectedOptionId,
+              isCorrect,
+              answeredAt: new Date(),
+            },
+          });
+        }
+      }
+    }
+
     const session = await this.prisma.examSession.findFirst({
-      where: {
-        userId,
-        assessmentId: attempt.assessmentId,
-        status: ExamStatus.ACTIVE,
-      },
+      where: { userId, assessmentId: attempt.assessmentId, status: ExamStatus.ACTIVE },
     });
 
-    // Re-verify the selected question set to calculate correct percentage
-    const selection = await this.questionSelectionService.selectQuestions(
-      attempt.assessmentId,
-      attempt.id,
-    );
+    const questionSet = (session?.questionSet ?? []) as unknown as QuestionSetItem[];
+    const hasQuestionSet = questionSet.length > 0;
 
-    const selectedQuestionIds = selection.questions.map((q) => q.id);
-
-    // Fetch the updated attempt answers
     const finalAnswers = await this.prisma.attemptAnswer.findMany({
       where: { attemptId },
     });
+
+    const selectedQuestionIds = hasQuestionSet
+      ? questionSet.map((q) => q.questionId)
+      : finalAnswers.map((a) => a.questionId);
 
     let correctCount = 0;
     for (const questionId of selectedQuestionIds) {
@@ -317,47 +377,42 @@ export class AttemptService {
       }
     }
 
-    const totalQuestions = selectedQuestionIds.length;
+    const totalQuestions = hasQuestionSet
+      ? questionSet.length
+      : Math.max(finalAnswers.length, attempt.assessment.sampleSize);
     let percentage = this.passFailEvaluationService.calculatePercentage(
       correctCount,
       totalQuestions,
     );
 
-    // Apply proctoring violation deduction if applicable
     if (session && session.scoreDeduction > 0) {
       percentage = Math.max(0, percentage - session.scoreDeduction);
     }
 
     const passed = percentage >= attempt.assessment.passingScore;
 
-    // Update session status to SUBMITTED
+    const finalScore =
+      session && session.scoreDeduction > 0
+        ? Math.max(0, Math.round((percentage / 100) * totalQuestions))
+        : correctCount;
+
     if (session) {
       await this.prisma.examSession.update({
         where: { id: session.id },
-        data: {
-          status: ExamStatus.SUBMITTED,
-          endedAt: new Date(),
-        },
+        data: { status: ExamStatus.SUBMITTED, endedAt: new Date() },
       });
 
-      // Link violation logs to the attempt for historical record
       await this.prisma.violationLog.updateMany({
         where: { sessionId: session.id },
         data: { attemptId: attempt.id },
       });
     }
 
-    // Update final assessment attempt grade
     const updatedAttempt = await this.prisma.assessmentAttempt.update({
       where: { id: attemptId },
-      data: {
-        score: percentage,
-        passed,
-        completedAt: new Date(),
-      },
+      data: { score: finalScore, passed, completedAt: new Date() },
     });
 
-    // Award XP on first pass only
     if (passed) {
       const priorPass = await this.prisma.assessmentAttempt.findFirst({
         where: {
@@ -374,40 +429,52 @@ export class AttemptService {
       }
     }
 
-    // Sprint 5 Task 4: Audit log on attempt completion
     await this.auditService.logAction(
       userId,
       AuditAction.ASSESSMENT_PUBLISHED,
-      `AttemptCompleted: attemptId=${attemptId}, score=${percentage}, passed=${passed}`,
+      `AttemptCompleted: attemptId=${attemptId}, score=${finalScore}, passed=${passed}`,
     );
 
-    // Sprint 5 Task 5: Check credential eligibility if student passed
     if (passed) {
+      // 1. Generate an Assessment-level credential
+      const moduleInfo = await this.prisma.module.findUnique({
+        where: { id: attempt.assessment.moduleId },
+        include: { track: { include: { program: true } } }
+      });
+      if (moduleInfo) {
+        const uniqueCode = require('crypto').randomBytes(9).toString('hex').toUpperCase();
+        await this.prisma.credential.create({
+          data: {
+            userId,
+            programId: moduleInfo.track.programId,
+            institutionId: moduleInfo.track.program.institutionId,
+            issuedById: userId, // System issued
+            tier: 'FORGE',
+            verificationCode: uniqueCode,
+            verificationUrl: `/verify/${uniqueCode}`,
+            verificationStatus: 'ACTIVE',
+          }
+        });
+      }
+
+      // 2. Check for Program-level credential eligibility
       await this.checkCredentialEligibility(userId, attempt.assessment.moduleId);
     }
+
+    await this.awardService.checkAndAward(userId, AchievementCategory.ASSESSMENT);
 
     return {
       success: true,
       attemptId: updatedAttempt.id,
-      score: percentage,
+      score: finalScore,
       passed,
     };
   }
 
-  // ─────────────────── CREDENTIAL ELIGIBILITY (Task 5) ───────────────────
-
-  /**
-   * After a student passes an assessment, check if they've completed
-   * all assessments in the track. If so, fire a notification to signal
-   * credential eligibility to Tirth's credential service.
-   *
-   * Traversal: Assessment.moduleId → Module.trackId → ProgramTrack → all Modules → all Assessments
-   */
   private async checkCredentialEligibility(
     userId: string,
     moduleId: string,
   ): Promise<void> {
-    // 1. Resolve the full chain: Module → Track → Program
     const currentModule = await this.prisma.module.findUnique({
       where: { id: moduleId },
       include: {
@@ -430,13 +497,11 @@ export class AttemptService {
     const track = currentModule.track;
     const allModules = track.modules;
 
-    // 2. Check if this is the last module in the track
     const maxOrder = Math.max(...allModules.map((m) => m.order));
     if (currentModule.order !== maxOrder) return;
 
-    // 3. Check if student has passed assessments in ALL modules of the track
     for (const mod of allModules) {
-      if (mod.assessments.length === 0) continue; // Skip modules with no assessments
+      if (mod.assessments.length === 0) continue;
 
       const passedAssessment = await this.prisma.assessmentAttempt.findFirst({
         where: {
@@ -447,39 +512,46 @@ export class AttemptService {
         },
       });
 
-      if (!passedAssessment) return; // Student hasn't passed this module's assessment
+      if (!passedAssessment) return;
     }
 
-    // 4. All modules passed — fire credential eligibility notification
     const programId = track.program.id;
     const trackId = track.id;
+
+    // Generate unique code
+    const uniqueCode = require('crypto').randomBytes(9).toString('hex').toUpperCase();
+
+    // Create credential directly in DB
+    const credential = await this.prisma.credential.create({
+      data: {
+        userId,
+        programId,
+        institutionId: track.program.institutionId,
+        issuedById: userId, // Self-issued for prototype or system ID
+        tier: 'CITADEL',
+        verificationCode: uniqueCode,
+        verificationUrl: `/verify/${uniqueCode}`,
+        verificationStatus: 'ACTIVE',
+      }
+    });
 
     await this.prisma.notification.create({
       data: {
         userId,
-        title: 'You are eligible for a credential!',
-        message:
-          'You have passed all assessments in the track. Your credential is being processed.',
-        type: NotificationType.CREDENTIAL,
+        title: 'You earned a credential!',
+        message: 'You have passed all assessments in the track. Your credential has been issued.',
+        type: 'CREDENTIAL',
         read: false,
       },
     });
 
-    // 5. Fire audit log for credential eligibility
     await this.auditService.logAction(
       userId,
-      AuditAction.CREDENTIAL_ISSUED,
-      `CredentialEligibility: userId=${userId}, programId=${programId}, trackId=${trackId}`,
+      'CREDENTIAL_ISSUED',
+      `Credential "${credential.verificationCode}" (ID: ${credential.id}) issued to user ${userId} for program ${programId}`,
     );
   }
 
-  // ─────────────────── GET ATTEMPT RESULT (Task 1) ───────────────────
-
-  /**
-   * Get completed attempt result with per-question breakdown.
-   * Students can only fetch their own results.
-   * Faculty can fetch any student's result for assessments they own.
-   */
   async getAttemptResult(
     userId: string,
     attemptId: string,
@@ -500,9 +572,7 @@ export class AttemptService {
           },
         },
         attemptAnswers: {
-          include: {
-            selectedOption: true,
-          },
+          include: { selectedOption: true },
         },
       },
     });
@@ -511,7 +581,6 @@ export class AttemptService {
       throw new NotFoundException('Attempt not found');
     }
 
-    // Ownership check: student can only see their own, faculty via ownership
     if (userRole === UserRole.FACULTY) {
       await this.assessmentService.validateAssessmentFacultyOwnership(
         attempt.assessmentId,
@@ -525,51 +594,68 @@ export class AttemptService {
       throw new BadRequestException('Attempt is not completed yet');
     }
 
-    // Reconstruct selected questions in identical order using the seed (attempt.id)
-    const selection = await this.questionSelectionService.selectQuestions(
-      attempt.assessmentId,
-      attempt.id,
-    );
+    const session = await this.prisma.examSession.findFirst({
+      where: {
+        userId,
+        assessmentId: attempt.assessmentId,
+        status: { in: [ExamStatus.SUBMITTED, ExamStatus.TERMINATED] },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
 
-    const totalQuestions = attempt.assessment.sampleSize;
+    const questionSet = (session?.questionSet ?? []) as unknown as QuestionSetItem[];
+    const totalQuestions = questionSet.length > 0
+      ? questionSet.length
+      : Math.max(attempt.attemptAnswers.length, attempt.assessment.sampleSize);
     const timeTaken = Math.floor(
       (new Date(attempt.completedAt).getTime() -
         new Date(attempt.startedAt).getTime()) /
-        1000,
+      1000,
     );
 
-    const correctCount = attempt.attemptAnswers.filter((a) => a.isCorrect).length;
-    const percentage = this.passFailEvaluationService.calculatePercentage(
-      correctCount,
-      totalQuestions,
-    );
-
-    const questions = selection.questions.map((q) => {
-      const savedAns = attempt.attemptAnswers.find(
-        (a) => a.questionId === q.id,
-      );
-      const dbQuestion = attempt.assessment.questionBank.questions.find(
-        (dbQ) => dbQ.id === q.id,
-      );
-      const correctOption = dbQuestion?.options.find((o) => o.isCorrect);
-
-      return {
-        questionId: q.id,
+    const questions = (questionSet.length > 0 ? questionSet.map((q) => ({
+        questionId: q.questionId,
         questionText: q.text,
-        selectedOptionId: savedAns?.selectedOptionId ?? null,
-        selectedOptionText: savedAns?.selectedOption?.text ?? null,
-        isCorrect: savedAns ? savedAns.isCorrect : false,
-        correctOptionId: correctOption?.id ?? '',
-        correctOptionText: correctOption?.text ?? '',
-      };
-    });
+      })) : attempt.attemptAnswers.map((a) => ({
+        questionId: a.questionId,
+        questionText: null as string | null,
+      }))).map((meta) => {
+        const savedAns = attempt.attemptAnswers.find((a) => a.questionId === meta.questionId);
+        const dbQuestion = attempt.assessment.questionBank.questions.find(
+          (dbQ) => dbQ.id === meta.questionId,
+        );
+        const correctOption = dbQuestion?.options.find((o) => o.isCorrect);
+        const isCorrect = savedAns ? savedAns.selectedOptionId === correctOption?.id : false;
+
+        return {
+          questionId: meta.questionId,
+          questionText: meta.questionText ?? dbQuestion?.text ?? 'Unknown question',
+          selectedOptionId: savedAns?.selectedOptionId ?? null,
+          selectedOptionText: savedAns?.selectedOption?.text ?? null,
+          isCorrect,
+          correctOptionId: correctOption?.id ?? '',
+          correctOptionText: correctOption?.text ?? '',
+          options: (dbQuestion?.options ?? []).map((o) => ({
+            id: o.id,
+            text: o.text,
+          })),
+        };
+      });
+
+    const score = questions.filter((q) => q.isCorrect).length;
+    const rawPercentage = Math.round((score / totalQuestions) * 100);
+    const deduction = session?.scoreDeduction ?? 0;
+    const effectivePercentage = Math.max(0, rawPercentage - deduction);
+    const effectiveScore = deduction > 0
+      ? Math.max(0, Math.round((effectivePercentage / 100) * totalQuestions))
+      : score;
 
     return {
       attemptId: attempt.id,
       assessmentTitle: attempt.assessment.title,
-      score: correctCount,
-      percentage,
-      passed: attempt.passed,
+      score: effectiveScore,
+      percentage: effectivePercentage,
+      passed: effectivePercentage >= attempt.assessment.passingScore,
       passingScore: attempt.assessment.passingScore,
       totalQuestions,
       timeTaken,
@@ -579,12 +665,6 @@ export class AttemptService {
     };
   }
 
-  // ─────────────────── ATTEMPT HISTORY (Task 1) ───────────────────
-
-  /**
-   * Return attempt history for an assessment.
-   * Students see only their own history; faculty see all students' history.
-   */
   async getAttemptHistory(
     assessmentId: string,
     userId: string,
@@ -599,33 +679,37 @@ export class AttemptService {
       throw new NotFoundException('Assessment not found');
     }
 
-    // Faculty ownership validation is handled by the controller
-    const whereClause: any = {
+    const where: Record<string, unknown> = {
       assessmentId,
       completedAt: { not: null },
     };
 
-    // Students can only see their own history
     if (!userRole || userRole === UserRole.STUDENT) {
-      whereClause.userId = userId;
+      where.userId = userId;
     }
 
     const attempts = await this.prisma.assessmentAttempt.findMany({
-      where: whereClause,
+      where,
       orderBy: { startedAt: 'desc' },
     });
 
-    const attemptDtos = attempts.map((a) => ({
-      attemptId: a.id,
-      score: a.score,
-      percentage: this.passFailEvaluationService.calculatePercentage(
-        a.score,
-        assessment.sampleSize,
-      ),
-      passed: a.passed,
-      startedAt: a.startedAt,
-      completedAt: a.completedAt,
-    }));
+    const attemptDtos = attempts.map((a) => {
+      const percentage =
+        a.score > assessment.sampleSize
+          ? a.score
+          : this.passFailEvaluationService.calculatePercentage(
+              a.score,
+              assessment.sampleSize,
+            );
+      return {
+        attemptId: a.id,
+        score: a.score,
+        percentage,
+        passed: a.passed,
+        startedAt: a.startedAt,
+        completedAt: a.completedAt,
+      };
+    });
 
     return {
       assessmentId: assessment.id,
@@ -635,11 +719,6 @@ export class AttemptService {
     };
   }
 
-  // ─────────────────── MY HISTORY (Task 1) ───────────────────
-
-  /**
-   * Returns all attempts across all assessments for the current student.
-   */
   async getMyHistory(userId: string): Promise<MyHistoryResponseDto> {
     const attempts = await this.prisma.assessmentAttempt.findMany({
       where: { userId },
@@ -653,33 +732,30 @@ export class AttemptService {
       orderBy: { startedAt: 'desc' },
     });
 
-    const attemptDtos = attempts.map((a) => ({
-      attemptId: a.id,
-      assessmentId: a.assessmentId,
-      assessmentTitle: a.assessment.title,
-      moduleTitle: a.assessment.module.title,
-      score: a.score,
-      percentage: this.passFailEvaluationService.calculatePercentage(
-        a.score,
-        a.assessment.sampleSize,
-      ),
-      passed: a.passed,
-      startedAt: a.startedAt,
-      completedAt: a.completedAt,
-    }));
+    const attemptDtos = attempts.map((a) => {
+      const percentage =
+        a.score > a.assessment.sampleSize
+          ? a.score
+          : this.passFailEvaluationService.calculatePercentage(
+              a.score,
+              a.assessment.sampleSize,
+            );
+      return {
+        attemptId: a.id,
+        assessmentId: a.assessmentId,
+        assessmentTitle: a.assessment.title,
+        moduleTitle: a.assessment.module.title,
+        score: a.score,
+        percentage,
+        passed: a.passed,
+        startedAt: a.startedAt,
+        completedAt: a.completedAt,
+      };
+    });
 
-    return {
-      userId,
-      attempts: attemptDtos,
-    };
+    return { userId, attempts: attemptDtos };
   }
 
-  // ─────────────────── ATTEMPT STATUS (Task 2) ───────────────────
-
-  /**
-   * Returns attempt status with remaining attempts, active attempt info,
-   * and best score for a student on a given assessment.
-   */
   async getAttemptStatus(
     assessmentId: string,
     userId: string,
@@ -698,20 +774,22 @@ export class AttemptService {
 
     const activeAttempt = attempts.find((a) => !a.completedAt);
     const completedAttempts = attempts.filter((a) => a.completedAt !== null);
-    const attemptsUsed = attempts.length;
-    const attemptsRemaining = Math.max(0, MAX_ATTEMPTS_DEFAULT - attemptsUsed);
+    const attemptsUsed = completedAttempts.length;
+    const attemptsRemaining = Math.max(0, assessment.maxAttempts - attemptsUsed);
 
-    // Best score among completed attempts
     let bestScore: number | null = null;
     let bestPercentage: number | null = null;
     let everPassed = false;
 
     if (completedAttempts.length > 0) {
       bestScore = Math.max(...completedAttempts.map((a) => a.score));
-      bestPercentage = this.passFailEvaluationService.calculatePercentage(
-        bestScore,
-        assessment.sampleSize,
-      );
+      bestPercentage =
+        bestScore > assessment.sampleSize
+          ? bestScore
+          : this.passFailEvaluationService.calculatePercentage(
+              bestScore,
+              assessment.sampleSize,
+            );
       everPassed = completedAttempts.some((a) => a.passed);
     }
 
@@ -719,10 +797,10 @@ export class AttemptService {
       assessmentId,
       attemptsUsed,
       attemptsRemaining,
-      maxAttempts: MAX_ATTEMPTS_DEFAULT,
+      maxAttempts: assessment.maxAttempts,
       hasActiveAttempt: !!activeAttempt,
       activeAttemptId: activeAttempt?.id ?? null,
-      canAttempt: !activeAttempt && attemptsRemaining > 0,
+      canAttempt: !activeAttempt && attemptsRemaining > 0 && !everPassed,
       bestScore,
       bestPercentage,
       everPassed,

@@ -126,6 +126,48 @@ NestJS 11, Prisma 6, PostgreSQL (Neon), JWT (jose)
 
 ---
 
+## Sprint 7 — Local Redis
+
+Redis is used as an optional cache layer for the `QuestionSelectionService` (5-minute TTL). The backend defaults to an in-memory cache when Redis is not running (`CACHE_STORE=memory`).
+
+### Start Redis (Docker)
+
+```bash
+docker compose -f docker-compose.dev.yml up -d
+```
+
+### Verify
+
+```bash
+docker exec -it dezai-redis redis-cli ping
+# Expected: PONG
+```
+
+### Enable Redis caching
+
+Set `CACHE_STORE=redis` in `backend/.env`:
+
+```env
+CACHE_STORE=redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+```
+
+> **Note:** `CACHE_STORE=memory` remains the default and works without Docker/Redis. Teammates who haven't set up Redis will not be affected.
+
+### Useful Redis commands
+
+| Command | Purpose |
+|---------|---------|
+| `docker exec -it dezai-redis redis-cli` | Open Redis CLI |
+| `docker logs dezai-redis` | View Redis logs |
+| `docker stop dezai-redis` | Stop container |
+| `docker start dezai-redis` | Restart container |
+| `docker exec -it dezai-redis redis-cli FLUSHALL` | Clear all cached data |
+| `docker exec -it dezai-redis redis-cli KEYS "qbank:*"` | Inspect question bank cache keys |
+
+---
+
 ## Roles
 
 - **Student**: Browse catalog, enroll, watch lessons, take notes, bookmarks, XP

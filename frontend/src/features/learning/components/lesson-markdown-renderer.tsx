@@ -19,7 +19,7 @@ export function LessonMarkdownRenderer({ content, className }: LessonMarkdownRen
         rehypePlugins={[rehypeSanitize]}
         components={{
           // Custom fenced block components interception
-          code({ inline, className: codeClassName, children, ...props }: any) {
+          code({ inline, className: codeClassName, children, ...props }: { inline?: boolean; className?: string; children?: React.ReactNode }) {
             const match = /language-(\S+)/.exec(codeClassName || "");
             const lang = match ? match[1] : "";
             const component = getBlockComponent(lang);

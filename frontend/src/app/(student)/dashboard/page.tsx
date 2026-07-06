@@ -1,6 +1,6 @@
 "use client";
 
-import { StudentDashboardPage } from "@/features/learning/pages/StudentDashboardPage";
+import { StudentDashboardPage } from "@/features/dashboard/pages/StudentDashboardPage";
 import { AdminDashboard } from "@/features/dashboard/components/AdminDashboard";
 import { FacultyDashboard } from "@/features/dashboard/components/FacultyDashboard";
 import { useAuthStore } from "@/lib/stores/auth.store";

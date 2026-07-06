@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
-import { CreateChatSessionDto, UpdateSessionContextDto } from '../dto/chat.dto';
+import { CreateChatSessionDto, UpdateSessionContextDto, UpdateSessionTitleDto } from '../dto/chat.dto';
 
 /**
  * ChatRepository handles all database operations for chat sessions and messages.
@@ -56,7 +56,7 @@ export class ChatRepository {
           take: 1, // Get only the last message as preview
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { updatedAt: 'desc' },
       take: limit,
       skip: offset,
     });
@@ -83,6 +83,10 @@ export class ChatRepository {
         content,
       },
     });
+  }
+
+  async deleteMessage(messageId: string) {
+    return this.prisma.chatMessage.delete({ where: { id: messageId } });
   }
 
   /**
@@ -120,6 +124,26 @@ export class ChatRepository {
         activeProgramId: dto.activeProgramId ?? undefined,
         activeModuleId: dto.activeModuleId ?? undefined,
         activeLessonId: dto.activeLessonId ?? undefined,
+      },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+  }
+
+  /**
+   * Update session title
+   */
+  async updateSessionTitle(
+    sessionId: string,
+    dto: UpdateSessionTitleDto,
+  ) {
+    return this.prisma.chatSession.update({
+      where: { id: sessionId },
+      data: {
+        title: dto.title,
       },
       include: {
         messages: {
