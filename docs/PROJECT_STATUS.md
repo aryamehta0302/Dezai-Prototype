@@ -8,8 +8,8 @@ This document tracks the current implementation progress, feature status, databa
 
 Dezai AI is a university-grade EdTech platform built with a secure Next.js frontend, modular NestJS backend, and a PostgreSQL database mapped via Prisma.
 
-* **Current Status**: **~92%** completion toward production MVP
-* **Latest Sprint**: Sprint 5 (Leaderboard Components + Faculty Monitoring & Intervention Hub)
+* **Current Status**: **~95%** completion toward production MVP
+* **Latest Sprint**: Sprint 7 (V1 Production Hardening - SSE Insights & Tenant Isolation)
 * **Latest Milestones**: 
   * **Leaderboard Features**: Global and Monthly XP performance widgets, current user rank card.
   * **Faculty Monitoring Module**: Curriculum checksheet audits, quiz logs, and proctoring violation timeline.
@@ -34,6 +34,7 @@ Dezai AI is a university-grade EdTech platform built with a secure Next.js front
 | **Sprint 3** | Assessment Engine | Question Bank CRUD, Fisher-Yates 100:15 Dynamic Selection, basic analytics | ✅ Completed | 2026-06-17 |
 | **Sprint 4** | Platform Polish & Lifecycle | AI Mentor Workspace, Faculty Dashboard 2.0, Notification Center, Attempt Lifecycle, Hybrid Delivery | ✅ Completed | 2026-06-18 |
 | **Sprint 5** | Leaderboards & Faculty Portal | Global/Monthly Leaderboards, Student Rank Cards, Faculty Monitoring & Intervention Hub | ✅ Completed | 2026-06-23 |
+| **Sprint 7** | V1 Production Hardening | SSE Faculty Insights Stream, Strict Tenant Isolation, Audit Interceptor, Skeleton Loader Refactoring | ✅ Completed | 2026-07-06 |
 
 ---
 
@@ -172,7 +173,7 @@ GET    /api/assessments/:id/questions/select
 GET    /api/assessments/:id/analytics
 ```
 
-### Assessment Lifecycle & Recommendations (10)
+### Assessment Lifecycle & Recommendations (11)
 ```http
 POST   /api/assessments/attempts/start
 GET    /api/assessments/attempts/history/:assessmentId
@@ -184,6 +185,7 @@ GET    /api/assessments/:id/results
 GET    /api/assessments/recommendations/next-module/:programId
 GET    /api/assessments/recommendations/continue-learning
 GET    /api/assessments/recommendations/ready-assessments
+GET    /api/assessments/faculty-insights/stream
 ```
 
 ### AI Mentor (6)

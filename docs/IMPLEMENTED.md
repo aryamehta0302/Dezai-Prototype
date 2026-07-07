@@ -660,6 +660,43 @@ No database migrations or schema alterations were required. Sent student outreac
 
 ---
 
+## 15. Sprint 7.1 — Faculty Real-Time Insights & Audit System
+
+### Features Implemented
+
+1. **Real-time SSE Insights Streaming**:
+   - Implemented a Server-Sent Events (SSE) route `GET /api/assessments/faculty-insights/stream` pushing real-time summaries and at-risk alerts.
+   - Designed corresponding React client integration in the Faculty Dashboard with smooth state management (`connected`, `reconnecting`, `offline`).
+
+2. **Access Isolation & Program Ownership Verification**:
+   - Hardened all program-related endpoints in the `AnalyticsController` to restrict visibility strictly to the assigned instructor or university admin, throwing `403 Forbidden` on breach attempts.
+
+3. **Data Access Audit Logging**:
+   - Activated a global-class auditing interceptor `FacultyDataAccessInterceptor` across all primary faculty controllers. Logs detailed audit contexts of every allowed/denied operation.
+
+4. **UX Loader Polish**:
+   - Refactored the dashboard layouts so the sidebar remains fixed on page-load, while local content blocks animate smoothly using the modular `PageSkeleton` component.
+
+### Endpoint Summary
+
+| Method | Route | Auth | Roles | Description |
+|---|---|---|---|---|
+| GET | `/api/assessments/faculty-insights/stream` | JWT | FACULTY, UNIV_ADMIN, DEZAI_ADMIN | SSE real-time cohort at-risk alerts stream |
+
+### Files Added / Modified
+
+| Action | File |
+|---|---|
+| MODIFIED | [backend/src/modules/analytics/analytics.module.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/analytics.module.ts) |
+| MODIFIED | [backend/src/modules/analytics/controllers/analytics.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/controllers/analytics.controller.ts) |
+| MODIFIED | [backend/src/modules/assessments/controllers/assessment.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/assessments/controllers/assessment.controller.ts) |
+| MODIFIED | [backend/src/modules/assessments/services/assessment.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/assessments/services/assessment.service.ts) |
+| MODIFIED | [backend/src/modules/programs/controllers/programs.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/programs/controllers/programs.controller.ts) |
+| MODIFIED | [backend/src/modules/users/services/xp.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/users/services/xp.service.ts) |
+| MODIFIED | [frontend/src/features/dashboard/components/FacultyDashboard.tsx](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/components/FacultyDashboard.tsx) |
+| NEW | [frontend/src/features/dashboard/hooks/useFacultyInsightsStream.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/hooks/useFacultyInsightsStream.ts) |
+| NEW | [backend/src/common/interceptors/faculty-data-access.interceptor.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/common/interceptors/faculty-data-access.interceptor.ts) |
+
 ## 14. Sprint 6: Assessment Intelligence & Faculty Insights Systems (Manan Panchal)
 
 **Sprint:** 6 | **Date:** 2026-06-23

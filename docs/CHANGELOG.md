@@ -111,6 +111,27 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Sprint 7] — 2026-07-06
+
+### V1 Production Hardening & SSE Insights (Faculty Experience Lead)
+
+#### Added
+- **SSE Faculty Insights Stream** — Real-time insights streaming endpoint pushing at-risk and low-progress indicators to faculty dashboards.
+  - Endpoint: `GET /api/assessments/faculty-insights/stream`
+  - Files: [assessment.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/assessments/controllers/assessment.controller.ts), [assessment.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/assessments/services/assessment.service.ts)
+- **Live Academic Risk Stream Widget** — Real-time dashboard panel in the frontend displaying live alerts and connection state feedback.
+  - Files: [FacultyDashboard.tsx](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/components/FacultyDashboard.tsx), [useFacultyInsightsStream.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/hooks/useFacultyInsightsStream.ts)
+- **Faculty Data Access Audit Logging** — Class-level interceptor applied to faculty controllers (`AnalyticsController`, `AssessmentController`, `ProgramsController`) to audit operations.
+  - File: [faculty-data-access.interceptor.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/common/interceptors/faculty-data-access.interceptor.ts)
+
+#### Changed
+- **Strict Tenant Isolation Boundaries** — Integrated program ownership checks on all program-related analytics endpoints inside `AnalyticsController` to prevent cross-tenant queries.
+  - Files: [analytics.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/controllers/analytics.controller.ts), [analytics.module.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/analytics.module.ts)
+- **Dashboard Loader Refactoring** — Replaced full-page loader spinner with persistent sidebar layout and local `PageSkeleton` widgets inside main panel.
+  - File: [FacultyDashboard.tsx](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/components/FacultyDashboard.tsx)
+
+---
+
 ## [Sprint 5] — 2026-06-22
 
 ### Assessment Module Completion (Manan Panchal)

@@ -6,6 +6,7 @@ import {
   Param,
   UseGuards,
   Req,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   AnalyticsService,
@@ -18,10 +19,12 @@ import {
   ProgramInsightsResponseDto,
   InterventionDto,
 } from '../services/analytics.service';
+import { ProgramsService } from '../../programs/services/programs.service';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
+import { FacultyDataAccessInterceptor } from '../../../common/interceptors/faculty-data-access.interceptor';
 
 /**
  * AnalyticsController
@@ -43,8 +46,12 @@ import { UserRole } from '@prisma/client';
  */
 @Controller('analytics')
 @UseGuards(JwtAuthGuard)
+@UseInterceptors(FacultyDataAccessInterceptor)
 export class AnalyticsController {
-  constructor(private readonly analyticsService: AnalyticsService) {}
+  constructor(
+    private readonly analyticsService: AnalyticsService,
+    private readonly programsService: ProgramsService,
+  ) {}
 
   /**
    * GET /api/analytics/faculty
@@ -108,7 +115,8 @@ export class AnalyticsController {
   @Get('programs/:id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
-  async getProgramAnalytics(@Param('id') programId: string): Promise<{ success: boolean; data: ProgramAnalyticsResponseDto }> {
+  async getProgramAnalytics(@Param('id') programId: string, @Req() req): Promise<{ success: boolean; data: ProgramAnalyticsResponseDto }> {
+    await this.programsService.validateProgramOwnership(req.user.id, programId, req.user.role as UserRole);
     const data = await this.analyticsService.getProgramAnalytics(programId);
     return { success: true, data };
   }
@@ -123,7 +131,8 @@ export class AnalyticsController {
   @Get('programs/:id/students')
   @UseGuards(RolesGuard)
   @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
-  async getStudentMetrics(@Param('id') programId: string): Promise<{ success: boolean; data: StudentMetricsResponseDto }> {
+  async getStudentMetrics(@Param('id') programId: string, @Req() req): Promise<{ success: boolean; data: StudentMetricsResponseDto }> {
+    await this.programsService.validateProgramOwnership(req.user.id, programId, req.user.role as UserRole);
     const data = await this.analyticsService.getStudentMetrics(programId);
     return { success: true, data };
   }
@@ -135,7 +144,8 @@ export class AnalyticsController {
   @Get('programs/:id/modules/stats')
   @UseGuards(RolesGuard)
   @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
-  async getModuleCompletionStats(@Param('id') programId: string): Promise<{ success: boolean; data: ModuleCompletionStatDto[] }> {
+  async getModuleCompletionStats(@Param('id') programId: string, @Req() req): Promise<{ success: boolean; data: ModuleCompletionStatDto[] }> {
+    await this.programsService.validateProgramOwnership(req.user.id, programId, req.user.role as UserRole);
     const data = await this.analyticsService.getModuleCompletionStats(programId);
     return { success: true, data };
   }
@@ -150,7 +160,9 @@ export class AnalyticsController {
   async getStudentDetailedProgress(
     @Param('programId') programId: string,
     @Param('userId') userId: string,
+    @Req() req,
   ): Promise<{ success: boolean; data: StudentDetailedProgressResponseDto }> {
+    await this.programsService.validateProgramOwnership(req.user.id, programId, req.user.role as UserRole);
     const data = await this.analyticsService.getStudentDetailedProgress(programId, userId);
     return { success: true, data };
   }
@@ -162,7 +174,8 @@ export class AnalyticsController {
   @Get('programs/:id/insights')
   @UseGuards(RolesGuard)
   @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
-  async getProgramInsights(@Param('id') programId: string): Promise<{ success: boolean; data: ProgramInsightsResponseDto }> {
+  async getProgramInsights(@Param('id') programId: string, @Req() req): Promise<{ success: boolean; data: ProgramInsightsResponseDto }> {
+    await this.programsService.validateProgramOwnership(req.user.id, programId, req.user.role as UserRole);
     const data = await this.analyticsService.getProgramInsights(programId);
     return { success: true, data };
   }
@@ -179,6 +192,7 @@ export class AnalyticsController {
     @Req() req,
     @Body() body: { userId: string; message: string },
   ): Promise<{ success: boolean; data: any }> {
+    await this.programsService.validateProgramOwnership(req.user.id, programId, req.user.role as UserRole);
     const data = await this.analyticsService.createIntervention(
       programId,
       req.user.id,
@@ -195,7 +209,8 @@ export class AnalyticsController {
   @Get('programs/:id/interventions')
   @UseGuards(RolesGuard)
   @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
-  async getInterventionsList(@Param('id') programId: string): Promise<{ success: boolean; data: InterventionDto[] }> {
+  async getInterventionsList(@Param('id') programId: string, @Req() req): Promise<{ success: boolean; data: InterventionDto[] }> {
+    await this.programsService.validateProgramOwnership(req.user.id, programId, req.user.role as UserRole);
     const data = await this.analyticsService.getInterventionsList(programId);
     return { success: true, data };
   }
