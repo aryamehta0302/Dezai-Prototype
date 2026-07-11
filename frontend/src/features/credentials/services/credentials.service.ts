@@ -7,7 +7,7 @@ export const credentialsService = {
    * Fetches the logged-in student's credentials.
    */
   getStudentCredentials: async (): Promise<CredentialResponse[]> => {
-    const res = await apiClient.get<{ success: boolean; credentials: CredentialResponse[] }>("/api/credentials/student");
+    const res = await apiClient.get<{ success: boolean; credentials: CredentialResponse[] }>("/credentials/student");
     return res.credentials;
   },
 
@@ -15,7 +15,7 @@ export const credentialsService = {
    * Public endpoint to verify a credential by its code.
    */
   verifyCredential: async (code: string): Promise<CredentialResponse> => {
-    const res = await apiClient.get<{ success: boolean; credential: CredentialResponse }>(`/api/credentials/verify/${code}`);
+    const res = await apiClient.get<{ success: boolean; credential: CredentialResponse }>(`/credentials/verify/${code}`);
     return res.credential;
   },
 
@@ -23,7 +23,7 @@ export const credentialsService = {
    * Claims a credential for a completed program.
    */
   claimCredential: async (programId: string): Promise<CredentialResponse> => {
-    const res = await apiClient.post<{ success: boolean; credential: CredentialResponse }>("/api/credentials/claim", {
+    const res = await apiClient.post<{ success: boolean; credential: CredentialResponse }>("/credentials/claim", {
       programId,
     });
     return res.credential;
@@ -33,7 +33,7 @@ export const credentialsService = {
    * Fetches specific credential details by database ID.
    */
   getCredentialDetails: async (id: string): Promise<CredentialResponse> => {
-    const res = await apiClient.get<{ success: boolean; credential: CredentialResponse }>(`/api/credentials/${id}`);
+    const res = await apiClient.get<{ success: boolean; credential: CredentialResponse }>(`/credentials/${id}`);
     return res.credential;
   },
 
@@ -41,6 +41,6 @@ export const credentialsService = {
    * Fetches credential analytics.
    */
   getCredentialAnalytics: async (): Promise<any> => {
-    return await apiClient.get<any>("/api/credentials/analytics");
+    return await apiClient.get<any>("/credentials/analytics");
   },
 };

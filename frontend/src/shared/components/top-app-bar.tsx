@@ -20,7 +20,7 @@ import {
 import { useState } from "react";
 
 interface TopAppBarProps {
-  variant?: "default" | "student" | "admin" | "university";
+  variant?: "default" | "student" | "admin" | "university" | "employee" | "enterprise";
   user?: {
     name: string;
     email: string;
@@ -39,6 +39,14 @@ const studentNav = [
   { href: "/profile", label: "Profile", icon: User },
 ];
 
+const employeeNav = [
+  { href: "/enterprise/credentials", label: "My Compliance", icon: Award },
+];
+
+const enterpriseNav = [
+  { href: "/enterprise/dashboard", label: "Compliance Dashboard", icon: LayoutDashboard },
+];
+
 export function TopAppBar({
   variant = "default",
   user,
@@ -50,7 +58,14 @@ export function TopAppBar({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
-  const nav = variant === "student" || variant === "default" ? studentNav : [];
+  const getNav = () => {
+    if (variant === "employee") return employeeNav;
+    if (variant === "enterprise") return enterpriseNav;
+    if (variant === "student" || variant === "default") return studentNav;
+    return [];
+  };
+
+  const nav = getNav();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-white">

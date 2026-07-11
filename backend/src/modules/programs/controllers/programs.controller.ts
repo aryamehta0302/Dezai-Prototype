@@ -12,12 +12,14 @@ import {
   HttpStatus,
   BadRequestException,
   Query,
+  UseInterceptors,
 } from "@nestjs/common";
 import { ProgramsService } from "../services/programs.service";
 import { JwtAuthGuard } from "../../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../../common/guards/roles.guard";
 import { Roles } from "../../../common/decorators/roles.decorator";
 import { UserRole } from "@prisma/client";
+import { FacultyDataAccessInterceptor } from "../../../common/interceptors/faculty-data-access.interceptor";
 import {
   CreateProgramDto,
   UpdateProgramDto,
@@ -31,6 +33,7 @@ import {
 } from "../dto/programs.dto";
 
 @Controller("programs")
+@UseInterceptors(FacultyDataAccessInterceptor)
 export class ProgramsController {
   constructor(private readonly programsService: ProgramsService) {}
 

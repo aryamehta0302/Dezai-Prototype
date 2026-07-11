@@ -19,6 +19,8 @@ import { LeaderboardsModule } from './modules/leaderboards/leaderboards.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AchievementsModule } from './modules/achievements/achievements.module';
 import { EnterpriseAssessmentsModule } from './modules/enterprise-assessments/enterprise-assessments.module';
+import { EnterpriseCredentialsModule } from './modules/enterprise-credentials/enterprise-credentials.module';
+
 
 @Module({
   imports: [
@@ -61,6 +63,7 @@ import { EnterpriseAssessmentsModule } from './modules/enterprise-assessments/en
     AuditModule,
     AchievementsModule,
     EnterpriseAssessmentsModule,
+    EnterpriseCredentialsModule,
   ],
   controllers: [],
   providers: [],

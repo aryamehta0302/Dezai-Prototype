@@ -79,6 +79,30 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Sprint 5 — QA & Release Readiness Validation] — 2026-07-01
+
+**Developer:** Hitarth (QA & Release Readiness Lead)
+
+### Added
+- **E2E Playwright Suite** — Created 7 automated tests covering registration, onboarding, enrollment, assessments, proctoring violations, and credential revocation/verification.
+  - Directory: [frontend/tests/e2e/](file:///d:/DEZAI/Dezai-Prototype/frontend/tests/e2e/)
+- **Load Testing (k6)** — Created load test scripts for Assessment Attempts and Leaderboard queries under multiple virtual user profiles.
+  - Directory: [tests/load/](file:///d:/DEZAI/Dezai-Prototype/tests/load/)
+- **Audit Log Validation Report (V1)** — Audited database schema log actions against all active module triggers.
+  - File: [reports/audit-log-validation-v1.md](file:///d:/DEZAI/Dezai-Prototype/reports/audit-log-validation-v1.md)
+- **Documentation Audit Report (V1)** — Reconciled API references, architecture rules, and setup guides.
+  - File: [reports/documentation-audit-v1.md](file:///d:/DEZAI/Dezai-Prototype/reports/documentation-audit-v1.md)
+- **V1 Release Readiness Report** — Compiled final release sign-off dashboard and checklists.
+  - File: [reports/V1-Release-Readiness-Report.md](file:///d:/DEZAI/Dezai-Prototype/reports/V1-Release-Readiness-Report.md)
+
+### Changed
+- **`UpdateCredentialStatusDto` Validation** — Added `@IsEnum` validation to prevent NestJS whitelisting from stripping the credential status patch fields.
+  - File: [UpdateCredentialStatusDto.ts](file:///d:/DEZAI/Dezai-Prototype/backend/src/modules/credentials/dto/UpdateCredentialStatusDto.ts)
+- **`CredentialContext` State Stability** — Wrapped context actions in `useCallback` to prevent infinite render loops on dynamic fetches.
+  - File: [CredentialContext.tsx](file:///d:/DEZAI/Dezai-Prototype/frontend/src/features/credentials/context/CredentialContext.tsx)
+
+---
+
 ## [Sprint 6] — 2026-06-23
 
 ### Assessment Intelligence + Faculty Insights & Intervention System (Manan Panchal)
@@ -98,6 +122,27 @@ All notable changes to this project will be documented in this file.
 - 3 new services: WeakTopicDetectionService, AssessmentAnalyticsService, FacultyInsightService
 
 ### Developer: Manan Panchal · Branch: feature/assessment-intelligence
+
+---
+
+## [Sprint 7] — 2026-07-06
+
+### V1 Production Hardening & SSE Insights (Faculty Experience Lead)
+
+#### Added
+- **SSE Faculty Insights Stream** — Real-time insights streaming endpoint pushing at-risk and low-progress indicators to faculty dashboards.
+  - Endpoint: `GET /api/assessments/faculty-insights/stream`
+  - Files: [assessment.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/assessments/controllers/assessment.controller.ts), [assessment.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/assessments/services/assessment.service.ts)
+- **Live Academic Risk Stream Widget** — Real-time dashboard panel in the frontend displaying live alerts and connection state feedback.
+  - Files: [FacultyDashboard.tsx](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/components/FacultyDashboard.tsx), [useFacultyInsightsStream.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/hooks/useFacultyInsightsStream.ts)
+- **Faculty Data Access Audit Logging** — Class-level interceptor applied to faculty controllers (`AnalyticsController`, `AssessmentController`, `ProgramsController`) to audit operations.
+  - File: [faculty-data-access.interceptor.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/common/interceptors/faculty-data-access.interceptor.ts)
+
+#### Changed
+- **Strict Tenant Isolation Boundaries** — Integrated program ownership checks on all program-related analytics endpoints inside `AnalyticsController` to prevent cross-tenant queries.
+  - Files: [analytics.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/controllers/analytics.controller.ts), [analytics.module.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/analytics.module.ts)
+- **Dashboard Loader Refactoring** — Replaced full-page loader spinner with persistent sidebar layout and local `PageSkeleton` widgets inside main panel.
+  - File: [FacultyDashboard.tsx](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/components/FacultyDashboard.tsx)
 
 ---
 

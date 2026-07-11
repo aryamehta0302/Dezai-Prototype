@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { CredentialsRepository } from '../repositories/credentials.repository';
 import { CreateCredentialDto } from '../dto/CreateCredentialDto';
 import { TemplateService } from './template.service';
@@ -7,15 +7,109 @@ import { v4 as uuidv4 } from 'uuid';
 import { VerifyStatus, CredentialTier } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { AuditAction } from '@prisma/client';
+import { NotificationsService } from '../../notifications/services/notifications.service';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class CredentialsService {
+    private readonly logger = new Logger(CredentialsService.name);
+
+    // In-memory cache for credential verification (TTL: 5 minutes)
+    private readonly verificationCache = new Map<string, { result: any; expiresAt: number }>();
+
+    // Track verification attempts for security monitoring
+    private readonly verificationAttempts = new Map<string, { count: number; firstAttempt: number }>();
+
     constructor(
         private readonly credentialsRepository: CredentialsRepository,
         private readonly templateService: TemplateService,
         private readonly auditService: AuditService,
         private readonly prisma: PrismaService,
+        private readonly notificationsService: NotificationsService,
     ) { }
+
+    private cacheGet(code: string): any | null {
+        const cached = this.verificationCache.get(code);
+        if (!cached) return null;
+        if (Date.now() > cached.expiresAt) {
+            this.verificationCache.delete(code);
+            return null;
+        }
+        return cached.result;
+    }
+
+    private cacheSet(code: string, result: any, ttlMs: number = 300000): void {
+        this.verificationCache.set(code, {
+            result,
+            expiresAt: Date.now() + ttlMs,
+        });
+    }
+
+    private cacheEvict(code: string): void {
+        this.verificationCache.delete(code);
+    }
+
+    private getSigningSecret(): string {
+        const secret = process.env.CREDENTIAL_SIGNING_SECRET;
+        if (!secret) {
+            this.logger.warn('CREDENTIAL_SIGNING_SECRET not set — using development fallback. Set this in production!');
+            return 'dezai-default-signing-secret-key-32-chars-long';
+        }
+        if (secret.length < 32) {
+            this.logger.warn('CREDENTIAL_SIGNING_SECRET is too short — should be at least 32 characters');
+        }
+        return secret;
+    }
+
+    private signCredentialMetadata(
+        credentialId: string,
+        code: string,
+        status: string,
+        userId: string,
+        programId: string,
+        metadataObj: any,
+        institutionId?: string,
+    ): string {
+        const { signature, ...rest } = metadataObj;
+        const secret = this.getSigningSecret();
+        const payload = JSON.stringify({
+            credentialId,
+            code,
+            status,
+            userId,
+            programId,
+            institutionId: institutionId || '',
+            metadata: rest
+        });
+        this.logger.warn(`CRITICAL DEBUG signCredentialMetadata payload: ${payload}`);
+        return crypto.createHmac('sha256', secret).update(payload).digest('hex');
+    }
+
+    private verifyCredentialMetadata(credential: any): boolean {
+        if (!credential.metadata) return false;
+        try {
+            const metadataObj = JSON.parse(credential.metadata);
+            if (!metadataObj.signature) return false;
+            const expected = this.signCredentialMetadata(
+                credential.id,
+                credential.verificationCode,
+                credential.verificationStatus,
+                credential.userId,
+                credential.programId,
+                metadataObj,
+                credential.institutionId,
+            );
+            this.logger.warn(`CRITICAL DEBUG verifyCredentialMetadata: expected=${expected}, received=${metadataObj.signature}`);
+            return crypto.timingSafeEqual(Buffer.from(metadataObj.signature), Buffer.from(expected));
+        } catch (e) {
+            this.logger.error(`CRITICAL DEBUG verifyCredentialMetadata error: ${e.message}`, e.stack);
+            return false;
+        }
+    }
+
+    private logSecurityEvent(event: string, details: any): void {
+        this.logger.warn(`[SECURITY] ${event}: ${JSON.stringify(details)}`);
+    }
 
     async issueCredential(data: CreateCredentialDto) {
         const template = await this.templateService.getTemplateById(data.templateId);
@@ -28,10 +122,37 @@ export class CredentialsService {
 
         const finalTier = data.tier || template.defaultTier;
 
-        const uniqueCode = uuidv4().replace(/-/g, '').substring(0, 18).toUpperCase();
+        // Generate cryptographically secure 18-character hex code
+        const uniqueCode = crypto.randomBytes(9).toString('hex').toUpperCase();
         const publicUrl = `/verify/${uniqueCode}`;
+        const credentialId = uuidv4();
+
+        const metadataObj: any = {
+            createdStatus: 'ACTIVE',
+            createdAt: new Date().toISOString(),
+            statusHistory: [{
+                status: 'ACTIVE',
+                changedBy: data.issuedById || 'System',
+                reason: 'Initial credential issuance',
+                date: new Date().toISOString(),
+            }],
+            statusReason: '',
+            statusLastChangedAt: new Date().toISOString(),
+        };
+
+        // Generate HMAC signature for tamper-proofing
+        metadataObj.signature = this.signCredentialMetadata(
+            credentialId,
+            uniqueCode,
+            'ACTIVE',
+            data.userId,
+            data.programId,
+            metadataObj,
+            data.institutionId,
+        );
 
         const credentialData = {
+            id: credentialId,
             userId: data.userId,
             programId: data.programId,
             institutionId: data.institutionId,
@@ -41,6 +162,7 @@ export class CredentialsService {
             verificationUrl: publicUrl,
             verificationStatus: 'ACTIVE' as const,
             credentialTemplateId: data.templateId,
+            metadata: JSON.stringify(metadataObj),
         };
 
         const credential = await this.credentialsRepository.createCredential(credentialData);
@@ -55,6 +177,12 @@ export class CredentialsService {
     }
 
     async verifyCredential(code: string) {
+        // Check cache first
+        const cached = this.cacheGet(code);
+        if (cached) {
+            return cached;
+        }
+
         const cred = await this.prisma.credential.findUnique({
             where: { verificationCode: code },
             include: {
@@ -68,15 +196,51 @@ export class CredentialsService {
             return { valid: false, message: 'Invalid Verification Code' };
         }
 
+        // Security Check: Verify metadata integrity
+        const isIntegrityValid = this.verifyCredentialMetadata(cred);
+        if (!isIntegrityValid) {
+            this.logSecurityEvent('TAMPER_DETECTED', {
+                credentialId: cred.id,
+                verificationCode: code,
+                userId: cred.userId,
+                attemptedStatus: cred.verificationStatus,
+                message: 'HMAC signature mismatch — metadata has been modified outside authorized system'
+            });
+
+            const tamperResult = {
+                valid: false,
+                status: 'REVOKED' as const,
+                message: 'Security Alert: Credential metadata tampering detected!',
+                data: cred,
+                tampered: true
+            };
+            this.cacheSet(code, tamperResult);
+
+            // Log audit trail for tamper detection
+            await this.auditService.logAction(
+                null,
+                AuditAction.CREDENTIAL_ISSUED,
+                `SECURITY ALERT: Tampering detected on credential ${cred.id} (Code: ${code}). Signature validation failed.`
+            );
+
+            return tamperResult;
+        }
+
         if (cred.verificationStatus === 'REVOKED') {
-            return { valid: false, status: 'REVOKED', message: 'This credential has been permanently revoked.', data: cred };
+            const revokedResult = { valid: false, status: 'REVOKED' as const, message: 'This credential has been permanently revoked.', data: cred };
+            this.cacheSet(code, revokedResult);
+            return revokedResult;
         }
 
         if (cred.verificationStatus === 'SUSPENDED') {
-            return { valid: false, status: 'SUSPENDED', message: 'This credential is under review (Suspended).', data: cred };
+            const suspendedResult = { valid: false, status: 'SUSPENDED' as const, message: 'This credential is under review (Suspended).', data: cred };
+            this.cacheSet(code, suspendedResult);
+            return suspendedResult;
         }
 
-        return { valid: true, status: 'ACTIVE', data: cred };
+        const activeResult = { valid: true, status: 'ACTIVE' as const, data: cred };
+        this.cacheSet(code, activeResult);
+        return activeResult;
     }
 
     async changeCredentialStatus(id: string, status: VerifyStatus, requesterId?: string, reason?: string) {
@@ -84,6 +248,9 @@ export class CredentialsService {
         if (!current) {
             throw new NotFoundException('Credential not found');
         }
+
+        // Evict from cache
+        this.cacheEvict(current.verificationCode);
 
         let metadataObj: any = {};
         if (current.metadata) {
@@ -108,6 +275,17 @@ export class CredentialsService {
         metadataObj.statusReason = reason || '';
         metadataObj.statusLastChangedAt = new Date().toISOString();
 
+        // Sign metadata with new status
+        metadataObj.signature = this.signCredentialMetadata(
+            id,
+            current.verificationCode,
+            status,
+            current.userId,
+            current.programId,
+            metadataObj,
+            current.institutionId,
+        );
+
         const updated = await this.prisma.credential.update({
             where: { id },
             data: {
@@ -120,6 +298,45 @@ export class CredentialsService {
                 issuer: { select: { id: true, name: true } },
             },
         });
+
+        // Trigger SYSTEM and CREDENTIAL notifications to the Student on REVOCATION
+        if (status === 'REVOKED') {
+            const programTitle = updated.program?.title || 'Program';
+            const message = `Your credential for the program "${programTitle}" has been permanently revoked.${reason ? ` Reason: ${reason}` : ''}`;
+            await this.notificationsService.createNotification(
+                updated.userId,
+                'Credential Revoked',
+                message,
+                'SYSTEM'
+            );
+            await this.notificationsService.createNotification(
+                updated.userId,
+                'Credential Status Updated',
+                `Your "${programTitle}" credential status has been changed to ${status}.`,
+                'CREDENTIAL'
+            );
+
+            this.logSecurityEvent('CREDENTIAL_REVOKED', {
+                credentialId: id,
+                userId: current.userId,
+                changedBy: requesterId || 'SYSTEM',
+                reason: reason || 'No reason provided',
+                previousStatus: current.verificationStatus,
+                newStatus: status,
+                verificationCode: current.verificationCode,
+            });
+        }
+
+        // Send CREDENTIAL notification for SUSPENDED status as well
+        if (status === 'SUSPENDED') {
+            const programTitle = updated.program?.title || 'Program';
+            await this.notificationsService.createNotification(
+                updated.userId,
+                'Credential Suspended',
+                `Your credential for "${programTitle}" has been suspended.${reason ? ` Reason: ${reason}` : ''}`,
+                'CREDENTIAL'
+            );
+        }
 
         if (requesterId) {
             await this.auditService.logAction(
@@ -249,10 +466,37 @@ export class CredentialsService {
             }
         }
 
-        const uniqueCode = uuidv4().replace(/-/g, '').substring(0, 18).toUpperCase();
+        // Generate cryptographically secure 18-character hex code
+        const uniqueCode = crypto.randomBytes(9).toString('hex').toUpperCase();
         const tier = this.getTierForProgram(programId);
+        const credentialId = uuidv4();
+
+        const metadataObj: any = {
+            createdStatus: 'ACTIVE',
+            createdAt: new Date().toISOString(),
+            statusHistory: [{
+                status: 'ACTIVE',
+                changedBy: issuerId,
+                reason: 'Automated credential issuance upon program completion',
+                date: new Date().toISOString(),
+            }],
+            statusReason: '',
+            statusLastChangedAt: new Date().toISOString(),
+        };
+
+        // Sign metadata for tamper-proofing
+        metadataObj.signature = this.signCredentialMetadata(
+            credentialId,
+            uniqueCode,
+            'ACTIVE',
+            userId,
+            programId,
+            metadataObj,
+            program.institutionId,
+        );
 
         return this.credentialsRepository.createCredential({
+            id: credentialId,
             userId,
             programId,
             institutionId: program.institutionId,
@@ -261,6 +505,7 @@ export class CredentialsService {
             verificationCode: uniqueCode,
             verificationUrl: `/verify/${uniqueCode}`,
             verificationStatus: 'ACTIVE' as const,
+            metadata: JSON.stringify(metadataObj),
         });
     }
 
@@ -398,18 +643,89 @@ export class CredentialsService {
             throw new NotFoundException('No credentials found for the given IDs');
         }
 
-        await this.credentialsRepository.batchUpdateStatus(ids, status);
+        // Evict all from cache
+        for (const cred of current) {
+            this.cacheEvict(cred.verificationCode);
+        }
 
-        const metadataUpdate = JSON.stringify({
-            statusReason: reason || `Batch ${status.toLowerCase()} by system`,
-            statusLastChangedAt: new Date().toISOString(),
-            batchId: uuidv4().substring(0, 8).toUpperCase(),
+        // Update each credential individually to maintain status history and cryptographic signatures
+        const updates = current.map(cred => {
+            let metadataObj: any = {};
+            if (cred.metadata) {
+                try {
+                    metadataObj = JSON.parse(cred.metadata);
+                } catch {
+                    metadataObj = {};
+                }
+            }
+
+            if (!metadataObj.statusHistory) {
+                metadataObj.statusHistory = [];
+            }
+
+            metadataObj.statusHistory.push({
+                status,
+                changedBy: requesterId,
+                reason: reason || `Batch status update to ${status.toLowerCase()}`,
+                date: new Date().toISOString(),
+            });
+
+            metadataObj.statusReason = reason || `Batch status update`;
+            metadataObj.statusLastChangedAt = new Date().toISOString();
+
+            // Sign updated metadata
+            metadataObj.signature = this.signCredentialMetadata(
+                cred.id,
+                cred.verificationCode,
+                status,
+                cred.userId,
+                cred.programId,
+                metadataObj,
+                cred.institutionId,
+            );
+
+            return this.prisma.credential.update({
+                where: { id: cred.id },
+                data: {
+                    verificationStatus: status,
+                    metadata: JSON.stringify(metadataObj)
+                }
+            });
         });
 
-        await this.prisma.credential.updateMany({
-            where: { id: { in: ids } },
-            data: { metadata: metadataUpdate },
-        });
+        await this.prisma.$transaction(updates);
+
+        // Trigger SYSTEM and CREDENTIAL notifications to students if status is REVOKED
+        if (status === 'REVOKED') {
+            for (const cred of current) {
+                const program = await this.prisma.program.findUnique({ where: { id: cred.programId } });
+                const programTitle = program?.title || 'Program';
+                const message = `Your credential for the program "${programTitle}" has been permanently revoked.${reason ? ` Reason: ${reason}` : ''}`;
+                await this.notificationsService.createNotification(
+                    cred.userId,
+                    'Credential Revoked',
+                    message,
+                    'SYSTEM'
+                );
+                await this.notificationsService.createNotification(
+                    cred.userId,
+                    'Credential Status Updated',
+                    `Your "${programTitle}" credential status has been changed to ${status} via batch update.`,
+                    'CREDENTIAL'
+                );
+            }
+        } else if (status === 'SUSPENDED') {
+            for (const cred of current) {
+                const program = await this.prisma.program.findUnique({ where: { id: cred.programId } });
+                const programTitle = program?.title || 'Program';
+                await this.notificationsService.createNotification(
+                    cred.userId,
+                    'Credential Suspended',
+                    `Your credential for "${programTitle}" has been suspended.${reason ? ` Reason: ${reason}` : ''}`,
+                    'CREDENTIAL'
+                );
+            }
+        }
 
         await this.auditService.logAction(
             requesterId,

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AnalyticsController } from './controllers/analytics.controller';
 import { AnalyticsService } from './services/analytics.service';
+import { ProgramsModule } from '../programs/programs.module';
 
 /**
  * AnalyticsModule
@@ -10,7 +11,7 @@ import { AnalyticsService } from './services/analytics.service';
  * This module is already imported in AppModule (app.module.ts).
  */
 @Module({
-  imports: [],
+  imports: [ProgramsModule],
   controllers: [AnalyticsController],
   providers: [AnalyticsService],
   exports: [AnalyticsService],

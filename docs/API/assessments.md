@@ -650,6 +650,45 @@ Get assessments linked to modules where the user has completed all lessons but h
 
 ---
 
+### `GET /api/assessments/faculty-insights/stream`
+
+Establish a Server-Sent Events (SSE) connection pushing real-time student cohort at-risk alerts. Updates are computed and pushed every 10 seconds.
+
+**Auth:** JWT + `FACULTY`, `UNIVERSITY_ADMIN`, `DEZAI_ADMIN`  
+**Query Parameters:** None  
+**Headers:**
+- `Accept: text/event-stream`
+- `Authorization: Bearer <JWT>`
+
+**Success Event Stream Chunk:**
+```json
+data: {
+  "timestamp": "2026-07-06T12:00:00.000Z",
+  "summary": {
+    "totalAtRisk": 2,
+    "totalLowProgress": 4,
+    "totalInactive": 1,
+    "totalStudentsMonitored": 18
+  },
+  "alerts": [
+    {
+      "type": "INACTIVE",
+      "userId": "3f7a1c88-9b2e-4d71-a8e3-0c5b12f3d901",
+      "userName": "John Doe",
+      "detail": "Inactive for 9 days"
+    },
+    {
+      "type": "AT_RISK",
+      "userId": "2a6b2c89-0d3e-5f72-b8f4-1c6b22f4d902",
+      "userName": "Sarah Smith",
+      "detail": "Repeated quiz failures (2+ attempts)"
+    }
+  ]
+}
+```
+
+---
+
 ## Ownership Rules
 
 | Role | Access Rule |
