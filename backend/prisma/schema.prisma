@@ -41,9 +41,6 @@ model User {
 
   facultyInfo   FacultyMember?
   instAdminInfo InstitutionAdmin?
-  employeeInfo   Employee?
-  orgAdminInfo   OrganizationAdmin?
-  complianceAttempts ComplianceAssessmentAttempt[]
 
   // ── Sprint 8: Enterprise relations ──
   organizationAdmin OrganizationAdmin?
@@ -919,7 +916,6 @@ enum QuestionBankSourceType {
   AI_GENERATED
   SEEDED_DEMO
 }
->>>>>>> origin/main
 
 enum OrgSize {
   SMALL
