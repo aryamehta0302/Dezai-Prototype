@@ -809,4 +809,63 @@ Implemented production hardening enhancements for the Analytics module.
 - No frontend routes added.
 - Focused only on production readiness and error handling.
 
---
+---
+
+## 18. Sprint 8: Enterprise Assessments & Compliance (Manan Panchal)
+
+Implemented the full Enterprise Assessments & Compliance module to support corporate onboarding, compliance certification, and organization-level tracking.
+
+### Features Delivered
+
+1.  **Additive Prisma Schema Models & Enums**:
+    *   Enums: `ComplianceTrack`, `QuestionBankSourceType`, `OrgSize`, `OrgAdminRole`, `EmploymentStatus`.
+    *   Models: `EnterpriseQuestionBank`, `EnterpriseQuestion`, `EnterpriseQuestionOption`, `ComplianceAssessment`, `ComplianceAssessmentAttempt`, `ComplianceAttemptAnswer`.
+    *   Audit Actions: Extended `AuditAction` enum with enterprise actions.
+2.  **EnterpriseQuestionBankService**:
+    *   Full CRUD for question banks and questions.
+    *   Ownership validation scoped to `organizationId`/`departmentId`.
+    *   Cache invalidation for associated compliance assessments.
+3.  **ComplianceAssessmentService**:
+    *   Full CRUD for compliance assessments.
+    *   Shuffled question selection leveraging the Fisher-Yates + cache-aside algorithm (resets option orders, strips `isCorrect` indicators, and caches questions).
+    *   10-question bank minimum enforcement.
+    *   **AI-Generated Assessment Ingestion**: Transactional creation of `EnterpriseQuestionBank` + `ComplianceAssessment` from parsed questions.
+4.  **ComplianceAttemptService**:
+    *   Attempt lifecycle (start, resume, autosave, submit, result details, history).
+    *   Reuses `PassFailEvaluationService` for score/percentage computations.
+    *   Stores BOTH raw score and percentage at submit time.
+    *   **Time Limit Enforcement**: Checks `timeLimit` on submission; if exceeded and `timeLimitEnabled` is true, the attempt is auto-failed.
+5.  **EnterpriseDashboardService**:
+    *   Aggregation dashboards for organizations, departments, employees, and specific compliance tracks.
+6.  **Demo Compliance Seeds**:
+    *   Seeded 4 default tracks (Cyber Security, Password Security, Data Privacy, Secure Email), each with 25 realistic, fully-formed questions.
+
+### Endpoint Summary
+
+| Method | Endpoint | Roles | Description |
+|---|---|---|---|
+| POST | `/api/enterprise/assessments/generated` | DEZAI_ADMIN | Ingest AI-generated assessment (bank + assessment) |
+| GET | `/api/enterprise/assessments/question-banks` | All | List question banks |
+| GET | `/api/enterprise/assessments/question-banks/:id` | All | Get question bank with questions |
+| POST | `/api/enterprise/assessments/question-banks` | DEZAI_ADMIN | Create question bank |
+| PUT | `/api/enterprise/assessments/question-banks/:id` | DEZAI_ADMIN | Update question bank |
+| DELETE | `/api/enterprise/assessments/question-banks/:id` | DEZAI_ADMIN | Delete question bank |
+| POST | `/api/enterprise/assessments/question-banks/:bankId/questions` | DEZAI_ADMIN | Add question to bank |
+| PUT | `/api/enterprise/assessments/questions/:questionId` | DEZAI_ADMIN | Update question |
+| DELETE | `/api/enterprise/assessments/questions/:questionId` | DEZAI_ADMIN | Delete question |
+| GET | `/api/enterprise/assessments/compliance` | All | List assessments |
+| GET | `/api/enterprise/assessments/compliance/:id` | All | Get assessment |
+| POST | `/api/enterprise/assessments/compliance` | DEZAI_ADMIN | Create compliance assessment |
+| PUT | `/api/enterprise/assessments/compliance/:id` | DEZAI_ADMIN | Update compliance assessment |
+| DELETE | `/api/enterprise/assessments/compliance/:id` | DEZAI_ADMIN | Delete compliance assessment |
+| GET | `/api/enterprise/assessments/compliance/:id/questions/select` | All | Shuffled questions pool for testing |
+| POST | `/api/enterprise/assessments/attempts/start` | All (Employee) | Start attempt |
+| POST | `/api/enterprise/assessments/attempts/:attemptId/submit` | All (Employee) | Submit attempt answers |
+| GET | `/api/enterprise/assessments/attempts/:attemptId/result` | All | Get graded result |
+| GET | `/api/enterprise/assessments/attempts/history/:assessmentId` | All | Get assessment attempt history |
+| GET | `/api/enterprise/assessments/attempts/my-history` | All | Get employee compliance history |
+| GET | `/api/enterprise/assessments/dashboard/organization/:orgId` | All | Org admin compliance dashboard |
+| GET | `/api/enterprise/assessments/dashboard/department/:deptId` | All | Department compliance dashboard |
+| GET | `/api/enterprise/assessments/dashboard/employee` | All | Personal compliance dashboard |
+| GET | `/api/enterprise/assessments/dashboard/track/:orgId/:track` | All | Detailed compliance track summary |
+

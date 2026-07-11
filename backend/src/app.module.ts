@@ -18,6 +18,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { LeaderboardsModule } from './modules/leaderboards/leaderboards.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AchievementsModule } from './modules/achievements/achievements.module';
+import { EnterpriseAssessmentsModule } from './modules/enterprise-assessments/enterprise-assessments.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { AchievementsModule } from './modules/achievements/achievements.module';
     LeaderboardsModule,
     AuditModule,
     AchievementsModule,
+    EnterpriseAssessmentsModule,
   ],
   controllers: [],
   providers: [],

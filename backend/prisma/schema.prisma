@@ -42,6 +42,11 @@ model User {
   facultyInfo   FacultyMember?
   instAdminInfo InstitutionAdmin?
 
+  // ── Sprint 8: Enterprise relations ──
+  organizationAdmin OrganizationAdmin?
+  employee          Employee?
+  complianceAttempts ComplianceAssessmentAttempt[]
+
   @@map("users")
 }
 
@@ -578,6 +583,14 @@ enum AuditAction {
   QUESTION_BANK_CREATED
   QUESTION_BANK_UPDATED
   QUESTION_BANK_DELETED
+  // Sprint 8: Enterprise
+  ORGANIZATION_CREATED
+  EMPLOYEE_INVITED
+  EMPLOYEE_JOINED
+  COMPLIANCE_ASSESSMENT_PUBLISHED
+  ENTERPRISE_QUESTION_BANK_CREATED
+  ENTERPRISE_QUESTION_BANK_UPDATED
+  ENTERPRISE_QUESTION_BANK_DELETED
 }
 
 model AuditLog {
@@ -663,4 +676,220 @@ model CredentialTemplate {
   credentials Credential[]
 
   @@map("credential_templates")
+}
+
+// ═══════════════════════════════════════════════════════════
+// Sprint 8: Enterprise Core (stubs — Deep owns full impl)
+// ═══════════════════════════════════════════════════════════
+
+enum OrgSize {
+  SMALL
+  MEDIUM
+  LARGE
+  ENTERPRISE
+}
+
+enum OrgAdminRole {
+  OWNER
+  ADMIN
+  MANAGER
+}
+
+enum EmploymentStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  OFFBOARDED
+}
+
+model Organization {
+  id           String    @id @default(uuid())
+  name         String
+  logoUrl      String?
+  industry     String?
+  size         OrgSize?
+  billingEmail String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  departments             Department[]
+  employees               Employee[]
+  orgAdmins               OrganizationAdmin[]
+  enterpriseQuestionBanks EnterpriseQuestionBank[]
+  complianceAssessments   ComplianceAssessment[]
+
+  @@map("organizations")
+}
+
+model OrganizationAdmin {
+  id             String       @id @default(uuid())
+  userId         String       @unique
+  organizationId String
+  role           OrgAdminRole @default(ADMIN)
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("organization_admins")
+}
+
+model Department {
+  id             String  @id @default(uuid())
+  organizationId String
+  name           String
+  description    String?
+  managerId      String?
+
+  organization          Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employees             Employee[]
+  enterpriseQuestionBanks EnterpriseQuestionBank[]
+  complianceAssessments ComplianceAssessment[]
+
+  @@map("departments")
+}
+
+model Employee {
+  id               String           @id @default(uuid())
+  userId           String           @unique
+  organizationId   String
+  departmentId     String?
+  title            String?
+  employmentStatus EmploymentStatus @default(INVITED)
+  invitedAt        DateTime?
+  joinedAt         DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  user                User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization        Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  department          Department?                  @relation(fields: [departmentId], references: [id])
+  complianceAttempts  ComplianceAssessmentAttempt[]
+
+  @@map("employees")
+}
+
+// ═══════════════════════════════════════════════════════════
+// Sprint 8: Enterprise Assessments & Compliance (Manan)
+// ═══════════════════════════════════════════════════════════
+
+enum ComplianceTrack {
+  CYBER_SECURITY
+  PASSWORD_SECURITY
+  DATA_PRIVACY
+  SECURE_EMAIL
+}
+
+enum QuestionBankSourceType {
+  MANUAL
+  AI_GENERATED
+  SEEDED_DEMO
+}
+
+model EnterpriseQuestionBank {
+  id               String                 @id @default(uuid())
+  title            String
+  description      String?
+  organizationId   String
+  departmentId     String?
+  complianceTrack  ComplianceTrack
+  sourceType       QuestionBankSourceType @default(MANUAL)
+  sourceDocumentId String?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  organization          Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  department            Department?            @relation(fields: [departmentId], references: [id])
+  questions             EnterpriseQuestion[]
+  complianceAssessments ComplianceAssessment[]
+
+  @@map("enterprise_question_banks")
+}
+
+model EnterpriseQuestion {
+  id             String     @id @default(uuid())
+  questionBankId String
+  text           String
+  category       String?
+  difficulty     Difficulty @default(MEDIUM)
+  explanation    String?
+  tags           String[]   @default([])
+  timerSeconds   Int        @default(60)
+  createdAt      DateTime   @default(now())
+
+  questionBank   EnterpriseQuestionBank    @relation(fields: [questionBankId], references: [id], onDelete: Cascade)
+  options        EnterpriseQuestionOption[]
+  attemptAnswers ComplianceAttemptAnswer[]
+
+  @@map("enterprise_questions")
+}
+
+model EnterpriseQuestionOption {
+  id         String  @id @default(uuid())
+  questionId String
+  text       String
+  isCorrect  Boolean @default(false)
+
+  question       EnterpriseQuestion        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  attemptAnswers ComplianceAttemptAnswer[]
+
+  @@map("enterprise_question_options")
+}
+
+model ComplianceAssessment {
+  id              String          @id @default(uuid())
+  organizationId  String
+  departmentId    String?
+  questionBankId  String
+  title           String
+  complianceTrack ComplianceTrack
+  passingScore    Int             @default(80)
+  sampleSize      Int             @default(15)
+  timeLimit       Int             @default(900)
+  timeLimitEnabled Boolean        @default(true)
+  maxAttempts     Int             @default(3)
+  allowResume     Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  department   Department?            @relation(fields: [departmentId], references: [id])
+  questionBank EnterpriseQuestionBank @relation(fields: [questionBankId], references: [id])
+  attempts     ComplianceAssessmentAttempt[]
+
+  @@map("compliance_assessments")
+}
+
+model ComplianceAssessmentAttempt {
+  id               String    @id @default(uuid())
+  userId           String
+  employeeId       String
+  assessmentId     String
+  score            Int       @default(0)
+  percentage       Float     @default(0)
+  passed           Boolean   @default(false)
+  startedAt        DateTime  @default(now())
+  completedAt      DateTime?
+  timeTakenSeconds Int?
+
+  user           User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employee       Employee                  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  assessment     ComplianceAssessment      @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  attemptAnswers ComplianceAttemptAnswer[]
+
+  @@map("compliance_assessment_attempts")
+}
+
+model ComplianceAttemptAnswer {
+  id               String   @id @default(uuid())
+  attemptId        String
+  questionId       String
+  selectedOptionId String
+  isCorrect        Boolean  @default(false)
+  answeredAt       DateTime @default(now())
+
+  attempt        ComplianceAssessmentAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question       EnterpriseQuestion         @relation(fields: [questionId], references: [id])
+  selectedOption EnterpriseQuestionOption   @relation(fields: [selectedOptionId], references: [id])
+
+  @@map("compliance_attempt_answers")
 }

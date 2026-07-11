@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Sprint 8] — 2026-07-11
+
+### Enterprise Assessments & Compliance (Manan Panchal)
+
+#### Added
+- **Enterprise Question Banks** — CRUD endpoints and backend service supporting manual/AI-generated banks with organization and department scoping.
+- **Compliance Assessments** — Assessment CRUD requiring a minimum of 10 questions in the referenced question bank, and a dynamic shuffled question select query implementing Fisher-Yates shuffle and cache-aside (via Redis/in-memory cache).
+- **Compliance Attempts** — Start attempt constraints, resume, autosave, and grading workflow. Grade evaluation stores BOTH raw score and percentage at submit time.
+- **Compliance Dashboards** — Performance aggregation dashboards for organizations, departments, employees, and specific tracks.
+- **Compliance Demo Tracks Seed** — Seed script containing 4 tracks (Cyber Security, Password Security, Data Privacy, Secure Email) with 25 questions each.
+- **Unit Tests** — 3 comprehensive unit test suites covering EnterpriseQuestionBankService, ComplianceAttemptService, and EnterpriseDashboardService.
+
+---
+
 ## [Sprint 7] — 2026-06-30
 
 ### Assessment Hardening & Production Readiness (Antigravity AI)
