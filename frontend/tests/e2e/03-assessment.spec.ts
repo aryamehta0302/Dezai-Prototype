@@ -37,15 +37,15 @@ test('Assessment taking, Fisher-Yates shuffled question bank flow, and grading',
   // 6. Acknowledge and Begin
   await page.click('button:has-text("Acknowledge & Begin Assessment")');
 
-  // 7. Solve questions (sampleSize = 4)
-  for (let i = 0; i < 4; i++) {
+  // 7. Solve questions (sampleSize = 5)
+  for (let i = 0; i < 5; i++) {
     // Select first option
     const options = page.locator('button:has(.rounded-full)');
     await expect(options.first()).toBeVisible();
     await options.first().click();
 
     // Click Next or Submit
-    if (i < 3) {
+    if (i < 4) {
       await page.click('button:has-text("Next")');
     } else {
       await page.click('button:has-text("Submit Assessment")');

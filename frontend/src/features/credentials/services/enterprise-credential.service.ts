@@ -1,6 +1,6 @@
 import { apiClient } from '@/core/api/client';
 
-const BASE = '/api/enterprise-credentials';
+const BASE = '/enterprise-credentials';
 
 export interface EnterpriseCredential {
     id: string;
@@ -38,7 +38,7 @@ export interface SearchParams {
 export const EnterpriseCredentialService = {
     verify: async (code: string): Promise<{ valid: boolean; data?: EnterpriseCredential; message?: string; status?: string; tampered?: boolean }> => {
         try {
-            return await apiClient.get<any>(`${BASE}/verify/${code}`);
+            return await apiClient.get<any>(`${BASE}/verify/${code}`, { public: true });
         } catch {
             return { valid: false, message: 'Invalid verification code or server error' };
         }

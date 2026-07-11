@@ -5,6 +5,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:3001/api";
 
 type ApiRequestOptions = RequestInit & {
     params?: Record<string, string | number>;
+    public?: boolean;
 };
 
 /**
@@ -18,17 +19,25 @@ class ApiClient {
     private async getAuthToken(): Promise<string | null> {
         // Check if we are on server or client
         if (typeof window === "undefined") {
-            const session = await auth();
-            return session?.accessToken || null;
+            try {
+                const session = await auth();
+                return session?.accessToken || null;
+            } catch {
+                return null;
+            }
         } else {
-            const session = await getSession();
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            return (session as any)?.accessToken || null;
+            try {
+                const session = await getSession();
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                return (session as any)?.accessToken || null;
+            } catch {
+                return null;
+            }
         }
     }
 
     private async request<T>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
-        const token = await this.getAuthToken();
+        const token = options.public ? null : await this.getAuthToken();
         const headers = new Headers(options.headers);
 
         if (token) {

@@ -64,10 +64,10 @@ export function VerificationPortal({ code: propCode }: VerificationPortalProps) 
     };
 
     useEffect(() => {
-        if (error && !loading) {
+        if (error && !loading && !result?.data) {
             setShowFallback(true);
         }
-    }, [error, loading]);
+    }, [error, loading, result]);
 
     // Reset fallback when code changes
     useEffect(() => {

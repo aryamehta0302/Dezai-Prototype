@@ -16,21 +16,27 @@ export const useVerification = (code: string | undefined) => {
         try {
             // 1. Try University verification first
             const data = await CredentialService.verify(code);
-            if (data.valid && data.data) {
+            if (data.data) {
                 setResult({ ...data, isEnterprise: false });
+                if (!data.valid) {
+                    setError(data.message || 'Credential is not active');
+                }
                 return;
             }
 
             // 2. Try Enterprise verification fallback
             const entData = await EnterpriseCredentialService.verify(code);
-            if (entData.valid && entData.data) {
+            if (entData.data) {
                 setResult({ ...entData, isEnterprise: true });
+                if (!entData.valid) {
+                    setError(entData.message || 'Credential is not active');
+                }
                 return;
             }
 
-            // If both fail, set error from university or enterprise
-            setResult({ valid: false, message: entData.message || data.message || 'Invalid verification code' });
-            setError(entData.message || data.message || 'Invalid verification code');
+            // If neither found, set error
+            setResult({ valid: false, message: 'Invalid verification code' });
+            setError('Invalid verification code');
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Network error. Try again later.';
             setError(message);

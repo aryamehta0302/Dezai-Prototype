@@ -9,7 +9,7 @@ import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { Response } from 'express';
 
-@Controller('api/enterprise-credentials')
+@Controller('enterprise-credentials')
 export class EnterpriseCredentialsController {
     constructor(
         private readonly service: EnterpriseCredentialsService,
