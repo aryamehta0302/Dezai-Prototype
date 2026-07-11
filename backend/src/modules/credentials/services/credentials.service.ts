@@ -81,6 +81,7 @@ export class CredentialsService {
             institutionId: institutionId || '',
             metadata: rest
         });
+        this.logger.warn(`CRITICAL DEBUG signCredentialMetadata payload: ${payload}`);
         return crypto.createHmac('sha256', secret).update(payload).digest('hex');
     }
 
@@ -98,8 +99,10 @@ export class CredentialsService {
                 metadataObj,
                 credential.institutionId,
             );
+            this.logger.warn(`CRITICAL DEBUG verifyCredentialMetadata: expected=${expected}, received=${metadataObj.signature}`);
             return crypto.timingSafeEqual(Buffer.from(metadataObj.signature), Buffer.from(expected));
-        } catch {
+        } catch (e) {
+            this.logger.error(`CRITICAL DEBUG verifyCredentialMetadata error: ${e.message}`, e.stack);
             return false;
         }
     }
@@ -215,7 +218,7 @@ export class CredentialsService {
 
             // Log audit trail for tamper detection
             await this.auditService.logAction(
-                'SYSTEM',
+                null,
                 AuditAction.CREDENTIAL_ISSUED,
                 `SECURITY ALERT: Tampering detected on credential ${cred.id} (Code: ${code}). Signature validation failed.`
             );

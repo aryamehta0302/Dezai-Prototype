@@ -1,13 +1,13 @@
 import { Credential, CreateCredentialDto, UpdateCredentialStatusDto, VerifyStatus, CredentialType, CredentialTemplate, CredentialSearchParams, SearchResult, ActivityFeedResult, EnhancedAnalytics } from '../types/credential.types';
 import { apiClient } from '@/core/api/client';
 
-const BASE = '/api/credentials';
+const BASE = '/credentials';
 
 export const CredentialService = {
 
     verify: async (code: string): Promise<{ valid: boolean; data?: Credential; message?: string; status?: VerifyStatus; tampered?: boolean }> => {
         try {
-            const res = await apiClient.get<any>(`${BASE}/verify/${code}`);
+            const res = await apiClient.get<any>(`${BASE}/verify/${code}`, { public: true });
             return res;
         } catch {
             return { valid: false, message: 'Invalid verification code or server error' };

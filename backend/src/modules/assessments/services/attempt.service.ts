@@ -442,9 +442,41 @@ export class AttemptService {
         include: { track: { include: { program: true } } }
       });
       if (moduleInfo) {
-        const uniqueCode = require('crypto').randomBytes(9).toString('hex').toUpperCase();
+        const crypto = require('crypto');
+        const credentialId = crypto.randomUUID();
+        const uniqueCode = crypto.randomBytes(9).toString('hex').toUpperCase();
+
+        // Generate metadata structure for integrity check
+        const metadataObj: any = {
+          createdStatus: 'ACTIVE',
+          createdAt: new Date().toISOString(),
+          statusHistory: [{
+            status: 'ACTIVE',
+            changedBy: userId,
+            reason: 'Automated assessment credential issuance',
+            date: new Date().toISOString(),
+          }],
+          statusReason: '',
+          statusLastChangedAt: new Date().toISOString(),
+        };
+
+        // Generate HMAC signature for tamper-proofing
+        const secret = process.env.CREDENTIAL_SIGNING_SECRET || 'dezai-default-signing-secret-key-32-chars-long';
+        const signPayload = JSON.stringify({
+          credentialId,
+          code: uniqueCode,
+          status: 'ACTIVE',
+          userId,
+          programId: moduleInfo.track.programId,
+          institutionId: moduleInfo.track.program.institutionId || '',
+          metadata: metadataObj
+        });
+        this.logger.warn(`CRITICAL DEBUG attempt.service.ts FORGE signPayload: ${signPayload}`);
+        metadataObj.signature = crypto.createHmac('sha256', secret).update(signPayload).digest('hex');
+
         await this.prisma.credential.create({
           data: {
+            id: credentialId,
             userId,
             programId: moduleInfo.track.programId,
             institutionId: moduleInfo.track.program.institutionId,
@@ -453,6 +485,7 @@ export class AttemptService {
             verificationCode: uniqueCode,
             verificationUrl: `/verify/${uniqueCode}`,
             verificationStatus: 'ACTIVE',
+            metadata: JSON.stringify(metadataObj)
           }
         });
       }
@@ -518,12 +551,43 @@ export class AttemptService {
     const programId = track.program.id;
     const trackId = track.id;
 
-    // Generate unique code
-    const uniqueCode = require('crypto').randomBytes(9).toString('hex').toUpperCase();
+    // Generate unique code and ID
+    const crypto = require('crypto');
+    const credentialId = crypto.randomUUID();
+    const uniqueCode = crypto.randomBytes(9).toString('hex').toUpperCase();
+
+    // Generate metadata structure for integrity check
+    const metadataObj: any = {
+      createdStatus: 'ACTIVE',
+      createdAt: new Date().toISOString(),
+      statusHistory: [{
+        status: 'ACTIVE',
+        changedBy: userId,
+        reason: 'Initial credential issuance',
+        date: new Date().toISOString(),
+      }],
+      statusReason: '',
+      statusLastChangedAt: new Date().toISOString(),
+    };
+
+    // Generate HMAC signature for tamper-proofing
+    const secret = process.env.CREDENTIAL_SIGNING_SECRET || 'dezai-default-signing-secret-key-32-chars-long';
+    const signPayload = JSON.stringify({
+      credentialId,
+      code: uniqueCode,
+      status: 'ACTIVE',
+      userId,
+      programId,
+      institutionId: track.program.institutionId || '',
+      metadata: metadataObj
+    });
+    this.logger.warn(`CRITICAL DEBUG attempt.service.ts signPayload: ${signPayload}`);
+    metadataObj.signature = crypto.createHmac('sha256', secret).update(signPayload).digest('hex');
 
     // Create credential directly in DB
     const credential = await this.prisma.credential.create({
       data: {
+        id: credentialId,
         userId,
         programId,
         institutionId: track.program.institutionId,
@@ -532,6 +596,7 @@ export class AttemptService {
         verificationCode: uniqueCode,
         verificationUrl: `/verify/${uniqueCode}`,
         verificationStatus: 'ACTIVE',
+        metadata: JSON.stringify(metadataObj)
       }
     });
 

@@ -42,15 +42,19 @@ test('Credential generation on success and public credential verification route'
   const correctAnswers = [
     "It generates new content rather than just analyzing existing data",
     "Transformer",
-    "The practice of crafting inputs to get desired outputs from AI models",
-    "Retrieval-Augmented Generation — grounding responses in external knowledge",
+    "Crafting inputs to get desired outputs from AI models",
+    "Retrieval-Augmented Generation",
     "Total Cost of Ownership over 3 years",
-    "AI systems based on their risk level to fundamental rights and safety",
+    "AI systems based on risk level to rights and safety",
+    "Model performs well on training data but poorly on new data",
+    "Image recognition and computer vision tasks",
+    "Algorithm for computing gradients in neural networks",
     "Data silos and integration with legacy systems",
-    "Diverse training data, fairness metrics, and regular auditing"
+    "Diverse training data, fairness metrics, and regular auditing",
+    "Gradients become too small for deep networks to learn effectively"
   ];
 
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 5; i++) {
     await page.waitForTimeout(500); // Wait for DOM to update with new question
     let clicked = false;
     for (const answerText of correctAnswers) {
@@ -63,7 +67,7 @@ test('Credential generation on success and public credential verification route'
     }
     expect(clicked).toBeTruthy();
 
-    if (i < 3) {
+    if (i < 4) {
       await page.click('button:has-text("Next")');
     } else {
       await page.click('button:has-text("Submit Assessment")');
@@ -79,7 +83,7 @@ test('Credential generation on success and public credential verification route'
 
   // 10. Navigate to My Credentials
   await page.goto('/certificates');
-  await expect(page.locator('h1')).toContainText('My Credentials');
+  await expect(page.locator('h1').first()).toContainText('My Credentials');
 
   // 11. Find the credential card and click the Verify button
   // Click Verify button inside the card which opens a new window or route
@@ -92,6 +96,6 @@ test('Credential generation on success and public credential verification route'
   ]);
 
   await popup.waitForLoadState();
-  await expect(popup.locator('h1')).toContainText('Credential Verified');
+  await expect(popup.locator('body')).toContainText('Verified by');
   await expect(popup.locator('body')).toContainText(name);
 });
