@@ -58,6 +58,11 @@ export function VerificationPortal({ code: propCode }: VerificationPortalProps) 
     const [copied, setCopied] = useState(false);
     const [showFallback, setShowFallback] = useState(false);
 
+    const formatTrack = (track: string) => {
+        if (!track) return 'Compliance Certificate';
+        return track.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+    };
+
     useEffect(() => {
         if (error && !loading) {
             setShowFallback(true);
@@ -87,7 +92,8 @@ export function VerificationPortal({ code: propCode }: VerificationPortalProps) 
     };
 
     const handleShareEmail = () => {
-        const subject = encodeURIComponent(`Verified Credential — ${result?.data?.program?.title || 'Dezai.ai'}`);
+        const title = result?.isEnterprise ? formatTrack(result?.data?.complianceTrack) : (result?.data?.program?.title || 'Dezai.ai');
+        const subject = encodeURIComponent(`Verified Credential — ${title}`);
         const body = encodeURIComponent(`You can verify this credential at: ${verifyUrl}`);
         window.open(`mailto:?subject=${subject}&body=${body}`);
     };
@@ -282,13 +288,19 @@ export function VerificationPortal({ code: propCode }: VerificationPortalProps) 
                                         <p className="text-xs font-semibold text-muted uppercase tracking-wider">Attempted Recipient Details</p>
                                         <div className="text-sm border-t border-border-light pt-2 space-y-1">
                                             <p className="text-on-surface">
-                                                Recipient: <span className="font-bold line-through">{result.data?.user?.name || result.data?.userId}</span>
+                                                Recipient: <span className="font-bold line-through">
+                                                    {result.isEnterprise ? (result.data?.employee?.user?.name || 'Employee') : (result.data?.user?.name || result.data?.userId)}
+                                                </span>
                                             </p>
                                             <p className="text-on-surface">
-                                                Program: <span className="font-medium line-through">{result.data?.program?.title || 'Unknown Program'}</span>
+                                                {result.isEnterprise ? 'Compliance Track' : 'Program'}: <span className="font-medium line-through">
+                                                    {result.isEnterprise ? formatTrack(result.data?.complianceTrack) : (result.data?.program?.title || 'Unknown Program')}
+                                                </span>
                                             </p>
                                             <p className="text-on-surface">
-                                                Institution: <span className="font-medium">{result.data?.program?.institution?.name || 'Unknown Institution'}</span>
+                                                {result.isEnterprise ? 'Organization' : 'Institution'}: <span className="font-medium">
+                                                    {result.isEnterprise ? (result.data?.organization?.name || 'Allianz') : (result.data?.program?.institution?.name || 'Unknown Institution')}
+                                                </span>
                                             </p>
                                             <p className="text-xs text-muted font-mono bg-neutral-100 p-2 rounded-md mt-2 select-all">
                                                 Code: {result.data?.verificationCode}
@@ -330,16 +342,30 @@ export function VerificationPortal({ code: propCode }: VerificationPortalProps) 
                             >
                                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20" />
                                 <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 h-20 w-20 rounded-full bg-white p-1 shadow-lg">
-                                    {result.data?.program?.institution?.logoUrl ? (
-                                        <img
-                                            src={result.data.program.institution.logoUrl}
-                                            alt="Institution logo"
-                                            className="h-full w-full rounded-full object-cover"
-                                        />
+                                    {result.isEnterprise ? (
+                                        result.data?.organization?.logoUrl ? (
+                                            <img
+                                                src={result.data.organization.logoUrl}
+                                                alt="Organization logo"
+                                                className="h-full w-full rounded-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="h-full w-full rounded-full bg-emerald-100 flex items-center justify-center">
+                                                <Award className="h-8 w-8 text-emerald-600" />
+                                            </div>
+                                        )
                                     ) : (
-                                        <div className="h-full w-full rounded-full bg-emerald-100 flex items-center justify-center">
-                                            <Award className="h-8 w-8 text-emerald-600" />
-                                        </div>
+                                        result.data?.program?.institution?.logoUrl ? (
+                                            <img
+                                                src={result.data.program.institution.logoUrl}
+                                                alt="Institution logo"
+                                                className="h-full w-full rounded-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="h-full w-full rounded-full bg-emerald-100 flex items-center justify-center">
+                                                <Award className="h-8 w-8 text-emerald-600" />
+                                            </div>
+                                        )
                                     )}
                                 </div>
                             </div>
@@ -351,9 +377,13 @@ export function VerificationPortal({ code: propCode }: VerificationPortalProps) 
                                 >
                                     {result.data?.verificationStatus} CREDENTIAL
                                 </span>
-                                <h2 className="text-2xl font-black text-on-surface mb-1">{result.data?.program?.title || 'Certified Mastery'}</h2>
+                                <h2 className="text-2xl font-black text-on-surface mb-1">
+                                    {result.isEnterprise ? (result.data?.template?.name || formatTrack(result.data?.complianceTrack)) : (result.data?.program?.title || 'Certified Mastery')}
+                                </h2>
                                 <p className="text-muted text-sm mb-6">
-                                    Issued to <span className="font-bold text-on-surface">{result.data?.user?.name || result.data?.userId}</span>
+                                    Issued to <span className="font-bold text-on-surface">
+                                        {result.isEnterprise ? (result.data?.employee?.user?.name || 'Employee') : (result.data?.user?.name || result.data?.userId)}
+                                    </span>
                                 </p>
 
                                 {/* Details Grid */}
@@ -366,19 +396,23 @@ export function VerificationPortal({ code: propCode }: VerificationPortalProps) 
                                     </div>
                                     <div>
                                         <p className="text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">Credential Tier</p>
-                                        <p className="text-sm font-bold text-primary">{result.data?.tier}</p>
+                                        <p className="text-sm font-bold text-primary">{result.isEnterprise ? 'COMPLIANCE' : result.data?.tier}</p>
                                     </div>
                                     <div>
                                         <p className="text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">
-                                            <User className="inline h-3 w-3 mr-0.5" />Issued By
+                                            <User className="inline h-3 w-3 mr-0.5" />{result.isEnterprise ? 'Department' : 'Issued By'}
                                         </p>
-                                        <p className="text-sm font-medium text-on-surface">{result.data?.issuer?.name || 'Dezai.ai'}</p>
+                                        <p className="text-sm font-medium text-on-surface">
+                                            {result.isEnterprise ? (result.data?.employee?.department?.name || 'Global Risk & Compliance') : (result.data?.issuer?.name || 'Dezai.ai')}
+                                        </p>
                                     </div>
                                     <div>
                                         <p className="text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">
-                                            <Building2 className="inline h-3 w-3 mr-0.5" />Institution
+                                            <Building2 className="inline h-3 w-3 mr-0.5" />{result.isEnterprise ? 'Organization' : 'Institution'}
                                         </p>
-                                        <p className="text-sm font-medium text-on-surface">{result.data?.program?.institution?.name || 'Dezai'}</p>
+                                        <p className="text-sm font-medium text-on-surface font-semibold text-emerald-600">
+                                            {result.isEnterprise ? (result.data?.organization?.name || 'Allianz Corp') : (result.data?.program?.institution?.name || 'Dezai')}
+                                        </p>
                                     </div>
                                     <div className="col-span-2">
                                         <p className="text-[10px] uppercase tracking-wider text-muted font-semibold mb-1">Verification ID</p>
@@ -390,7 +424,7 @@ export function VerificationPortal({ code: propCode }: VerificationPortalProps) 
                                 <div className="flex items-center gap-3 justify-center text-sm mb-6">
                                     <ShieldCheck className="h-5 w-5 text-emerald-500" />
                                     <span className="text-muted">
-                                        Verified by <span className="font-semibold text-on-surface">{result.data?.program?.institution?.name || 'Dezai'}</span>
+                                        Verified by <span className="font-semibold text-on-surface">{result.isEnterprise ? (result.data?.organization?.name || 'Allianz') : (result.data?.program?.institution?.name || 'Dezai')}</span>
                                     </span>
                                 </div>
 
