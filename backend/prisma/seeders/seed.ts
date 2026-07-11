@@ -714,7 +714,240 @@ async function main() {
     console.log('  Achievement definitions already exist, skipped');
   }
 
+  // Seed Enterprise Platform Additions
+  await seedEnterprise();
+
   console.log('\n=== Seeding completed successfully! ===');
+}
+
+async function seedEnterprise() {
+  console.log('\n--- Seeding Enterprise Compliance & Training Platform ---');
+
+  const passwordHash = hashPassword('password123');
+
+  // 1. Create Organization
+  const org = await prisma.organization.upsert({
+    where: { id: 'org-allianz' },
+    update: {},
+    create: {
+      id: 'org-allianz',
+      name: 'Allianz Corp',
+      logoUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&h=200&fit=crop',
+      industry: 'Financial Services',
+      size: 'ENTERPRISE',
+      billingEmail: 'billing@allianz.com',
+    },
+  });
+  console.log(`  ✓ Seeding organization: ${org.name}`);
+
+  // 2. Create User and Org Admin
+  const adminUser = await prisma.user.upsert({
+    where: { email: 'orgadmin@allianz.com' },
+    update: { role: 'ORGANIZATION_ADMIN' },
+    create: {
+      id: 'user-orgadmin',
+      email: 'orgadmin@allianz.com',
+      name: 'Arya Risk Manager',
+      passwordHash,
+      role: 'ORGANIZATION_ADMIN',
+      onboarded: true,
+    },
+  });
+
+  await prisma.organizationAdmin.upsert({
+    where: { userId: adminUser.id },
+    update: {},
+    create: {
+      id: 'orgadmin-1',
+      userId: adminUser.id,
+      organizationId: org.id,
+      role: 'ADMIN',
+    },
+  });
+  console.log(`  ✓ Seeding Org Admin: ${adminUser.email}`);
+
+  // 3. Create User and Employee
+  const employeeUser = await prisma.user.upsert({
+    where: { email: 'employee@allianz.com' },
+    update: { role: 'EMPLOYEE' },
+    create: {
+      id: 'user-employee',
+      email: 'employee@allianz.com',
+      name: 'Tirth Employee',
+      passwordHash,
+      role: 'EMPLOYEE',
+      onboarded: true,
+    },
+  });
+
+  // 4. Create Department
+  const dept = await prisma.department.upsert({
+    where: { id: 'dept-grc' },
+    update: {},
+    create: {
+      id: 'dept-grc',
+      organizationId: org.id,
+      name: 'Global Risk & Compliance',
+      description: 'Responsible for regulatory oversight, auditing, and cybersecurity compliance training.',
+    },
+  });
+  console.log(`  ✓ Seeding Department: ${dept.name}`);
+
+  // 5. Create Employee entry
+  const employee = await prisma.employee.upsert({
+    where: { userId: employeeUser.id },
+    update: { departmentId: dept.id },
+    create: {
+      id: 'emp-tirth',
+      userId: employeeUser.id,
+      organizationId: org.id,
+      departmentId: dept.id,
+      title: 'Compliance Associate',
+      employmentStatus: 'ACTIVE',
+      joinedAt: new Date(),
+    },
+  });
+  console.log(`  ✓ Seeding Employee: ${employeeUser.email}`);
+
+  // Set manager
+  await prisma.department.update({
+    where: { id: dept.id },
+    data: { managerId: employee.id },
+  });
+
+  // 6. Create Enterprise Question Bank for Cybersecurity
+  const eqb = await prisma.enterpriseQuestionBank.upsert({
+    where: { id: 'eqb-cybersecurity' },
+    update: {},
+    create: {
+      id: 'eqb-cybersecurity',
+      title: 'Cybersecurity Threat Mitigation Bank',
+      description: 'Core questions for evaluating threat landscape, phishing, and password compliance.',
+      organizationId: org.id,
+      departmentId: dept.id,
+      complianceTrack: 'CYBER_SECURITY',
+      sourceType: 'SEEDED_DEMO',
+    },
+  });
+  console.log(`  ✓ Seeding Question Bank: ${eqb.title}`);
+
+  // Seed questions if empty
+  const qCount = await prisma.enterpriseQuestion.count({
+    where: { questionBankId: eqb.id },
+  });
+  if (qCount === 0) {
+    const q1 = await prisma.enterpriseQuestion.create({
+      data: {
+        id: 'eq-cyber-1',
+        questionBankId: eqb.id,
+        text: 'Which of the following describes a spear-phishing attack?',
+        difficulty: 'MEDIUM',
+        explanation: 'Spear phishing targets specific individuals with personalized communications to steal credentials.',
+        timerSeconds: 45,
+      },
+    });
+    await prisma.enterpriseQuestionOption.createMany({
+      data: [
+        { questionId: q1.id, text: 'A personalized email target aiming at a specific individual', isCorrect: true },
+        { questionId: q1.id, text: 'A broad attack targeting all users on a server', isCorrect: false },
+        { questionId: q1.id, text: 'A physical security breach at the office building', isCorrect: false },
+        { questionId: q1.id, text: 'A brute-force attempt to guess admin passwords', isCorrect: false },
+      ],
+    });
+
+    const q2 = await prisma.enterpriseQuestion.create({
+      data: {
+        id: 'eq-cyber-2',
+        questionBankId: eqb.id,
+        text: 'What is the recommended character minimum for corporate master passwords under NIST guidelines?',
+        difficulty: 'EASY',
+        explanation: 'NIST SP 800-63B recommends memorized secrets (passwords) be at least 8 characters in length, but 12-16 is preferred for enterprise security.',
+        timerSeconds: 45,
+      },
+    });
+    await prisma.enterpriseQuestionOption.createMany({
+      data: [
+        { questionId: q2.id, text: 'At least 12 characters', isCorrect: true },
+        { questionId: q2.id, text: '6 characters', isCorrect: false },
+        { questionId: q2.id, text: 'Any length is fine as long as there is an uppercase character', isCorrect: false },
+        { questionId: q2.id, text: 'NIST does not recommend length rules', isCorrect: false },
+      ],
+    });
+    console.log('    ✓ Seeded threat mitigation questions');
+  }
+
+  // 7. Seed Compliance Assessment
+  const assessment = await prisma.complianceAssessment.upsert({
+    where: { id: 'assess-cyber-1' },
+    update: {},
+    create: {
+      id: 'assess-cyber-1',
+      organizationId: org.id,
+      departmentId: dept.id,
+      questionBankId: eqb.id,
+      title: 'Cybersecurity Threat & Mitigation Exam',
+      complianceTrack: 'CYBER_SECURITY',
+      passingScore: 80,
+      sampleSize: 2,
+      timeLimit: 900,
+      timeLimitEnabled: true,
+      maxAttempts: 3,
+      allowResume: true,
+    },
+  });
+  console.log(`  ✓ Seeding Compliance Assessment: ${assessment.title}`);
+
+  // 8. Seed Compliance Attempt
+  const attempt = await prisma.complianceAssessmentAttempt.upsert({
+    where: { id: 'attempt-cyber-1' },
+    update: {},
+    create: {
+      id: 'attempt-cyber-1',
+      userId: employeeUser.id,
+      employeeId: employee.id,
+      assessmentId: assessment.id,
+      score: 2,
+      percentage: 100.0,
+      passed: true,
+      startedAt: new Date(),
+      completedAt: new Date(),
+      timeTakenSeconds: 120,
+    },
+  });
+
+  // 9. Seed Enterprise Credential Template
+  const template = await prisma.enterpriseCredentialTemplate.upsert({
+    where: { id: 'template-cyber-1' },
+    update: {},
+    create: {
+      id: 'template-cyber-1',
+      name: 'Allianz Security Threat Specialist Certificate',
+      complianceTrack: 'CYBER_SECURITY',
+      organizationId: org.id,
+      designUrl: '/designs/enterprise-dark.png',
+    },
+  });
+  console.log(`  ✓ Seeding Credential Template: ${template.name}`);
+
+  // 10. Seed Enterprise Credential
+  const credential = await prisma.enterpriseCredential.upsert({
+    where: { id: 'cred-cyber-1' },
+    update: {},
+    create: {
+      id: 'cred-cyber-1',
+      employeeId: employee.id,
+      organizationId: org.id,
+      complianceAssessmentId: assessment.id,
+      complianceTrack: 'CYBER_SECURITY',
+      verificationCode: 'ALLIANZCYBER202611',
+      qrCodeUrl: '/qr/allianzcyber202611.png',
+      verificationUrl: 'http://localhost:3000/verify/ALLIANZCYBER202611',
+      verificationStatus: 'ACTIVE',
+      issuedAt: new Date(),
+      templateId: template.id,
+    },
+  });
+  console.log(`  ✓ Seeding Enterprise Credential: ${credential.verificationCode}`);
 }
 
 main()
