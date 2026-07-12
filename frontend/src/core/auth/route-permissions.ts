@@ -50,6 +50,13 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
     deniedRedirect: "/unauthorized",
   },
 
+  // ─── Employee Learning Routes ───
+  {
+    pathPrefix: "/learning",
+    allowedRoles: [UserRole.EMPLOYEE, UserRole.ORGANIZATION_ADMIN, UserRole.ORGANIZATION_MANAGER, UserRole.DEZAI_ADMIN],
+    deniedRedirect: "/unauthorized",
+  },
+
   // ─── Enterprise Routes ───
   {
     pathPrefix: "/enterprise/dashboard",

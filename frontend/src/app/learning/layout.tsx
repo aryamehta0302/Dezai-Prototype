@@ -8,7 +8,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useNotificationStore } from "@/lib/stores/notification.store";
 import { useEffect, useRef } from "react";
 
-export default function EnterpriseLayout({
+export default function LearningLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -24,22 +24,11 @@ export default function EnterpriseLayout({
     initialize();
   }, []);
 
-  const getVariant = () => {
-    if (!user) return "default";
-    switch (user.role) {
-      case UserRole.ORGANIZATION_ADMIN:
-      case UserRole.ORGANIZATION_MANAGER:
-        return "enterprise";
-      default:
-        return "default";
-    }
-  };
-
   return (
     <AuthGuard>
       <div className="flex min-h-screen flex-col">
         <TopAppBar
-          variant={getVariant()}
+          variant="employee"
           user={
             user
               ? {
