@@ -44,6 +44,7 @@ model User {
   employeeInfo   Employee?
   orgAdminInfo   OrganizationAdmin?
   complianceAttempts ComplianceAssessmentAttempt[]
+  complianceDocuments ComplianceDocument[]
 
   @@map("users")
 }
@@ -695,6 +696,8 @@ model Organization {
   complianceAssessments   ComplianceAssessment[]
   enterpriseCredentials   EnterpriseCredential[]
   enterpriseTemplates     EnterpriseCredentialTemplate[]
+  complianceDocuments     ComplianceDocument[]
+  complianceGeneratedContent ComplianceGeneratedContent[]
 
   @@map("organizations")
 }
@@ -766,6 +769,7 @@ model EnterpriseQuestionBank {
   department            Department?            @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   questions             EnterpriseQuestion[]
   complianceAssessments ComplianceAssessment[]
+  sourceDocument        ComplianceDocument? @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
 
   @@map("enterprise_question_banks")
 }
@@ -895,6 +899,66 @@ model EnterpriseCredentialTemplate {
   credentials    EnterpriseCredential[]
 
   @@map("enterprise_credential_templates")
+}
+
+model ComplianceDocument {
+  id             String   @id @default(uuid())
+  organizationId String
+  uploadedById   String
+  title          String
+  fileName       String
+  fileType       String
+  sizeBytes      Int
+  extractedText  String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization     Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedBy       User                         @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+  chunks           ComplianceDocumentChunk[]
+  generatedContent ComplianceGeneratedContent[]
+  questionBanks    EnterpriseQuestionBank[]
+
+  @@index([organizationId, createdAt])
+  @@map("compliance_documents")
+}
+
+model ComplianceDocumentChunk {
+  id         String   @id @default(uuid())
+  documentId String
+  index      Int
+  text       String
+  createdAt  DateTime @default(now())
+
+  document ComplianceDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, index])
+  @@index([documentId])
+  @@map("compliance_document_chunks")
+}
+
+model ComplianceGeneratedContent {
+  id             String                         @id @default(uuid())
+  organizationId String
+  documentId     String
+  type           ComplianceGeneratedContentType
+  title          String
+  content        Json
+  createdAt      DateTime                       @default(now())
+  updatedAt      DateTime                       @updatedAt
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  document     ComplianceDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, documentId, type])
+  @@map("compliance_generated_content")
+}
+
+enum ComplianceGeneratedContentType {
+  LESSON
+  SUMMARY
+  FLASHCARD
+  ASSESSMENT
 }
 
 enum ComplianceTrack {
