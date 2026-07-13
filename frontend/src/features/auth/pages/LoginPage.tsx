@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { GoogleSignInButton } from "../components/provider-sign-in-button";
 import { PremiumButton } from "@/shared/ui/premium-button";
 import { GraduationCap } from "lucide-react";
+import { getDashboardForRole } from "@/core/auth/permissions";
+import type { UserRole } from "@/shared/types/common.types";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
@@ -32,7 +34,10 @@ export function LoginPage() {
       } else {
         toast.success("Successfully logged in!");
         router.refresh();
-        router.push("/dashboard");
+        const sessionRes = await fetch("/api/auth/session");
+        const session = await sessionRes.json();
+        const role = session?.user?.role as UserRole | undefined;
+        router.push(role ? getDashboardForRole(role) : "/dashboard");
       }
     } catch {
       toast.error("An error occurred. Please try again.");

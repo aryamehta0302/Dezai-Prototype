@@ -16,6 +16,11 @@ import {
   LogOut,
   Settings,
   ChevronDown,
+  TrendingUp,
+  Clock,
+  Trophy,
+  Medal,
+  Users,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -40,11 +45,19 @@ const studentNav = [
 ];
 
 const employeeNav = [
-  { href: "/enterprise/credentials", label: "My Compliance", icon: Award },
+  { href: "/learning", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/learning/progress", label: "Progress", icon: TrendingUp },
+  { href: "/learning/timeline", label: "History", icon: Clock },
+  { href: "/learning/achievements", label: "Achievements", icon: Trophy },
+  { href: "/learning/leaderboard", label: "Leaderboard", icon: Medal },
+  { href: "/enterprise/credentials", label: "Credentials", icon: Award },
+  { href: "/learning/profile", label: "Profile", icon: User },
 ];
 
 const enterpriseNav = [
   { href: "/enterprise/dashboard", label: "Compliance Dashboard", icon: LayoutDashboard },
+  { href: "/learning", label: "Team Learning", icon: Users },
+  { href: "/learning/leaderboard", label: "Leaderboard", icon: Medal },
 ];
 
 export function TopAppBar({
