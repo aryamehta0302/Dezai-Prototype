@@ -1,13 +1,21 @@
 import { forwardRef, useState } from "react"
 import { cn } from "@/shared/utils"
 
+type PremiumButtonSize = "sm" | "lg"
+
 interface PremiumButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode
   icon?: React.ReactNode
+  size?: PremiumButtonSize
+}
+
+const sizeStyles: Record<PremiumButtonSize, string> = {
+  sm: "rounded-full px-6 py-3 text-sm gap-3",
+  lg: "rounded-[26px] px-10 py-5 text-2xl gap-4",
 }
 
 const PremiumButton = forwardRef<HTMLButtonElement, PremiumButtonProps>(
-  ({ children, icon, className, ...props }, ref) => {
+  ({ children, icon, size = "lg", className, ...props }, ref) => {
     const [pressed, setPressed] = useState(false)
 
     return (
@@ -15,14 +23,15 @@ const PremiumButton = forwardRef<HTMLButtonElement, PremiumButtonProps>(
         ref={ref}
         data-slot="premium-button"
         className={cn(
-          "group relative inline-flex items-center justify-center gap-4 overflow-hidden rounded-[26px] px-10 py-5",
-          "font-sans text-2xl font-semibold tracking-tight text-white",
+          "group relative inline-flex items-center justify-center overflow-hidden",
+          "font-sans font-semibold tracking-tight text-white",
           "cursor-pointer select-none outline-none",
           "transition-[transform,box-shadow] duration-300",
           "hover:shadow-[0_16px_45px_rgba(44,102,255,0.28)]",
           "focus-visible:ring-3 focus-visible:ring-ring/50",
           "disabled:pointer-events-none disabled:opacity-50",
           pressed && "scale-[0.985]",
+          sizeStyles[size],
           className,
         )}
         style={{
@@ -50,7 +59,7 @@ const PremiumButton = forwardRef<HTMLButtonElement, PremiumButtonProps>(
           }}
         />
         {icon && (
-          <span className="flex items-center justify-center">
+          <span className="relative z-1 flex items-center justify-center">
             {icon}
           </span>
         )}
