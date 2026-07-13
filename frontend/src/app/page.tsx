@@ -22,24 +22,33 @@ import {
 const features = [
   {
     icon: Brain,
-    title: "AI Mentor that actually teaches",
-    copy: "Not a chatbot bolted onto a PDF viewer. It tracks weak topics per learner and adapts practice in real time.",
+    title: "AI Learning",
+    copy: "Adaptive learning paths that detect weak concepts and spin up targeted side-quests to fix gaps before you move on.",
   },
   {
     icon: ShieldCheck,
-    title: "Assessments people can't fake",
-    copy: "Identity verification, browser lockdown, session recording. Your certificates mean something.",
+    title: "Secure Assessments",
+    copy: "100-question pools randomized per session. Browser lockdown, clipboard disabled, tab-switch detection. Two students get different exams.",
   },
   {
     icon: Award,
-    title: "Three tiers of credentials",
-    copy: "Skill badges for completion. University-accredited certificates for rigor. Industry-verified for career proof.",
+    title: "Verified Credentials",
+    copy: "University-branded, uniquely ID'd, instantly verifiable. Every certificate has a public verification page employers can trust.",
   },
   {
     icon: BarChart3,
-    title: "Analytics you'll actually use",
-    copy: "XP, streaks, completion rates, weak topics, cohort comparisons. See what's working and what isn't.",
+    title: "Analytics & Leaderboards",
+    copy: "Student performance, cohort comparisons, XP tracking, campus rankings. Top 3 students monthly earn scholarship codes.",
   },
+];
+
+const comparisonRows = [
+  { traditional: "PDF Certificate", dezai: "Verified Credential" },
+  { traditional: "Recorded Videos", dezai: "AI Adaptive Learning" },
+  { traditional: "Static Quizzes", dezai: "Secure Proctored Assessments" },
+  { traditional: "Completion Rate", dezai: "Competency Score" },
+  { traditional: "Resume Claims", dezai: "Employer Verification" },
+  { traditional: "Passive Learning", dezai: "Gamified XP Progression" },
 ];
 
 const roles = [
@@ -117,7 +126,7 @@ export default function HomePage() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-white text-slate-900 antialiased">
       {/* ── Grainient BG ── */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[650px] overflow-hidden opacity-80">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[720px] overflow-hidden opacity-80">
         <Grainient
           color1="#60a5fa"
           color2="#1d4ed8"
@@ -142,9 +151,8 @@ export default function HomePage() {
           centerY={1}
           zoom={1.3}
         />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-white to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-[400px] bg-gradient-to-t from-white to-transparent" />
       </div>
-
       {/* ── Nav ── */}
       <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${mobileOpen ? "bg-white shadow-sm" : scrolled ? "bg-white/70 backdrop-blur-2xl shadow-[0_1px_0_0_rgba(0,0,0,0.05)]" : ""}`}>
         <div className={`mx-auto flex h-14 max-w-7xl items-center justify-between px-5 md:px-8 transition-colors duration-300`}>
@@ -156,9 +164,9 @@ export default function HomePage() {
           </Link>
           <nav className="hidden items-center gap-7 text-[13px] font-medium md:flex transition-colors duration-300">
             {[
-              { href: "#features", label: "Features" },
-              { href: "#roles", label: "Who It's For" },
-              { href: "#faq", label: "FAQ" },
+              { href: "#features", label: "Platform" },
+              { href: "#solutions", label: "Solutions" },
+              { href: "#employer", label: "For Employers" },
               { href: "/verify", label: "Verify Credential" },
             ].map((link) => (
               <a
@@ -192,9 +200,9 @@ export default function HomePage() {
             <div className="mx-auto max-w-7xl px-5 py-4">
               <div className="space-y-0.5">
                 {[
-                  { href: "#features", label: "Features" },
-                  { href: "#roles", label: "Who It's For" },
-                  { href: "#faq", label: "FAQ" },
+                  { href: "#features", label: "Platform" },
+                  { href: "#solutions", label: "Solutions" },
+                  { href: "#employer", label: "For Employers" },
                   { href: "/verify", label: "Verify Credential" },
                 ].map((link) => (
                   <a
@@ -229,10 +237,10 @@ export default function HomePage() {
       </header>
 
       {/* ── Hero ── */}
-      <section className="relative pt-28 pb-20 md:pt-28 md:pb-28">
+      <section className="relative pt-28 pb-8 md:pt-28 md:pb-12">
         {/* Grainient background */}
         <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-          <div className="absolute left-1/2 top-0 h-[600px] w-[600px] -translate-x-1/2 -translate-y-[100px] opacity-60 sm:h-[1080px] sm:w-[1080px] sm:-translate-y-[200px]">
+          <div className="absolute left-1/2 top-0 h-[1100px] w-[600px] -translate-x-1/2 -translate-y-[400px] opacity-60 sm:h-[1600px] sm:w-[1080px] sm:-translate-y-[500px]">
             <Grainient
               color1="#8fc5ff"
               color2="#584ceb"
@@ -267,184 +275,76 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-5 md:px-8">
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50/60 px-3 py-1 text-[12px] font-medium text-blue-700 sm:text-[13px]">
-              Trusted by 6 universities and counting
+              Trusted by 6+ university partners
             </div>
 
             <h1 className="font-['Playfair_Display',serif] text-[36px] font-medium leading-[92%] tracking-[-0.03em] sm:text-[48px] md:text-[64px] lg:text-[80px] xl:text-[88px] text-white">
-              Stop issuing certificates
+              Education That
               <br />
               <span className="text-white">
-                no one believes
+                Employers Trust
               </span>
             </h1>
 
             <p className="mx-auto mt-6 max-w-lg text-[16px] leading-[1.7] tracking-[-0.01em] text-white/70">
-              Dezai helps universities and training partners teach AI skills with real assessments and credentials employers can verify. Not another MOOC handing out PDFs.
+              Traditional platforms measure completion. Dezai measures competency — through AI-powered assessments, verified credentials, and employer-ready skill validation.
             </p>
 
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link href="/signup">
                 <PremiumButton size="sm" icon={<ArrowRight className="size-4" />}>
-                  Create free account
+                  Start Building Your Future
                 </PremiumButton>
               </Link>
-              <Link
-                href="/login"
+              <button
                 className="inline-flex h-[46px] items-center gap-2 rounded-full border border-white/15 px-6 text-[14px] font-medium text-white transition hover:bg-white/5"
               >
-                Explore demo
-              </Link>
+                <CirclePlay className="size-4 fill-white" />
+                Watch Platform Demo
+              </button>
             </div>
           </div>
         </div>
+
+        {/* Dashboard mockup — same section, sits on top of the BG */}
+        <div className="mx-auto max-w-7xl px-5 md:px-8 mt-16">
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/50">
+            <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3">
+              <span className="size-3 rounded-full bg-[#FF5F56]" />
+              <span className="size-3 rounded-full bg-[#FFBD2E]" />
+              <span className="size-3 rounded-full bg-[#27C93F]" />
+              <div className="mx-auto flex items-center gap-1 rounded-md bg-slate-200/60 px-4 py-1 sm:px-24">
+                <span className="text-[11px] font-medium text-slate-400">dezai.ai/learning</span>
+              </div>
+            </div>
+            <div className="relative aspect-[16/9] bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-3 text-slate-300">
+                  <GraduationCap className="size-12" />
+                  <span className="text-sm font-medium">Platform preview</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </section>
 
-      {/* ── Product Preview ── */}
-      <section className="mx-auto max-w-7xl px-5 md:px-8">
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/50">
-          {/* macOS title bar */}
-          <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3">
-            <span className="size-3 rounded-full bg-[#FF5F56]" />
-            <span className="size-3 rounded-full bg-[#FFBD2E]" />
-            <span className="size-3 rounded-full bg-[#27C93F]" />
-            <div className="mx-auto flex items-center gap-1 rounded-md bg-slate-200/60 px-4 py-1 sm:px-24">
-              <span className="text-[11px] font-medium text-slate-400">dezai.ai/learning</span>
+      {/* ── Trusted By / Stats ── */}
+      <section className="mx-auto max-w-7xl px-5 md:px-8 pt-16 pb-8">
+        <p className="text-center text-[12px] font-semibold uppercase tracking-[0.15em] text-slate-400 mb-8">Trusted by</p>
+        <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+          {[
+            { value: "6+", label: "Partner Universities" },
+            { value: "200+", label: "Faculty Members" },
+            { value: "10K+", label: "Assessments Completed" },
+            { value: "100%", label: "Verifiable Credentials" },
+          ].map((stat) => (
+            <div key={stat.label} className="text-center">
+              <p className="text-3xl font-semibold tracking-tight text-slate-900">{stat.value}</p>
+              <p className="mt-1 text-sm text-slate-500">{stat.label}</p>
             </div>
-          </div>
-          {/* App content placeholder */}
-          <div className="relative aspect-[16/9] bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-3 text-slate-300">
-                <GraduationCap className="size-12" />
-                <span className="text-sm font-medium">Platform preview</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Feature Showcase ── */}
-      <section className="mx-auto max-w-7xl px-5 md:px-8 pt-20 lg:pt-32 pb-12 lg:pb-16">
-        <div className="mb-16 flex flex-col items-center gap-4 text-center">
-          <h2 className="inline-block w-fit bg-gradient-to-r from-[#19191D] to-[#626275] bg-clip-text text-3xl leading-[1.25] font-medium tracking-[-1.28px] text-transparent lg:text-5xl xl:text-[56px]">
-            From setup to first credential in days
-          </h2>
-          <p className="max-w-xl text-base leading-relaxed text-[#8C929D] md:text-lg">
-            Set up a cohort, let AI mentor your learners, and issue credentials that employers can actually verify. Three steps, no bureaucracy.
-          </p>
-        </div>
-
-        <div className="scrollbar-none flex snap-x snap-mandatory gap-6 overflow-x-auto pb-4 lg:grid lg:snap-none lg:grid-cols-3 lg:overflow-visible lg:pb-0 xl:gap-8">
-          {/* Card 1: AI Mentor */}
-          <div className="min-w-[85vw] snap-center sm:min-w-[60vw] md:min-w-[45vw] lg:min-w-0">
-            <div>
-              <div className="card-styles flex flex-col justify-between p-[18px] md:p-[19px] lg:p-[17px] xl:p-[22px] 2xl:p-6">
-                <div className="pointer-events-none rounded-[6px] bg-[linear-gradient(180deg,rgba(255,255,255,0.7)_0%,#F9FAFB_100%)] p-3.5 md:rounded-[10px] lg:rounded-[9px] xl:rounded-xl xl:p-4.5">
-                  <div className="relative h-[195px] w-full overflow-hidden rounded-xl bg-gradient-to-br from-blue-50 via-white to-indigo-50/30 px-[10px] py-[14px] md:h-[206px] md:rounded-[10px] lg:h-[185px] xl:h-[240px] 2xl:h-[260px]">
-                    <div className="absolute right-4 top-4 flex items-center gap-1.5 rounded-md bg-blue-50 px-2 py-1">
-                      <div className="size-1.5 rounded-full bg-blue-500 animate-pulse" />
-                      <span className="text-[10px] font-medium text-blue-700">AI Active</span>
-                    </div>
-                    <div className="absolute bottom-4 left-4 right-4">
-                      <div className="rounded-lg bg-white/80 p-3 shadow-sm backdrop-blur-sm">
-                        <div className="flex items-start gap-2">
-                          <div className="grid size-6 shrink-0 place-items-center rounded-full bg-blue-600">
-                            <Brain className="size-3 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-[11px] leading-relaxed text-slate-600">I noticed you struggled with recursion in Quiz 3. Let me walk you through a simpler example...</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="mx-auto mt-[19px] max-w-[600px] text-base leading-snug tracking-[-0.02em] text-gray-500 sm:text-lg md:mt-5 xl:mt-[18px] xl:text-xl 2xl:mt-[26px]">
-                  <p><strong className="mr-1 font-medium text-slate-900">Adapts to each learner.</strong>AI mentoring that tracks weak topics and adjusts practice in real time — not a chatbot bolted onto a PDF viewer.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 2: Proctored Assessments */}
-          <div className="min-w-[85vw] snap-center sm:min-w-[60vw] md:min-w-[45vw] lg:min-w-0">
-            <div>
-              <div className="card-styles flex flex-col justify-between p-[18px] md:p-[19px] lg:p-[17px] xl:p-[22px] 2xl:p-6">
-                <div className="pointer-events-none rounded-[6px] bg-[linear-gradient(180deg,rgba(255,255,255,0.7)_0%,#F9FAFB_100%)] p-3.5 md:rounded-[10px] lg:rounded-[9px] xl:rounded-xl xl:p-4.5">
-                  <div className="relative h-[195px] w-full overflow-hidden rounded-xl bg-gradient-to-br from-emerald-50 via-white to-teal-50/30 px-[10px] py-[14px] md:h-[206px] md:rounded-[10px] lg:h-[185px] xl:h-[240px] 2xl:h-[260px]">
-                    <div className="absolute left-4 top-4 flex items-center gap-1.5 rounded-md bg-emerald-50 px-2 py-1">
-                      <ShieldCheck className="size-3 text-emerald-600" />
-                      <span className="text-[10px] font-medium text-emerald-700">Proctored</span>
-                    </div>
-                    <div className="absolute right-4 top-4 flex items-center gap-1.5 rounded-md bg-amber-50 px-2 py-1">
-                      <span className="text-[10px] font-medium text-amber-700">12:45</span>
-                    </div>
-                    <div className="absolute bottom-4 left-4 right-4 space-y-2">
-                      <div className="flex items-center gap-2 rounded-lg bg-white/80 px-3 py-2 shadow-sm backdrop-blur-sm">
-                        <div className="grid size-5 place-items-center rounded-full bg-emerald-100">
-                          <Check className="size-3 text-emerald-600" />
-                        </div>
-                        <span className="text-[11px] font-medium text-slate-600">Identity verified</span>
-                      </div>
-                      <div className="flex items-center gap-2 rounded-lg bg-white/80 px-3 py-2 shadow-sm backdrop-blur-sm">
-                        <div className="grid size-5 place-items-center rounded-full bg-blue-100">
-                          <ShieldCheck className="size-3 text-blue-600" />
-                        </div>
-                        <span className="text-[11px] font-medium text-slate-600">Browser lockdown active</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="mx-auto mt-[19px] max-w-[600px] text-base leading-snug tracking-[-0.02em] text-gray-500 sm:text-lg md:mt-5 xl:mt-[18px] xl:text-xl 2xl:mt-[26px]">
-                  <p><strong className="mr-1 font-medium text-slate-900">Assessments people can&apos;t fake.</strong>Identity verification, browser lockdown, and session recording. Your certificates mean something.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 3: Credentials */}
-          <div className="min-w-[85vw] snap-center sm:min-w-[60vw] md:min-w-[45vw] lg:min-w-0">
-            <div>
-              <div className="card-styles flex flex-col justify-between p-[18px] md:p-[19px] lg:p-[17px] xl:p-[22px] 2xl:p-6">
-                <div className="pointer-events-none rounded-[6px] bg-[linear-gradient(180deg,rgba(255,255,255,0.7)_0%,#F9FAFB_100%)] p-3.5 md:rounded-[10px] lg:rounded-[9px] xl:rounded-xl xl:p-4.5">
-                  <div className="relative h-[195px] w-full overflow-hidden rounded-xl bg-gradient-to-br from-violet-50 via-white to-purple-50/30 px-[10px] py-[14px] md:h-[206px] md:rounded-[10px] lg:h-[185px] xl:h-[240px] 2xl:h-[260px]">
-                    <div className="absolute inset-x-4 top-4 rounded-lg border border-violet-100 bg-white p-3 shadow-sm">
-                      <div className="flex items-center gap-3">
-                        <div className="grid size-10 place-items-center rounded-lg bg-gradient-to-br from-violet-500 to-blue-600">
-                          <Award className="size-5 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-[12px] font-semibold text-slate-900">AI Fundamentals</p>
-                          <p className="text-[10px] text-slate-500">University-Accredited Certificate</p>
-                        </div>
-                      </div>
-                      <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-2">
-                        <span className="text-[9px] font-mono text-slate-400">VD-2026-AI-8847</span>
-                        <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[8px] font-medium text-emerald-700">Verified</span>
-                      </div>
-                    </div>
-                    <div className="absolute bottom-4 left-4 right-4 flex gap-2">
-                      <div className="flex-1 rounded-md bg-white/80 px-2 py-1.5 text-center shadow-sm backdrop-blur-sm">
-                        <p className="text-[14px] font-semibold text-slate-900">88%</p>
-                        <p className="text-[8px] text-slate-500">Score</p>
-                      </div>
-                      <div className="flex-1 rounded-md bg-white/80 px-2 py-1.5 text-center shadow-sm backdrop-blur-sm">
-                        <p className="text-[14px] font-semibold text-slate-900">12</p>
-                        <p className="text-[8px] text-slate-500">Modules</p>
-                      </div>
-                      <div className="flex-1 rounded-md bg-white/80 px-2 py-1.5 text-center shadow-sm backdrop-blur-sm">
-                        <p className="text-[14px] font-semibold text-slate-900">4.8</p>
-                        <p className="text-[8px] text-slate-500">Rating</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="mx-auto mt-[19px] max-w-[600px] text-base leading-snug tracking-[-0.02em] text-gray-500 sm:text-lg md:mt-5 xl:mt-[18px] xl:text-xl 2xl:mt-[26px]">
-                  <p><strong className="mr-1 font-medium text-slate-900">Credentials that hold weight.</strong>Three tiers — skill badges, university-accredited, and industry-verified. Every certificate has a public verification page.</p>
-                </div>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 
@@ -453,10 +353,10 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-5 md:px-8 pt-20 lg:pt-32 pb-12 lg:pb-16">
           <div className="mb-16 flex flex-col items-center gap-4 text-center">
             <h2 className="inline-block w-fit bg-gradient-to-r from-[#19191D] to-[#626275] bg-clip-text text-3xl leading-[1.25] font-medium tracking-[-1.28px] text-transparent lg:text-5xl xl:text-[56px]">
-              The parts that matter
+              Everything in one platform
             </h2>
             <p className="max-w-xl text-base leading-relaxed text-[#8C929D] md:text-lg">
-              Every feature is built for credibility — AI mentoring that adapts, assessments that can&apos;t be gamed, and credentials anyone can verify.
+              AI learning, secure assessments, verified credentials, and employer verification — unified for universities, students, and employers.
             </p>
           </div>
 
@@ -480,33 +380,219 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Roles ── */}
-      <section id="roles">
+      {/* ── Problem ── */}
+      <section>
         <div className="mx-auto max-w-7xl px-5 md:px-8 pt-20 lg:pt-32 pb-12 lg:pb-16">
           <div className="mb-16 flex flex-col items-center gap-4 text-center">
             <h2 className="inline-block w-fit bg-gradient-to-r from-[#19191D] to-[#626275] bg-clip-text text-3xl leading-[1.25] font-medium tracking-[-1.28px] text-transparent lg:text-5xl xl:text-[56px]">
-              Built for the people who actually do the work
+              Education is broken
             </h2>
             <p className="max-w-xl text-base leading-relaxed text-[#8C929D] md:text-lg">
-              Whether you&apos;re a university launching AI programs, a training partner certifying skills, or an enterprise running compliance — Dezai fits how you work.
+              Completion rates below 7%. PDFs anyone can fake. No way for employers to verify what a candidate actually knows.
             </p>
           </div>
 
-          <div className="grid gap-6 lg:gap-8 md:grid-cols-2">
-            {roles.map((r) => (
+          <div className="grid gap-6 lg:grid-cols-3">
+            {[
+              { title: "PDF certificates", desc: "Anyone can upload one. Employers have no way to verify if the student actually possesses the skills.", color: "red" },
+              { title: "Passive learning", desc: "Students watch videos. Completion rates stay below 7%. Knowledge retention disappears.", color: "red" },
+              { title: "Weak assessments", desc: "Static quizzes, easy cheating, no real skill validation. Completion means nothing.", color: "red" },
+            ].map((card) => (
               <div
-                key={r.title}
-                className="rounded-4xl bg-gradient-to-br from-slate-50 to-white p-5 sm:p-8"
+                key={card.title}
+                className="rounded-4xl border border-white/25 bg-white p-6 shadow-[inset_1px_1px_10px_2px_rgba(255,255,255,0.2)]"
+                style={{ boxShadow: "inset 1px 1px 10px 2px rgba(255,255,255,0.2), inset 0px 0px 24px 0px rgba(148,163,184,0.1)" }}
               >
-                <h3 className="text-xl font-medium tracking-[-0.3px] text-slate-900">{r.title}</h3>
-                <ul className="mt-4 space-y-2.5">
-                  {r.items.map((item) => (
-                    <li key={item} className="flex items-start gap-2.5 text-sm font-medium leading-[1.6] tracking-[-0.01em] text-[#626275]">
-                      <Check className="mt-0.5 size-3.5 shrink-0 text-blue-500" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+                <h3 className="text-xl font-medium tracking-[-0.3px] text-slate-900">{card.title}</h3>
+                <p className="mt-2 text-sm font-medium leading-[1.6] tracking-[-0.01em] text-[#626275]">{card.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Old vs Dezai flow */}
+          <div className="mt-16 grid gap-8 lg:grid-cols-2">
+            <div className="rounded-4xl bg-slate-50 p-6 sm:p-8">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.15em] text-slate-400">Traditional</p>
+              <div className="mt-4 flex flex-wrap items-center gap-3 text-sm font-medium text-slate-500">
+                <span className="rounded-full bg-slate-100 px-3 py-1">Learning</span>
+                <span className="text-slate-300">&rarr;</span>
+                <span className="rounded-full bg-slate-100 px-3 py-1">Certificate</span>
+                <span className="text-slate-300">&rarr;</span>
+                <span className="rounded-full bg-slate-100 px-3 py-1">Done</span>
+              </div>
+            </div>
+            <div className="rounded-4xl bg-blue-50/50 p-6 sm:p-8">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.15em] text-blue-500">Dezai</p>
+              <div className="mt-4 flex flex-wrap items-center gap-3 text-sm font-medium text-slate-700">
+                <span className="rounded-full bg-blue-100 px-3 py-1 text-blue-700">Learn</span>
+                <span className="text-blue-300">&rarr;</span>
+                <span className="rounded-full bg-blue-100 px-3 py-1 text-blue-700">Practice</span>
+                <span className="text-blue-300">&rarr;</span>
+                <span className="rounded-full bg-blue-100 px-3 py-1 text-blue-700">Assessment</span>
+                <span className="text-blue-300">&rarr;</span>
+                <span className="rounded-full bg-blue-100 px-3 py-1 text-blue-700">Verify</span>
+                <span className="text-blue-300">&rarr;</span>
+                <span className="rounded-full bg-blue-600 px-3 py-1 text-white">Career</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── How Dezai Works ── */}
+      <section className="bg-slate-50/60">
+        <div className="mx-auto max-w-7xl px-5 md:px-8 pt-20 lg:pt-32 pb-12 lg:pb-16">
+          <div className="mb-16 flex flex-col items-center gap-4 text-center">
+            <h2 className="inline-block w-fit bg-gradient-to-r from-[#19191D] to-[#626275] bg-clip-text text-3xl leading-[1.25] font-medium tracking-[-1.28px] text-transparent lg:text-5xl xl:text-[56px]">
+              How Dezai works
+            </h2>
+            <p className="max-w-xl text-base leading-relaxed text-[#8C929D] md:text-lg">
+              From university course to employer-verified credential. Five steps.
+            </p>
+          </div>
+
+          <div className="relative mx-auto max-w-3xl">
+            <div className="absolute left-[18px] top-0 bottom-0 w-px bg-slate-200" />
+            <div className="space-y-8">
+              {[
+                { step: "01", title: "University creates course", desc: "Partner faculty provide syllabi and record major concept videos. Dezai handles AI mentoring, proctoring, and credential issuance." },
+                { step: "02", title: "Students learn with AI", desc: "Adaptive learning paths, side-quests for weak topics, expressive typography that makes concepts stick." },
+                { step: "03", title: "AI assesses competency", desc: "Randomized questions from 100+ pools. Browser lockdown. Time-bounded. Two students sitting side-by-side get different exams." },
+                { step: "04", title: "Credential is issued", desc: "University-branded, uniquely ID'd, publicly verifiable. Includes assessment score, skills validated, and project portfolio." },
+                { step: "05", title: "Employer verifies instantly", desc: "Paste the credential ID into the verification portal. See university, score, skills, projects, and status — no phone calls needed." },
+              ].map((item) => (
+                <div key={item.step} className="flex gap-5">
+                  <div className="relative z-10 grid size-9 shrink-0 place-items-center rounded-full bg-blue-600 text-[12px] font-bold text-white">
+                    {item.step}
+                  </div>
+                  <div className="pt-1.5">
+                    <h3 className="text-lg font-medium text-slate-900">{item.title}</h3>
+                    <p className="mt-1 text-sm leading-relaxed text-slate-500">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Student Journey ── */}
+      <section id="solutions">
+        <div className="mx-auto max-w-7xl px-5 md:px-8 pt-20 lg:pt-32 pb-12 lg:pb-16">
+          <div className="mb-16 flex flex-col items-center gap-4 text-center">
+            <h2 className="inline-block w-fit bg-gradient-to-r from-[#19191D] to-[#626275] bg-clip-text text-3xl leading-[1.25] font-medium tracking-[-1.28px] text-transparent lg:text-5xl xl:text-[56px]">
+              A student&apos;s journey
+            </h2>
+            <p className="max-w-xl text-base leading-relaxed text-[#8C929D] md:text-lg">
+              Enroll. Learn. Earn. Get verified. Get hired.
+            </p>
+          </div>
+
+          <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-3 sm:gap-4">
+            {["Enroll", "Learn", "Earn XP", "Pass Assessment", "Get Credential", "Employer Verification", "Career"].map((step, i) => (
+              <div key={step} className="flex items-center gap-3 sm:gap-4">
+                <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm">{step}</div>
+                {i < 6 && <span className="hidden text-slate-300 sm:inline">&rarr;</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Employer Section ── */}
+      <section id="employer" className="bg-slate-50/60">
+        <div className="mx-auto max-w-7xl px-5 md:px-8 pt-20 lg:pt-32 pb-12 lg:pb-16">
+          <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+            <div>
+              <h2 className="bg-gradient-to-r from-[#19191D] to-[#626275] bg-clip-text text-3xl leading-[1.25] font-medium tracking-[-1.28px] text-transparent lg:text-5xl xl:text-[56px]">
+                Hire based on skills,<br />not PDFs
+              </h2>
+              <p className="mt-4 max-w-md text-base leading-relaxed text-[#8C929D] md:text-lg">
+                Stop guessing from resumes. Paste a credential ID and see the full picture — university, assessment score, skills, projects, and verification status.
+              </p>
+              <div className="mt-6">
+                <Link href="/verify">
+                  <PremiumButton size="sm" icon={<ShieldCheck className="size-4" />}>Verify a Credential</PremiumButton>
+                </Link>
+              </div>
+            </div>
+
+            {/* Verification mockup */}
+            <div className="rounded-4xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-100/50">
+              <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3">
+                <span className="text-sm font-mono text-slate-400">VD-2026-AI-8847</span>
+                <span className="ml-auto rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">Verified</span>
+              </div>
+              <div className="mt-4 space-y-3">
+                {[
+                  { label: "University", value: "KPGU Vadodara" },
+                  { label: "Assessment Score", value: "88%" },
+                  { label: "Skills Validated", value: "AI, ML, Python" },
+                  { label: "Projects Completed", value: "12" },
+                  { label: "Issue Date", value: "March 2026" },
+                ].map((row) => (
+                  <div key={row.label} className="flex items-center justify-between border-b border-slate-100 pb-2 text-sm">
+                    <span className="text-slate-500">{row.label}</span>
+                    <span className="font-medium text-slate-900">{row.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── XP / Gamification ── */}
+      <section>
+        <div className="mx-auto max-w-7xl px-5 md:px-8 pt-20 lg:pt-32 pb-12 lg:pb-16">
+          <div className="mb-16 flex flex-col items-center gap-4 text-center">
+            <h2 className="inline-block w-fit bg-gradient-to-r from-[#19191D] to-[#626275] bg-clip-text text-3xl leading-[1.25] font-medium tracking-[-1.28px] text-transparent lg:text-5xl xl:text-[56px]">
+              Learning that feels like progress
+            </h2>
+            <p className="max-w-xl text-base leading-relaxed text-[#8C929D] md:text-lg">
+              XP, streaks, leaderboards, and guilds. Your daily focus converts into a globally verified professional asset.
+            </p>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-4">
+            {[
+              { icon: "🔥", title: "Daily Streaks", desc: "Consistency earns more XP. Break the streak, lose momentum." },
+              { icon: "⚔️", title: "Boss Battles", desc: "End-of-module assessments styled as timed challenges with randomized questions." },
+              { icon: "🏆", title: "Campus Rankings", desc: "Monthly leaderboards. Top 3 students earn automatic scholarship codes." },
+              { icon: "🔓", title: "Unlock Tiers", desc: "High XP unlocks premium university co-branded and industry-aligned credentials." },
+            ].map((card) => (
+              <div
+                key={card.title}
+                className="rounded-4xl border border-white/25 bg-white p-6 shadow-[inset_1px_1px_10px_2px_rgba(255,255,255,0.2)]"
+                style={{ boxShadow: "inset 1px 1px 10px 2px rgba(255,255,255,0.2), inset 0px 0px 24px 0px rgba(148,163,184,0.1)" }}
+              >
+                <span className="text-2xl">{card.icon}</span>
+                <h3 className="mt-4 text-lg font-medium text-slate-900">{card.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-500">{card.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Comparison ── */}
+      <section className="bg-slate-50/60">
+        <div className="mx-auto max-w-7xl px-5 md:px-8 pt-20 lg:pt-32 pb-12 lg:pb-16">
+          <div className="mb-16 flex flex-col items-center gap-4 text-center">
+            <h2 className="inline-block w-fit bg-gradient-to-r from-[#19191D] to-[#626275] bg-clip-text text-3xl leading-[1.25] font-medium tracking-[-1.28px] text-transparent lg:text-5xl xl:text-[56px]">
+              Why Dezai
+            </h2>
+          </div>
+
+          <div className="mx-auto max-w-2xl overflow-hidden rounded-4xl border border-slate-200">
+            <div className="grid grid-cols-2 bg-slate-50 text-sm font-semibold text-slate-500">
+              <div className="px-6 py-4">Traditional LMS</div>
+              <div className="border-l border-slate-200 px-6 py-4 text-blue-600">Dezai</div>
+            </div>
+            {comparisonRows.map((row, i) => (
+              <div key={row.traditional} className={`grid grid-cols-2 text-sm ${i !== comparisonRows.length - 1 ? "border-b border-slate-100" : ""}`}>
+                <div className="px-6 py-4 text-slate-500">{row.traditional}</div>
+                <div className="border-l border-slate-100 px-6 py-4 font-medium text-slate-900">{row.dezai}</div>
               </div>
             ))}
           </div>
