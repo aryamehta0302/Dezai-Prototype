@@ -41,8 +41,10 @@ model User {
 
   facultyInfo   FacultyMember?
   instAdminInfo InstitutionAdmin?
-  employeeInfo   Employee?
-  orgAdminInfo   OrganizationAdmin?
+
+  // ── Sprint 8: Enterprise relations ──
+  organizationAdmin OrganizationAdmin?
+  employee          Employee?
   complianceAttempts ComplianceAssessmentAttempt[]
 
   @@map("users")
@@ -584,10 +586,14 @@ enum AuditAction {
   QUESTION_BANK_CREATED
   QUESTION_BANK_UPDATED
   QUESTION_BANK_DELETED
+  // Sprint 8: Enterprise
   ORGANIZATION_CREATED
   EMPLOYEE_INVITED
   EMPLOYEE_JOINED
   COMPLIANCE_ASSESSMENT_PUBLISHED
+  ENTERPRISE_QUESTION_BANK_CREATED
+  ENTERPRISE_QUESTION_BANK_UPDATED
+  ENTERPRISE_QUESTION_BANK_DELETED
   ENTERPRISE_CREDENTIAL_ISSUED
 }
 
@@ -676,6 +682,7 @@ model CredentialTemplate {
   @@map("credential_templates")
 }
 
+// Proposed Sprint 8 Enterprise Additions
 // Proposed Sprint 8 Enterprise Additions
 
 model Organization {
@@ -929,3 +936,4 @@ enum EmploymentStatus {
   SUSPENDED
   OFFBOARDED
 }
+
