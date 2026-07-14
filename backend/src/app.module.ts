@@ -19,7 +19,6 @@ import { LeaderboardsModule } from './modules/leaderboards/leaderboards.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AchievementsModule } from './modules/achievements/achievements.module';
 import { EnterpriseCredentialsModule } from './modules/enterprise-credentials/enterprise-credentials.module';
-import { EmployeeLearningModule } from './modules/employee-learning/employee-learning.module';
 
 @Module({
   imports: [
@@ -62,7 +61,6 @@ import { EmployeeLearningModule } from './modules/employee-learning/employee-lea
     AuditModule,
     AchievementsModule,
     EnterpriseCredentialsModule,
-    EmployeeLearningModule,
   ],
   controllers: [],
   providers: [],
