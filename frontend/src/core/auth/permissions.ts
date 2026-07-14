@@ -74,7 +74,7 @@ export const DEFAULT_DASHBOARD: Record<UserRole, string> = {
   [UserRole.DEZAI_ADMIN]: "/dashboard",
   [UserRole.ORGANIZATION_ADMIN]: "/enterprise/dashboard",
   [UserRole.ORGANIZATION_MANAGER]: "/enterprise/dashboard",
-  [UserRole.EMPLOYEE]: "/learning",
+  [UserRole.EMPLOYEE]: "/enterprise/credentials",
 };
 
 /** Get the appropriate dashboard redirect for a user role */

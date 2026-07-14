@@ -44,8 +44,6 @@ model User {
   employeeInfo   Employee?
   orgAdminInfo   OrganizationAdmin?
   complianceAttempts ComplianceAssessmentAttempt[]
-  employeeNotes     EmployeeNote[]
-  employeeBookmarks EmployeeBookmark[]
 
   @@map("users")
 }
@@ -591,12 +589,6 @@ enum AuditAction {
   EMPLOYEE_JOINED
   COMPLIANCE_ASSESSMENT_PUBLISHED
   ENTERPRISE_CREDENTIAL_ISSUED
-  EMPLOYEE_NOTE_UPSERTED
-  EMPLOYEE_BOOKMARK_ADDED
-  EMPLOYEE_BOOKMARK_REMOVED
-  COMPLIANCE_ATTEMPT_STARTED
-  COMPLIANCE_ATTEMPT_PASSED
-  COMPLIANCE_ATTEMPT_FAILED
 }
 
 model AuditLog {
@@ -830,8 +822,6 @@ model ComplianceAssessment {
   questionBank          EnterpriseQuestionBank      @relation(fields: [questionBankId], references: [id])
   attempts              ComplianceAssessmentAttempt[]
   enterpriseCredentials EnterpriseCredential[]
-  employeeNotes         EmployeeNote[]
-  employeeBookmarks     EmployeeBookmark[]
 
   @@map("compliance_assessments")
 }
@@ -938,32 +928,4 @@ enum EmploymentStatus {
   ACTIVE
   SUSPENDED
   OFFBOARDED
-}
-
-model EmployeeNote {
-  id           String   @id @default(uuid())
-  userId       String
-  assessmentId String
-  content      String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assessment ComplianceAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, assessmentId])
-  @@map("employee_notes")
-}
-
-model EmployeeBookmark {
-  id           String   @id @default(uuid())
-  userId       String
-  assessmentId String
-  createdAt    DateTime @default(now())
-
-  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assessment ComplianceAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, assessmentId])
-  @@map("employee_bookmarks")
 }

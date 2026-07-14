@@ -288,7 +288,7 @@ async function main() {
   await prisma.user.upsert({
     where: { email: 'student@dezai.edu' },
     update: { role: UserRole.STUDENT, onboarded: true, passwordHash: commonPasswordHash },
-    create: { email: 'student@dezai.edu', name: 'Alex Student', role: UserRole.STUDENT, passwordHash: commonPasswordHash, onboarded: true },
+    create: { email: 'student@dezai.edu', name: 'Ansh Dhanani', role: UserRole.STUDENT, passwordHash: commonPasswordHash, onboarded: true },
   });
 
   const facultyMap: Record<string, { email: string; name: string; instId: string }> = {
@@ -747,7 +747,7 @@ async function seedEnterprise() {
     create: {
       id: 'user-orgadmin',
       email: 'orgadmin@allianz.com',
-      name: 'Jane Manager',
+      name: 'Arya Risk Manager',
       passwordHash,
       role: 'ORGANIZATION_ADMIN',
       onboarded: true,
@@ -773,7 +773,7 @@ async function seedEnterprise() {
     create: {
       id: 'user-employee',
       email: 'employee@allianz.com',
-      name: 'Sam Employee',
+      name: 'Tirth Employee',
       passwordHash,
       role: 'EMPLOYEE',
       onboarded: true,
@@ -798,7 +798,7 @@ async function seedEnterprise() {
     where: { userId: employeeUser.id },
     update: { departmentId: dept.id },
     create: {
-      id: 'emp-john',
+      id: 'emp-tirth',
       userId: employeeUser.id,
       organizationId: org.id,
       departmentId: dept.id,

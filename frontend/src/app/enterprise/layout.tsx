@@ -30,6 +30,8 @@ export default function EnterpriseLayout({
       case UserRole.ORGANIZATION_ADMIN:
       case UserRole.ORGANIZATION_MANAGER:
         return "enterprise";
+      case UserRole.EMPLOYEE:
+        return "employee";
       default:
         return "default";
     }
