@@ -20,6 +20,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { AchievementsModule } from './modules/achievements/achievements.module';
 import { EnterpriseAssessmentsModule } from './modules/enterprise-assessments/enterprise-assessments.module';
 import { EnterpriseCredentialsModule } from './modules/enterprise-credentials/enterprise-credentials.module';
+import { EnterpriseAdminModule } from './modules/enterprise-admin/enterprise-admin.module';
 
 
 @Module({
@@ -64,6 +65,7 @@ import { EnterpriseCredentialsModule } from './modules/enterprise-credentials/en
     AchievementsModule,
     EnterpriseAssessmentsModule,
     EnterpriseCredentialsModule,
+    EnterpriseAdminModule,
   ],
   controllers: [],
   providers: [],

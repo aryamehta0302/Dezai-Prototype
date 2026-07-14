@@ -256,7 +256,7 @@ export class ComplianceKnowledgeService {
   ): Promise<string> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { orgAdminInfo: true, employeeInfo: true },
+      include: { organizationAdmin: true, employee: true },
     });
     if (!user) throw new ForbiddenException('User not found');
     if (user.role === UserRole.DEZAI_ADMIN && requestedOrganizationId) {
@@ -264,7 +264,7 @@ export class ComplianceKnowledgeService {
     }
 
     const organizationId =
-      user.orgAdminInfo?.organizationId ?? user.employeeInfo?.organizationId;
+      user.organizationAdmin?.organizationId ?? user.employee?.organizationId;
     if (!organizationId) {
       throw new ForbiddenException('Organization access is required');
     }
