@@ -45,6 +45,8 @@ const employeeNav = [
 
 const enterpriseNav = [
   { href: "/enterprise/dashboard", label: "Compliance Dashboard", icon: LayoutDashboard },
+  { href: "/enterprise/admin/departments", label: "Departments", icon: BookOpen },
+  { href: "/enterprise/admin/directory", label: "Org Directory", icon: User },
 ];
 
 export function TopAppBar({
@@ -106,13 +108,6 @@ export function TopAppBar({
 
         {/* Right Side */}
         <div className="flex items-center gap-2">
-          {/* Search */}
-          {user && (
-            <button className="hidden sm:flex items-center gap-2 rounded-xl border border-border bg-surface-low px-4 h-11 text-sm text-muted hover:border-outline transition-colors">
-              <Search className="h-4 w-4" />
-              <span className="hidden lg:inline">Search courses...</span>
-            </button>
-          )}
 
           {/* Notifications */}
           {user && (

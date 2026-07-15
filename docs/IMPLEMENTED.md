@@ -906,3 +906,95 @@ Implemented the full Enterprise Assessments & Compliance module to support corpo
 | GET | `/api/enterprise/assessments/dashboard/employee` | All | Personal compliance dashboard |
 | GET | `/api/enterprise/assessments/dashboard/track/:orgId/:track` | All | Detailed compliance track summary |
 
+---
+
+## Enterprise Administration Module (Sprint 9)
+
+> **Branch**: `feature/faculty-institution-lead`
+> **Backend module**: `backend/src/modules/enterprise-admin/`
+> **Frontend feature**: `frontend/src/features/enterprise-admin/`
+> **API docs**: `docs/API/enterprise-admin.md`
+
+### Features Implemented
+
+#### Department Management
+- Full CRUD: create, list, get, update, delete
+- Manager assignment at creation or via update
+- Delete gracefully orphans employees (`SetNull`)
+- Delete confirmation shows headcount warning
+
+#### Employee Management
+- Full CRUD: create, list, get, update, delete
+- Conflict detection (user already an employee)
+- Department membership validated on create
+- Employment status lifecycle: `INVITED → ACTIVE → SUSPENDED/OFFBOARDED`
+
+#### Employee Assignment
+- Assign / reassign employee to a department
+- Idempotent (no-op if already assigned)
+- Validates department belongs to same org
+
+#### Manager Assignment (NEW schema field: `Employee.managerId`)
+- Assign / remove manager per employee
+- **Self-assignment prevention**: `400 Bad Request`
+- **Circular chain prevention**: walks chain upward before saving (`A→B→A` blocked)
+- Cross-org manager blocked
+
+#### Employee Search & Filtering
+- Paginated (`{ data, total, page, limit, totalPages }`)
+- Filters: name/email/title, department, manager, employment status
+
+#### Org Directory
+- All employees browsable, ordered dept → name
+- Dept + manager shown inline
+
+#### Employee Profile
+- Personal info, department, manager reference
+- Direct reports list
+
+#### Department Stats
+- Headcount per department
+- Manager assigned / unassigned summary
+
+#### Org Settings
+- Read and update: name, logoUrl, industry, size, billingEmail
+
+### Prisma Schema Changes
+- Added `Employee.managerId String?` (self-referential FK)
+- Added `Employee.manager` and `Employee.directReports` relations
+- Migration: `20260714173230_add_employee_manager_relation`
+
+### Bug Fixed
+- `compliance-knowledge.service.ts` — fixed wrong Prisma relation names (`orgAdminInfo → organizationAdmin`, `employeeInfo → employee`)
+
+### API Endpoints
+
+| Method | Endpoint | Role | Description |
+|--------|----------|------|-------------|
+| GET | `/api/enterprise-admin/org/:orgId` | Admin/Manager | Get organization |
+| PATCH | `/api/enterprise-admin/org/:orgId/settings` | Admin | Update org settings |
+| GET | `/api/enterprise-admin/organizations/:orgId/departments` | Admin/Manager | List departments |
+| GET | `/api/enterprise-admin/departments/:id` | Admin/Manager | Get department |
+| POST | `/api/enterprise-admin/departments` | Admin | Create department |
+| PATCH | `/api/enterprise-admin/departments/:id` | Admin | Update department |
+| DELETE | `/api/enterprise-admin/departments/:id` | Admin | Delete department |
+| GET | `/api/enterprise-admin/organizations/:orgId/department-stats` | Admin/Manager | Dept stats |
+| GET | `/api/enterprise-admin/organizations/:orgId/employees` | Admin/Manager | List employees |
+| GET | `/api/enterprise-admin/organizations/:orgId/employees/search` | Admin/Manager | Search employees (paginated) |
+| GET | `/api/enterprise-admin/employees/:id` | Admin/Manager | Get employee |
+| GET | `/api/enterprise-admin/employees/:id/profile` | Admin/Manager | Employee profile + direct reports |
+| POST | `/api/enterprise-admin/employees` | Admin | Create employee |
+| PATCH | `/api/enterprise-admin/employees/:id` | Admin | Update employee |
+| DELETE | `/api/enterprise-admin/employees/:id` | Admin | Remove employee |
+| PATCH | `/api/enterprise-admin/employees/:id/department` | Admin | Assign department |
+| PATCH | `/api/enterprise-admin/employees/:id/manager` | Admin | Assign manager |
+| GET | `/api/enterprise-admin/organizations/:orgId/directory` | Admin/Manager | Org directory |
+
+### Frontend Pages
+
+| Route | Component | Description |
+|-------|-----------|-------------|
+| `/enterprise/admin/departments` | `DepartmentManagementPage` | CRUD with create/edit/delete dialogs |
+| `/enterprise/admin/directory` | `OrgDirectoryPage` | Browsable directory grouped by dept |
+| `/enterprise/admin/employees/:id` | `EmployeeProfilePage` | Profile with direct reports |
+
