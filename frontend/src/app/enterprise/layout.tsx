@@ -1,12 +1,13 @@
 "use client";
 
 import { AuthGuard } from "@/features/auth/components/auth-guard";
+import { EnterpriseSidebar } from "@/features/enterprise/components/layout/enterprise-sidebar";
 import { TopAppBar } from "@/shared/components/top-app-bar";
-import { UserRole } from "@/shared/types/common.types";
 import { useAuthStore } from "@/lib/stores/auth.store";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useNotificationStore } from "@/lib/stores/notification.store";
 import { useEffect, useRef } from "react";
+import { UserRole } from "@/shared/types/common.types";
 
 export default function EnterpriseLayout({
   children,
@@ -38,25 +39,35 @@ export default function EnterpriseLayout({
   };
 
   return (
-    <AuthGuard>
-      <div className="flex min-h-screen flex-col">
-        <TopAppBar
-          variant={getVariant()}
-          user={
-            user
-              ? {
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                avatar: user.avatar,
-              }
-              : null
-          }
+    <>
+      <div className="flex h-screen overflow-hidden bg-background">
+        {/* Enterprise Specific Sidebar */}
+        <EnterpriseSidebar 
           onLogout={logout}
-          notificationCount={unreadCount}
         />
-        <main className="flex-1 bg-slate-50/50">{children}</main>
+        
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <TopAppBar
+            variant={getVariant()}
+            user={
+              user
+                ? {
+                  name: user.name,
+                  email: user.email,
+                  role: user.role,
+                  avatar: user.avatar,
+                }
+                : null
+            }
+            onLogout={logout}
+            notificationCount={unreadCount}
+          />
+          <main className="flex-1 overflow-y-auto bg-surface-low/30">
+            {children}
+          </main>
+        </div>
       </div>
-    </AuthGuard>
+    </>
   );
 }
