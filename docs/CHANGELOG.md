@@ -14,8 +14,6 @@ All notable changes to this project will be documented in this file.
 - **Compliance Demo Tracks Seed** — Seed script containing 4 tracks (Cyber Security, Password Security, Data Privacy, Secure Email) with 25 questions each.
 - **Unit Tests** — 3 comprehensive unit test suites covering EnterpriseQuestionBankService, ComplianceAttemptService, and EnterpriseDashboardService.
 
----
-
 ## [Sprint 7] — 2026-06-30
 
 ### Assessment Hardening & Production Readiness (Antigravity AI)
@@ -504,7 +502,21 @@ frontend/src/app/(student)/chat/page.tsx (NEW)
 - Curriculum & Program Management (Manan Panchal)
 - See [IMPLEMENTED.md](file:///d:/git/dezai/Dezai-Prototype/docs/IMPLEMENTED.md) Sections 5–7.
 
---
+---
+
+## [Sprint 8] — Enterprise Analytics Dashboard (Krish Parmar)
+
+#### Added
+- **Enterprise Analytics Dashboard** — New `/enterprise/analytics` route with a 3-tab view (Overview, Departments, Employees) for compliance performance monitoring. Accessible to `ORGANIZATION_ADMIN`, `ORGANIZATION_MANAGER`, and `DEZAI_ADMIN`.
+- **Enterprise Analytics API** — 5 new read-only endpoints under `/api/analytics/enterprise/*` (overview, tracks, departments, employees, activity). Guarded by `JwtAuthGuard` + `RolesGuard`. Separate from `AnalyticsController` to bypass `FacultyDataAccessInterceptor`.
+- **Compliance Track Chart** — Recharts horizontal bar chart with colour-coded pass rates per compliance track.
+- **Department Compliance Table** — Per-department compliance rate with `Progress` bar and status badge.
+- **Paginated Employee Table** — Employee compliance status with last-attempt score and active credential count.
+- **Activity Feed** — Merged, chronologically sorted feed of recent assessment attempts and credential issuances.
+- **Sidebar Navigation** — Added "Analytics" entry to the Enterprise Sidebar under "Dashboard".
+- **RBAC Route** — Added `/enterprise/analytics` to `route-permissions.ts` with correct role constraints.
+
+---
 ## [Sprint 7] - Production Readiness(Krish Parmar) 2026-06-29
 
 ### Added
@@ -605,8 +617,3 @@ frontend/src/app/(student)/chat/page.tsx (NEW)
   - File: [docs/IMPLEMENTED.md](file:///d:/Dezai-Prototype-main/docs/IMPLEMENTED.md)
 
 ---
-
-
-
-
-
