@@ -11,7 +11,8 @@ import {
   LogOut, 
   ChevronDown,
   LayoutDashboard,
-  Plus
+  Plus,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { 
@@ -40,6 +41,7 @@ export function EnterpriseSidebar({ onLogout }: EnterpriseSidebarProps) {
 
   const navigation = [
     { name: "Dashboard", href: "/enterprise/dashboard", icon: LayoutDashboard },
+    { name: "Analytics", href: "/enterprise/analytics", icon: BarChart3 },
     { name: "Team Directory", href: "/enterprise/team", icon: Users },
     { name: "Departments", href: "/enterprise/departments", icon: Briefcase },
     { name: "Settings", href: "/enterprise/settings", icon: Settings },

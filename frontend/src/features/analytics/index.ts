@@ -34,3 +34,20 @@ export type {
   XpMilestone,
   LeaderboardRange,
 } from './types/analytics.types.ts';
+
+// ─── Sprint 8: Enterprise Analytics (additive — existing exports unchanged) ───
+export { ComplianceTrackChart } from './components/compliance-track-chart';
+export { DepartmentComplianceTable } from './components/department-compliance-table';
+export { EnterpriseAnalyticsDashboard } from './pages/EnterpriseAnalyticsDashboard';
+export { useEnterpriseAnalytics } from './hooks/useEnterpriseAnalytics';
+export { enterpriseAnalyticsService } from './services/enterprise-analytics.service';
+export type {
+  EnterpriseOverview,
+  EnterpriseTrackStat,
+  EnterpriseDepartmentStat,
+  EnterpriseEmployeeRow,
+  EnterpriseEmployeeList,
+  EnterpriseActivityEntry,
+  EnterpriseActivityType,
+  EnterpriseAnalyticsState,
+} from './types/enterprise-analytics.types';

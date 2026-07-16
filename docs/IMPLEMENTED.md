@@ -998,3 +998,90 @@ Implemented the full Enterprise Assessments & Compliance module to support corpo
 | `/enterprise/admin/directory` | `OrgDirectoryPage` | Browsable directory grouped by dept |
 | `/enterprise/admin/employees/:id` | `EmployeeProfilePage` | Profile with direct reports |
 
+---
+
+## 19. Sprint 8: Enterprise Analytics Dashboard (Krish Parmar)
+
+**Branch:** `feature/sprint-8-enterprise-analytics`
+
+This sprint delivers the Enterprise Analytics Dashboard — a comprehensive compliance performance monitoring suite available exclusively to `ORGANIZATION_ADMIN`, `ORGANIZATION_MANAGER`, and `DEZAI_ADMIN` roles.
+
+---
+
+### Backend
+
+#### `EnterpriseAnalyticsService`
+
+Five fully isolated, read-only query methods wired to Prisma:
+
+| Method | Description |
+|--------|-------------|
+| `getOverview(userId, orgId?)` | Returns 6 KPIs: total/active employees, compliance rate, credential count, assessments taken, avg score |
+| `getTrackBreakdown(userId, orgId?)` | Per `ComplianceTrack` pass rate, attempt counts, and credential issuances via `groupBy` |
+| `getDepartmentBreakdown(userId, orgId?)` | Per department: employee count, compliant count, compliance rate %, credential count |
+| `getEmployeeCompliance(userId, page, limit, orgId?)` | Paginated employee table with last attempt score, credential count, and employment status |
+| `getActivityFeed(userId, orgId?)` | Merged + sorted feed of recent `ComplianceAssessmentAttempt` events and `EnterpriseCredential` issuances |
+
+All methods share a private `resolveOrgId()` helper enforcing organizational boundary isolation. `DEZAI_ADMIN` may pass any `organizationId`. `ORGANIZATION_ADMIN` / `ORGANIZATION_MANAGER` are restricted to their own organization.
+
+#### `EnterpriseAnalyticsController`
+
+Separate dedicated controller (`@Controller('analytics/enterprise')`) with its own guard stack:
+
+- `JwtAuthGuard` + `RolesGuard` + `@Roles(ORGANIZATION_ADMIN, ORGANIZATION_MANAGER, DEZAI_ADMIN)`
+- **Intentionally separated** from `AnalyticsController` to avoid the `FacultyDataAccessInterceptor` applied to faculty routes.
+
+Registered in `AnalyticsModule` as an additive entry alongside existing Sprint 1 registrations.
+
+#### API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/analytics/enterprise/overview` | KPI overview |
+| GET | `/api/analytics/enterprise/tracks` | Track pass rates |
+| GET | `/api/analytics/enterprise/departments` | Department breakdown |
+| GET | `/api/analytics/enterprise/employees` | Paginated employee list (`?page=&limit=`) |
+| GET | `/api/analytics/enterprise/activity` | Activity feed |
+
+---
+
+### Frontend
+
+#### Types — `features/analytics/types/enterprise-analytics.types.ts`
+Eight TypeScript interfaces: `EnterpriseOverview`, `EnterpriseTrackStat`, `EnterpriseDepartmentStat`, `EnterpriseEmployeeRow`, `EnterpriseEmployeeList`, `EnterpriseActivityEntry`, `EnterpriseActivityType`, `EnterpriseAnalyticsState`.
+
+#### Service — `features/analytics/services/enterprise-analytics.service.ts`
+Thin API client wrapping all 5 endpoints with error-safe try/catch returning safe fallback values.
+
+#### Hook — `features/analytics/hooks/useEnterpriseAnalytics.ts`
+Single data-fetching hook calling all 5 endpoints in parallel via `Promise.all`. Cleanup via cancelled-flag pattern. Exposes `fetchEmployeePage()` for client-side pagination.
+
+#### Components
+- **`compliance-track-chart.tsx`** — Recharts horizontal `BarChart` with color-coded bars (green/amber/red by pass rate) and custom Tooltip.
+- **`department-compliance-table.tsx`** — Table with `Progress` bar, status `Badge` (Compliant/In Progress/At Risk), and empty state.
+
+#### Page — `features/analytics/pages/EnterpriseAnalyticsDashboard.tsx`
+3-tab dashboard (`Overview`, `Departments`, `Employees`) with KPI cards, compliance health progress banner, track chart, activity feed, and paginated employee table.
+
+#### App Router — `app/enterprise/analytics/page.tsx`
+Thin Next.js App Router page that automatically inherits Nil's `app/enterprise/layout.tsx` (sidebar + TopAppBar).
+
+---
+
+### Shared Integration Files (Additive Only)
+
+| File | Change | Preserved |
+|------|--------|-----------|
+| `backend/src/modules/analytics/analytics.module.ts` | Added `EnterpriseAnalyticsController` + `EnterpriseAnalyticsService` | Sprint 1 registrations untouched |
+| `frontend/src/core/auth/route-permissions.ts` | Added `/enterprise/analytics` RBAC rule | All 12 existing rules untouched |
+| `frontend/src/features/enterprise/components/layout/enterprise-sidebar.tsx` | Added `Analytics` nav item | All of Nil's existing nav items untouched |
+| `frontend/src/features/analytics/index.ts` | Appended Sprint 8 barrel exports | All Sprint 6 exports untouched |
+
+---
+
+### Prisma — No Schema Changes
+Sprint 8 consumed existing models (`ComplianceAssessmentAttempt`, `EnterpriseCredential`, `Department`, `Employee`, `Organization`). Zero new migrations required.
+
+### Build Verification
+- **Backend:** `nest build` → ✅ 0 errors
+- **Frontend:** `tsc --noEmit` → ✅ 0 errors
