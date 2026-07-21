@@ -1,4 +1,8 @@
-import { Controller, Post, Get, Put, Delete, Body, Param } from '@nestjs/common';
+import { Controller, Post, Get, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../common/guards/roles.guard';
+import { Roles } from '../../../common/decorators/roles.decorator';
+import { UserRole } from '@prisma/client';
 import { CreateOrganizationService } from '../services/organization/create-organization.service';
 import { GetOrganizationService } from '../services/organization/get-organization.service';
 import { UpdateOrganizationService } from '../services/organization/update-organization.service';
@@ -10,6 +14,8 @@ import { CreateOrganizationDto, UpdateOrganizationDto } from '../dto/organizatio
  * Exposes endpoints for Enterprise registration and CRUD operations.
  */
 @Controller('organizations')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.DEZAI_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.ORGANIZATION_MANAGER)
 export class OrganizationController {
   constructor(
     private readonly createOrgService: CreateOrganizationService,
