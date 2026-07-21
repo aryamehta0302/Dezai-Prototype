@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { 
   Building2, 
   Users, 
@@ -18,6 +18,7 @@ import { Button } from "@/shared/ui/button";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
+  DropdownMenuGroup,
   DropdownMenuItem, 
   DropdownMenuLabel, 
   DropdownMenuSeparator, 
@@ -33,11 +34,12 @@ interface EnterpriseSidebarProps {
 export function EnterpriseSidebar({ onLogout }: EnterpriseSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   
   const { data: organizations, isLoading } = useOrganizations();
   
-  // Default to first organization for now
-  const activeOrg = organizations?.[0];
+  const orgId = searchParams.get('orgId');
+  const activeOrg = organizations?.find(o => o.id === orgId) ?? organizations?.[0];
 
   const navigation = [
     { name: "Dashboard", href: "/enterprise/dashboard", icon: LayoutDashboard },
@@ -83,17 +85,20 @@ export function EnterpriseSidebar({ onLogout }: EnterpriseSidebarProps) {
               <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="start">
-            <DropdownMenuLabel>Organizations</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {organizations?.map((org) => (
-              <DropdownMenuItem 
-                key={org.id} 
-                className="flex items-center gap-2 cursor-pointer font-medium"
-              >
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-                {org.name}
-              </DropdownMenuItem>
-            ))}
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Organizations</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {organizations?.map((org) => (
+                <DropdownMenuItem 
+                  key={org.id} 
+                  className="flex items-center gap-2 cursor-pointer font-medium"
+                  onClick={() => router.push(`/enterprise/dashboard?orgId=${org.id}`)}
+                >
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  {org.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               className="text-primary font-medium cursor-pointer"
@@ -109,9 +114,10 @@ export function EnterpriseSidebar({ onLogout }: EnterpriseSidebarProps) {
       {/* Main Navigation */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
         {navigation.map((item) => {
+          const href = orgId ? `${item.href}?orgId=${orgId}` : item.href;
           const isActive = pathname.startsWith(item.href);
           return (
-            <Link key={item.name} href={item.href}>
+            <Link key={item.name} href={href}>
               <Button
                 variant={isActive ? "secondary" : "ghost"}
                 className={`w-full justify-start h-10 px-3 transition-all duration-200 ${

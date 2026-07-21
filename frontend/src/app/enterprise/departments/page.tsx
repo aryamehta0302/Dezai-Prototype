@@ -3,16 +3,18 @@
 import React, { useState } from "react";
 import { Search, Building2 } from "lucide-react";
 import { Input } from "@/shared/ui/input";
+import { useSearchParams } from "next/navigation";
 import { useOrganizations, useDepartments } from "@/features/enterprise/hooks/use-enterprise";
 import { DepartmentCard } from "@/features/enterprise/components/departments/department-card";
 import { DepartmentModal } from "@/features/enterprise/components/departments/department-modal";
 
 export default function EnterpriseDepartmentsPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const searchParams = useSearchParams();
   
-  // Temporary: Grab the first organization the user has access to
   const { data: orgs, isLoading: isLoadingOrgs } = useOrganizations();
-  const activeOrgId = orgs?.[0]?.id;
+  const orgIdParam = searchParams.get('orgId');
+  const activeOrgId = (orgIdParam && orgs?.some(o => o.id === orgIdParam) ? orgIdParam : undefined) ?? orgs?.[0]?.id;
 
   const { data: departments, isLoading: isLoadingDepartments } = useDepartments(activeOrgId);
 

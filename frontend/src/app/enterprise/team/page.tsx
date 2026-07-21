@@ -6,14 +6,16 @@ import { Input } from "@/shared/ui/input";
 import { Button } from "@/shared/ui/button";
 import { EmployeesTable } from "@/features/enterprise/components/team/employees-table";
 import { InviteEmployeeModal } from "@/features/enterprise/components/team/invite-employee-modal";
+import { useSearchParams } from "next/navigation";
 import { useOrganizations, useEmployees } from "@/features/enterprise/hooks/use-enterprise";
 
 export default function EnterpriseTeamPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const searchParams = useSearchParams();
   
-  // Temporary: Grab the first organization the user has access to
   const { data: orgs, isLoading: isLoadingOrgs } = useOrganizations();
-  const activeOrgId = orgs?.[0]?.id;
+  const orgIdParam = searchParams.get('orgId');
+  const activeOrgId = (orgIdParam && orgs?.some(o => o.id === orgIdParam) ? orgIdParam : undefined) ?? orgs?.[0]?.id;
 
   const { data: employees, isLoading: isLoadingEmployees } = useEmployees(activeOrgId);
 
