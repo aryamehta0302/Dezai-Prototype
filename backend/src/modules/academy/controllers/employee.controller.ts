@@ -1,4 +1,8 @@
-import { Controller, Post, Get, Delete, Body, Param } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../common/guards/roles.guard';
+import { Roles } from '../../../common/decorators/roles.decorator';
+import { UserRole } from '@prisma/client';
 import { InviteEmployeeService } from '../services/employee/invite-employee.service';
 import { AcceptInvitationService } from '../services/employee/accept-invitation.service';
 import { GetEmployeesService } from '../services/employee/get-employees.service';
@@ -10,6 +14,8 @@ import { InviteEmployeeDto, AcceptInvitationDto } from '../dto/employee.dto';
  * Handles inviting employees and managing their lifecycle within an organization.
  */
 @Controller('organizations/:organizationId/employees')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.DEZAI_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.ORGANIZATION_MANAGER)
 export class EmployeeController {
   constructor(
     private readonly inviteEmpService: InviteEmployeeService,

@@ -1,4 +1,8 @@
-import { Controller, Post, Get, Delete, Body, Param } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../common/guards/roles.guard';
+import { Roles } from '../../../common/decorators/roles.decorator';
+import { UserRole } from '@prisma/client';
 import { AssignOrgAdminService } from '../services/org-admin/assign-org-admin.service';
 import { GetOrgAdminsService } from '../services/org-admin/get-org-admins.service';
 import { RemoveOrgAdminService } from '../services/org-admin/remove-org-admin.service';
@@ -9,6 +13,8 @@ import { AssignOrgAdminDto } from '../dto/org-admin.dto';
  * Handles assigning and removing admin roles within an organization.
  */
 @Controller('organizations/:organizationId/admins')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.DEZAI_ADMIN, UserRole.ORGANIZATION_ADMIN, UserRole.ORGANIZATION_MANAGER)
 export class OrganizationAdminController {
   constructor(
     private readonly assignAdminService: AssignOrgAdminService,
