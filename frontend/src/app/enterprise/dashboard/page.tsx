@@ -12,12 +12,14 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
+import { useSearchParams } from "next/navigation";
 import { useOrganizations, useOrganizationStats } from "@/features/enterprise/hooks/use-enterprise";
 
 export default function EnterpriseDashboardPage() {
-  // Temporary: Grab the first organization the user has access to
+  const searchParams = useSearchParams();
   const { data: orgs, isLoading: isLoadingOrgs } = useOrganizations();
-  const activeOrgId = orgs?.[0]?.id;
+  const orgIdParam = searchParams.get('orgId');
+  const activeOrgId = (orgIdParam && orgs?.some(o => o.id === orgIdParam) ? orgIdParam : undefined) ?? orgs?.[0]?.id;
 
   const { stats, departments, isLoading } = useOrganizationStats(activeOrgId);
 

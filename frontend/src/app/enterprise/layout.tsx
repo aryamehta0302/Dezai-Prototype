@@ -6,7 +6,7 @@ import { TopAppBar } from "@/shared/components/top-app-bar";
 import { useAuthStore } from "@/lib/stores/auth.store";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useNotificationStore } from "@/lib/stores/notification.store";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, Suspense } from "react";
 import { UserRole } from "@/shared/types/common.types";
 
 export default function EnterpriseLayout({
@@ -42,9 +42,11 @@ export default function EnterpriseLayout({
     <>
       <div className="flex h-screen overflow-hidden bg-background">
         {/* Enterprise Specific Sidebar */}
-        <EnterpriseSidebar 
-          onLogout={logout}
-        />
+        <Suspense fallback={<div className="w-64 border-r border-border bg-surface animate-pulse" />}>
+          <EnterpriseSidebar 
+            onLogout={logout}
+          />
+        </Suspense>
         
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0">
@@ -64,7 +66,9 @@ export default function EnterpriseLayout({
             notificationCount={unreadCount}
           />
           <main className="flex-1 overflow-y-auto bg-surface-low/30">
-            {children}
+            <Suspense fallback={null}>
+              {children}
+            </Suspense>
           </main>
         </div>
       </div>

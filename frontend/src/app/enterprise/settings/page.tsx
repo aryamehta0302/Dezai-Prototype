@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useOrganizations, useOrgAdmins } from "@/features/enterprise/hooks/use-enterprise";
 import { OrgProfileForm } from "@/features/enterprise/components/settings/org-profile-form";
 import { OrgAdminsTable } from "@/features/enterprise/components/settings/org-admins-table";
@@ -9,10 +10,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/shared/ui/tabs";
 import { Settings, Shield, Building2, CreditCard } from "lucide-react";
 
 export default function EnterpriseSettingsPage() {
-  // Temporary: Grab the first organization the user has access to
+  const searchParams = useSearchParams();
   const { data: orgs, isLoading: isLoadingOrgs } = useOrganizations();
-  const activeOrgId = orgs?.[0]?.id;
-  const activeOrg = orgs?.[0];
+  const orgIdParam = searchParams.get('orgId');
+  const activeOrgId = (orgIdParam && orgs?.some(o => o.id === orgIdParam) ? orgIdParam : undefined) ?? orgs?.[0]?.id;
+  const activeOrg = orgs?.find(o => o.id === activeOrgId) ?? orgs?.[0];
 
   const { data: admins, isLoading: isLoadingAdmins } = useOrgAdmins(activeOrgId);
 
