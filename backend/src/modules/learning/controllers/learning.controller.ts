@@ -21,6 +21,7 @@ import { ProgramsService } from '../../programs/services/programs.service';
 import { LearningCleanupService } from '../services/learning-cleanup.service';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
+import { InstitutionActiveGuard } from '../../../common/guards/institution-active.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 
@@ -43,6 +44,7 @@ export class UpsertNoteDto {
 }
 
 @Controller('learning')
+@UseGuards(InstitutionActiveGuard)
 export class LearningController {
   constructor(
     private readonly learningService: LearningService,

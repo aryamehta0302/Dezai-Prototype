@@ -1,5 +1,5 @@
-import { InstitutionDashboardPage } from "@/features/institution/pages/InstitutionDashboardPage";
+import { UniversityDashboardPage } from "@/features/university-admin/pages/UniversityDashboardPage";
 
 export default function Page() {
-  return <InstitutionDashboardPage />;
+  return <UniversityDashboardPage />;
 }

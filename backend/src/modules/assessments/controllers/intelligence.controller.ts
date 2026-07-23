@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
+import { InstitutionActiveGuard } from '../../../common/guards/institution-active.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { WeakTopicDetectionService } from '../services/weak-topic-detection.service';
@@ -22,6 +23,7 @@ import { AssessmentService } from '../services/assessment.service';
  * paths to avoid collisions with existing single-segment routes.
  */
 @Controller('assessments')
+@UseGuards(InstitutionActiveGuard)
 export class IntelligenceController {
   constructor(
     private readonly weakTopicDetectionService: WeakTopicDetectionService,

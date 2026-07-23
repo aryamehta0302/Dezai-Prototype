@@ -22,6 +22,12 @@ import { EnterpriseAssessmentsModule } from './modules/enterprise-assessments/en
 import { EnterpriseCredentialsModule } from './modules/enterprise-credentials/enterprise-credentials.module';
 
 
+import { DepartmentsModule } from './modules/departments/departments.module';
+import { UniversityAdminModule } from './modules/university-admin/university-admin.module';
+import { PlatformAdminModule } from './modules/platform-admin/platform-admin.module';
+import { RbacScopeModule } from './shared/rbac-scope.module';
+
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -46,6 +52,7 @@ import { EnterpriseCredentialsModule } from './modules/enterprise-credentials/en
       },
     }),
     DatabaseModule,
+    RbacScopeModule,
     AuthModule,
     UsersModule,
     InstitutionsModule,
@@ -64,6 +71,9 @@ import { EnterpriseCredentialsModule } from './modules/enterprise-credentials/en
     AchievementsModule,
     EnterpriseAssessmentsModule,
     EnterpriseCredentialsModule,
+    DepartmentsModule,
+    UniversityAdminModule,
+    PlatformAdminModule,
   ],
   controllers: [],
   providers: [],

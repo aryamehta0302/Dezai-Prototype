@@ -11,13 +11,14 @@ import {
 import { AttemptService } from '../services/attempt.service';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
+import { InstitutionActiveGuard } from '../../../common/guards/institution-active.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { StartAttemptDto, AutoSaveAnswersDto, SubmitAttemptDto } from '../dto/attempt.dto';
 import { SyncAnswersDto } from '../dto/sync.dto';
 
 @Controller('assessments/attempts')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, InstitutionActiveGuard)
 export class AttemptController {
   constructor(private readonly attemptService: AttemptService) {}
 

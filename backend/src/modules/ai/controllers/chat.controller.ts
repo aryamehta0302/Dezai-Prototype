@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { ChatService } from '../services/chat.service';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
+import { InstitutionActiveGuard } from '../../../common/guards/institution-active.guard';
 import {
   CreateChatSessionDto,
   SendMessageDto,
@@ -29,6 +30,7 @@ import {
  * All endpoints require JWT authentication.
  */
 @Controller('ai-mentor')
+@UseGuards(InstitutionActiveGuard)
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 

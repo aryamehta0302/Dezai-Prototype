@@ -2,11 +2,12 @@ import { Controller, Post, Get, Delete, Param, UseGuards, Req, BadRequestExcepti
 import { EnrollmentService } from '../services/enrollment.service';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
+import { InstitutionActiveGuard } from '../../../common/guards/institution-active.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 
 @Controller('enrollments')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, InstitutionActiveGuard)
 export class EnrollmentController {
   constructor(private readonly enrollmentService: EnrollmentService) {}
 
