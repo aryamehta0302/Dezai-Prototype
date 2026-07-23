@@ -6,6 +6,7 @@ import { UpdateCredentialStatusDto } from '../dto/UpdateCredentialStatusDto';
 import { CredentialType, VerifyStatus, CredentialTier } from '@prisma/client';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
+import { InstitutionActiveGuard } from '../../../common/guards/institution-active.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { Response } from 'express';
@@ -13,6 +14,7 @@ import { Response } from 'express';
 import { VerificationRateLimitGuard } from '../guards/verification-rate-limit.guard';
 
 @Controller('credentials')
+@UseGuards(InstitutionActiveGuard)
 export class CredentialsController {
     constructor(
         private readonly credentialsService: CredentialsService,

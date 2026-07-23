@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
+import { InstitutionActiveGuard } from '../../../common/guards/institution-active.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { FacultyInsightService } from '../services/faculty-insight.service';
@@ -22,6 +23,7 @@ import { AssessmentService } from '../services/assessment.service';
  * 'faculty-insights/' prefix to namespace Task B endpoints.
  */
 @Controller('assessments')
+@UseGuards(InstitutionActiveGuard)
 export class FacultyInsightsController {
   constructor(
     private readonly facultyInsightService: FacultyInsightService,

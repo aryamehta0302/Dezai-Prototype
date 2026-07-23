@@ -22,6 +22,7 @@ import { QuestionSelectionService } from "../services/question-selection.service
 import { RecommendationService } from "../services/recommendation.service";
 import { JwtAuthGuard } from "../../../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../../../common/guards/roles.guard";
+import { InstitutionActiveGuard } from "../../../common/guards/institution-active.guard";
 import { Roles } from "../../../common/decorators/roles.decorator";
 import { UserRole, ViolationType } from "@prisma/client";
 import { FacultyDataAccessInterceptor } from "../../../common/interceptors/faculty-data-access.interceptor";
@@ -35,6 +36,7 @@ import {
 } from "../dto/assessment.dto";
 
 @Controller("assessments")
+@UseGuards(InstitutionActiveGuard)
 @UseInterceptors(FacultyDataAccessInterceptor)
 export class AssessmentController {
   constructor(

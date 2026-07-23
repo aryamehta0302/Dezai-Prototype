@@ -9,6 +9,7 @@ import { AssessmentService } from '../services/assessment.service';
 import { AttemptService } from '../services/attempt.service';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
+import { InstitutionActiveGuard } from '../../../common/guards/institution-active.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 
@@ -20,6 +21,7 @@ import { UserRole } from '@prisma/client';
  * the existing single-segment :id routes in AssessmentController.
  */
 @Controller('assessments')
+@UseGuards(InstitutionActiveGuard)
 export class ResultsController {
   constructor(
     private readonly assessmentService: AssessmentService,
