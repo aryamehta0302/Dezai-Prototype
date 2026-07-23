@@ -5,8 +5,10 @@ import { AssessmentsModule } from '../assessments/assessments.module';
 import { AuditModule } from '../audit/audit.module';
 import { ChatController } from './controllers/chat.controller';
 import { IntelligenceController } from './controllers/intelligence.controller';
+import { ComplianceKnowledgeController } from './controllers/compliance-knowledge.controller';
 import { ChatService } from './services/chat.service';
 import { MentorIntelligenceService } from './services/mentor-intelligence.service';
+import { ComplianceKnowledgeService } from './services/compliance-knowledge.service';
 import { ChatRepository } from './repositories/chat.repository';
 import { AIProviderService } from './services/ai-provider.service';
 import { MockProvider } from './services/providers/mock-provider';
@@ -17,10 +19,15 @@ import { PromptBuilderService } from './services/prompt-builder.service';
 
 @Module({
   imports: [DatabaseModule, LearningModule, AssessmentsModule, AuditModule],
-  controllers: [ChatController, IntelligenceController],
+  controllers: [
+    ChatController,
+    IntelligenceController,
+    ComplianceKnowledgeController,
+  ],
   providers: [
     ChatService,
     MentorIntelligenceService,
+    ComplianceKnowledgeService,
     ChatRepository,
     AIProviderService,
     MockProvider,
@@ -29,6 +36,6 @@ import { PromptBuilderService } from './services/prompt-builder.service';
     OpenAIProvider,
     PromptBuilderService,
   ],
-  exports: [ChatService, MentorIntelligenceService],
+  exports: [ChatService, MentorIntelligenceService, ComplianceKnowledgeService],
 })
 export class AiModule {}

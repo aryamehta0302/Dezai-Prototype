@@ -20,6 +20,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { AchievementsModule } from './modules/achievements/achievements.module';
 import { EnterpriseAssessmentsModule } from './modules/enterprise-assessments/enterprise-assessments.module';
 import { EnterpriseCredentialsModule } from './modules/enterprise-credentials/enterprise-credentials.module';
+import { EnterpriseAdminModule } from './modules/enterprise-admin/enterprise-admin.module';
 
 
 import { DepartmentsModule } from './modules/departments/departments.module';
@@ -38,13 +39,16 @@ import { RbacScopeModule } from './shared/rbac-scope.module';
         const store = config.get<string>('CACHE_STORE', 'memory');
 
         if (store === 'redis') {
-          const { redisStore } = await import('cache-manager-ioredis-yet');
+          const { default: KeyvRedis } = await import('@keyv/redis');
+          const host = config.get<string>('REDIS_HOST', 'localhost');
+          const port = config.get<number>('REDIS_PORT', 6379);
+          const password = config.get<string>('REDIS_PASSWORD', '');
+          const uri = password
+            ? `redis://:${password}@${host}:${port}`
+            : `redis://${host}:${port}`;
           return {
-            store: redisStore,
-            host: config.get<string>('REDIS_HOST', 'localhost'),
-            port: config.get<number>('REDIS_PORT', 6379),
-            password: config.get<string>('REDIS_PASSWORD', ''),
-            ttl: 300_000, // 5 minutes in ms
+            stores: [new KeyvRedis(uri)],
+            ttl: 300_000,
           };
         }
 
@@ -71,6 +75,7 @@ import { RbacScopeModule } from './shared/rbac-scope.module';
     AchievementsModule,
     EnterpriseAssessmentsModule,
     EnterpriseCredentialsModule,
+    EnterpriseAdminModule,
     DepartmentsModule,
     UniversityAdminModule,
     PlatformAdminModule,

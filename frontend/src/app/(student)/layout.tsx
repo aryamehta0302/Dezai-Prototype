@@ -48,6 +48,9 @@ export default function StudentLayout({
       case UserRole.DEZAI_ADMIN: return "admin";
       case UserRole.FACULTY:
       case UserRole.UNIVERSITY_ADMIN: return "university";
+      case UserRole.ORGANIZATION_ADMIN:
+      case UserRole.ORGANIZATION_MANAGER: return "enterprise";
+      case UserRole.EMPLOYEE: return "employee";
       default: return "student";
     }
   };

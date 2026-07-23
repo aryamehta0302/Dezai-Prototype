@@ -906,3 +906,182 @@ Implemented the full Enterprise Assessments & Compliance module to support corpo
 | GET | `/api/enterprise/assessments/dashboard/employee` | All | Personal compliance dashboard |
 | GET | `/api/enterprise/assessments/dashboard/track/:orgId/:track` | All | Detailed compliance track summary |
 
+---
+
+## Enterprise Administration Module (Sprint 9)
+
+> **Branch**: `feature/faculty-institution-lead`
+> **Backend module**: `backend/src/modules/enterprise-admin/`
+> **Frontend feature**: `frontend/src/features/enterprise-admin/`
+> **API docs**: `docs/API/enterprise-admin.md`
+
+### Features Implemented
+
+#### Department Management
+- Full CRUD: create, list, get, update, delete
+- Manager assignment at creation or via update
+- Delete gracefully orphans employees (`SetNull`)
+- Delete confirmation shows headcount warning
+
+#### Employee Management
+- Full CRUD: create, list, get, update, delete
+- Conflict detection (user already an employee)
+- Department membership validated on create
+- Employment status lifecycle: `INVITED → ACTIVE → SUSPENDED/OFFBOARDED`
+
+#### Employee Assignment
+- Assign / reassign employee to a department
+- Idempotent (no-op if already assigned)
+- Validates department belongs to same org
+
+#### Manager Assignment (NEW schema field: `Employee.managerId`)
+- Assign / remove manager per employee
+- **Self-assignment prevention**: `400 Bad Request`
+- **Circular chain prevention**: walks chain upward before saving (`A→B→A` blocked)
+- Cross-org manager blocked
+
+#### Employee Search & Filtering
+- Paginated (`{ data, total, page, limit, totalPages }`)
+- Filters: name/email/title, department, manager, employment status
+
+#### Org Directory
+- All employees browsable, ordered dept → name
+- Dept + manager shown inline
+
+#### Employee Profile
+- Personal info, department, manager reference
+- Direct reports list
+
+#### Department Stats
+- Headcount per department
+- Manager assigned / unassigned summary
+
+#### Org Settings
+- Read and update: name, logoUrl, industry, size, billingEmail
+
+### Prisma Schema Changes
+- Added `Employee.managerId String?` (self-referential FK)
+- Added `Employee.manager` and `Employee.directReports` relations
+- Migration: `20260714173230_add_employee_manager_relation`
+
+### Bug Fixed
+- `compliance-knowledge.service.ts` — fixed wrong Prisma relation names (`orgAdminInfo → organizationAdmin`, `employeeInfo → employee`)
+
+### API Endpoints
+
+| Method | Endpoint | Role | Description |
+|--------|----------|------|-------------|
+| GET | `/api/enterprise-admin/org/:orgId` | Admin/Manager | Get organization |
+| PATCH | `/api/enterprise-admin/org/:orgId/settings` | Admin | Update org settings |
+| GET | `/api/enterprise-admin/organizations/:orgId/departments` | Admin/Manager | List departments |
+| GET | `/api/enterprise-admin/departments/:id` | Admin/Manager | Get department |
+| POST | `/api/enterprise-admin/departments` | Admin | Create department |
+| PATCH | `/api/enterprise-admin/departments/:id` | Admin | Update department |
+| DELETE | `/api/enterprise-admin/departments/:id` | Admin | Delete department |
+| GET | `/api/enterprise-admin/organizations/:orgId/department-stats` | Admin/Manager | Dept stats |
+| GET | `/api/enterprise-admin/organizations/:orgId/employees` | Admin/Manager | List employees |
+| GET | `/api/enterprise-admin/organizations/:orgId/employees/search` | Admin/Manager | Search employees (paginated) |
+| GET | `/api/enterprise-admin/employees/:id` | Admin/Manager | Get employee |
+| GET | `/api/enterprise-admin/employees/:id/profile` | Admin/Manager | Employee profile + direct reports |
+| POST | `/api/enterprise-admin/employees` | Admin | Create employee |
+| PATCH | `/api/enterprise-admin/employees/:id` | Admin | Update employee |
+| DELETE | `/api/enterprise-admin/employees/:id` | Admin | Remove employee |
+| PATCH | `/api/enterprise-admin/employees/:id/department` | Admin | Assign department |
+| PATCH | `/api/enterprise-admin/employees/:id/manager` | Admin | Assign manager |
+| GET | `/api/enterprise-admin/organizations/:orgId/directory` | Admin/Manager | Org directory |
+
+### Frontend Pages
+
+| Route | Component | Description |
+|-------|-----------|-------------|
+| `/enterprise/admin/departments` | `DepartmentManagementPage` | CRUD with create/edit/delete dialogs |
+| `/enterprise/admin/directory` | `OrgDirectoryPage` | Browsable directory grouped by dept |
+| `/enterprise/admin/employees/:id` | `EmployeeProfilePage` | Profile with direct reports |
+
+---
+
+## 19. Sprint 8: Enterprise Analytics Dashboard (Krish Parmar)
+
+**Branch:** `feature/sprint-8-enterprise-analytics`
+
+This sprint delivers the Enterprise Analytics Dashboard — a comprehensive compliance performance monitoring suite available exclusively to `ORGANIZATION_ADMIN`, `ORGANIZATION_MANAGER`, and `DEZAI_ADMIN` roles.
+
+---
+
+### Backend
+
+#### `EnterpriseAnalyticsService`
+
+Five fully isolated, read-only query methods wired to Prisma:
+
+| Method | Description |
+|--------|-------------|
+| `getOverview(userId, orgId?)` | Returns 6 KPIs: total/active employees, compliance rate, credential count, assessments taken, avg score |
+| `getTrackBreakdown(userId, orgId?)` | Per `ComplianceTrack` pass rate, attempt counts, and credential issuances via `groupBy` |
+| `getDepartmentBreakdown(userId, orgId?)` | Per department: employee count, compliant count, compliance rate %, credential count |
+| `getEmployeeCompliance(userId, page, limit, orgId?)` | Paginated employee table with last attempt score, credential count, and employment status |
+| `getActivityFeed(userId, orgId?)` | Merged + sorted feed of recent `ComplianceAssessmentAttempt` events and `EnterpriseCredential` issuances |
+
+All methods share a private `resolveOrgId()` helper enforcing organizational boundary isolation. `DEZAI_ADMIN` may pass any `organizationId`. `ORGANIZATION_ADMIN` / `ORGANIZATION_MANAGER` are restricted to their own organization.
+
+#### `EnterpriseAnalyticsController`
+
+Separate dedicated controller (`@Controller('analytics/enterprise')`) with its own guard stack:
+
+- `JwtAuthGuard` + `RolesGuard` + `@Roles(ORGANIZATION_ADMIN, ORGANIZATION_MANAGER, DEZAI_ADMIN)`
+- **Intentionally separated** from `AnalyticsController` to avoid the `FacultyDataAccessInterceptor` applied to faculty routes.
+
+Registered in `AnalyticsModule` as an additive entry alongside existing Sprint 1 registrations.
+
+#### API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/analytics/enterprise/overview` | KPI overview |
+| GET | `/api/analytics/enterprise/tracks` | Track pass rates |
+| GET | `/api/analytics/enterprise/departments` | Department breakdown |
+| GET | `/api/analytics/enterprise/employees` | Paginated employee list (`?page=&limit=`) |
+| GET | `/api/analytics/enterprise/activity` | Activity feed |
+
+---
+
+### Frontend
+
+#### Types — `features/analytics/types/enterprise-analytics.types.ts`
+Eight TypeScript interfaces: `EnterpriseOverview`, `EnterpriseTrackStat`, `EnterpriseDepartmentStat`, `EnterpriseEmployeeRow`, `EnterpriseEmployeeList`, `EnterpriseActivityEntry`, `EnterpriseActivityType`, `EnterpriseAnalyticsState`.
+
+#### Service — `features/analytics/services/enterprise-analytics.service.ts`
+Thin API client wrapping all 5 endpoints with error-safe try/catch returning safe fallback values.
+
+#### Hook — `features/analytics/hooks/useEnterpriseAnalytics.ts`
+Single data-fetching hook calling all 5 endpoints in parallel via `Promise.all`. Cleanup via cancelled-flag pattern. Exposes `fetchEmployeePage()` for client-side pagination.
+
+#### Components
+- **`compliance-track-chart.tsx`** — Recharts horizontal `BarChart` with color-coded bars (green/amber/red by pass rate) and custom Tooltip.
+- **`department-compliance-table.tsx`** — Table with `Progress` bar, status `Badge` (Compliant/In Progress/At Risk), and empty state.
+
+#### Page — `features/analytics/pages/EnterpriseAnalyticsDashboard.tsx`
+3-tab dashboard (`Overview`, `Departments`, `Employees`) with KPI cards, compliance health progress banner, track chart, activity feed, and paginated employee table.
+
+#### App Router — `app/enterprise/analytics/page.tsx`
+Thin Next.js App Router page that automatically inherits Nil's `app/enterprise/layout.tsx` (sidebar + TopAppBar).
+
+---
+
+### Shared Integration Files (Additive Only)
+
+| File | Change | Preserved |
+|------|--------|-----------|
+| `backend/src/modules/analytics/analytics.module.ts` | Added `EnterpriseAnalyticsController` + `EnterpriseAnalyticsService` | Sprint 1 registrations untouched |
+| `frontend/src/core/auth/route-permissions.ts` | Added `/enterprise/analytics` RBAC rule | All 12 existing rules untouched |
+| `frontend/src/features/enterprise/components/layout/enterprise-sidebar.tsx` | Added `Analytics` nav item | All of Nil's existing nav items untouched |
+| `frontend/src/features/analytics/index.ts` | Appended Sprint 8 barrel exports | All Sprint 6 exports untouched |
+
+---
+
+### Prisma — No Schema Changes
+Sprint 8 consumed existing models (`ComplianceAssessmentAttempt`, `EnterpriseCredential`, `Department`, `Employee`, `Organization`). Zero new migrations required.
+
+### Build Verification
+- **Backend:** `nest build` → ✅ 0 errors
+- **Frontend:** `tsc --noEmit` → ✅ 0 errors

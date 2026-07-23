@@ -12,6 +12,12 @@ interface ChatContext {
   activeLessonId?: string | null;
 }
 
+interface ChatPromptOptions {
+  documentContext?: string;
+  complianceOnly?: boolean;
+  includeHistory?: boolean;
+}
+
 @Injectable()
 export class PromptBuilderService {
   constructor(private readonly prisma: PrismaService) {}
@@ -19,18 +25,28 @@ export class PromptBuilderService {
   async buildChatPrompt(
     session: ChatContext,
     userMessage: string,
+    options: ChatPromptOptions = {},
   ): Promise<string> {
     const [history, learningContext] = await Promise.all([
-      this.buildHistory(session.id),
+      options.includeHistory === false ? Promise.resolve('') : this.buildHistory(session.id),
       this.buildLearningContext(session, userMessage),
     ]);
 
     return [
-      'You are the concise, encouraging AI Mentor for the Dezai learning platform.',
-      'Explain clearly, use relevant examples, and ask a check-for-understanding question when useful.',
-      'Use only the supplied learning context; say when the context does not contain an answer.',
+      options.complianceOnly
+        ? 'You are the AI Compliance Chat for the Dezai enterprise learning platform.'
+        : 'You are the concise, encouraging AI Mentor for the Dezai learning platform.',
+      options.complianceOnly
+        ? 'Answer ONLY from the uploaded company document excerpts. If the excerpts do not answer the question, say that the uploaded documents do not contain the answer.'
+        : 'Explain clearly, use relevant examples, and ask a check-for-understanding question when useful.',
+      options.complianceOnly
+        ? 'Do not use outside knowledge, general compliance assumptions, or policy details that are not present in the document excerpts.'
+        : 'Use only the supplied learning context; say when the context does not contain an answer.',
       'Keep answers to 2-3 short paragraphs and use markdown when it improves clarity.',
       learningContext ? `Learning context:\n${learningContext}` : '',
+      options.documentContext
+        ? `Uploaded company document excerpts:\n${options.documentContext.slice(0, MAX_CONTEXT_CHARS * 3)}`
+        : '',
       history ? `Recent conversation:\n${history}` : '',
     ]
       .filter(Boolean)
