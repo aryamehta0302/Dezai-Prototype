@@ -36,7 +36,7 @@ import { RbacScopeModule } from './shared/rbac-scope.module';
       isGlobal: true,
       inject: [ConfigService],
       useFactory: async (config: ConfigService) => {
-        const store = config.get<string>('CACHE_STORE', 'memory');
+        const store = config.get<string>('CACHE_STORE', 'redis');
 
         if (store === 'redis') {
           const { default: KeyvRedis } = await import('@keyv/redis');
