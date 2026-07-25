@@ -1,6 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { Settings, Save } from "lucide-react";
+import { PageContainer } from "@/shared/components/page-container";
+import { Card, CardHeader, CardTitle, CardContent } from "@/shared/ui/card";
+import { Input } from "@/shared/ui/input";
+import { Button } from "@/shared/ui/button";
+import { Skeleton } from "@/shared/ui/skeleton";
 import { universityAdminService } from "../services/university-admin.service";
 
 export const UniversitySettingsPage: React.FC = () => {
@@ -54,94 +60,95 @@ export const UniversitySettingsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="p-8 space-y-4 max-w-4xl mx-auto">
-        <div className="h-8 w-48 animate-pulse rounded bg-slate-800" />
-        <div className="h-64 animate-pulse rounded-2xl bg-slate-900" />
-      </div>
+      <PageContainer className="py-8 space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-64 w-full" />
+      </PageContainer>
     );
   }
 
   return (
-    <div className="p-8 space-y-8 max-w-4xl mx-auto">
+    <PageContainer className="py-8 space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-100">University Settings</h1>
-        <p className="text-sm text-slate-400">Manage university profile, contact information, and institutional details</p>
+        <h1 className="text-2xl font-bold text-on-surface">University Settings</h1>
+        <p className="text-sm text-muted">Manage university profile, contact information, and institutional details</p>
       </div>
 
-      <form onSubmit={handleSave} className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 space-y-6 backdrop-blur-md">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">University Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            />
-          </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <Settings className="h-4 w-4 inline mr-2" />
+            Profile Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSave} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-xs font-medium text-on-surface mb-1">University Name</label>
+                <Input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">Contact Email</label>
-            <input
-              type="email"
-              value={contactEmail}
-              onChange={(e) => setContactEmail(e.target.value)}
-              className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
+              <div>
+                <label className="block text-xs font-medium text-on-surface mb-1">Contact Email</label>
+                <Input
+                  type="email"
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                />
+              </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">Contact Phone</label>
-            <input
-              type="text"
-              value={contactPhone}
-              onChange={(e) => setContactPhone(e.target.value)}
-              className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
+              <div>
+                <label className="block text-xs font-medium text-on-surface mb-1">Contact Phone</label>
+                <Input
+                  type="text"
+                  value={contactPhone}
+                  onChange={(e) => setContactPhone(e.target.value)}
+                />
+              </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">Country</label>
-            <input
-              type="text"
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
-              className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
+              <div>
+                <label className="block text-xs font-medium text-on-surface mb-1">Country</label>
+                <Input
+                  type="text"
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                />
+              </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">State / Region</label>
-            <input
-              type="text"
-              value={state}
-              onChange={(e) => setState(e.target.value)}
-              className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
+              <div>
+                <label className="block text-xs font-medium text-on-surface mb-1">State / Region</label>
+                <Input
+                  type="text"
+                  value={state}
+                  onChange={(e) => setState(e.target.value)}
+                />
+              </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">City</label>
-            <input
-              type="text"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-        </div>
+              <div>
+                <label className="block text-xs font-medium text-on-surface mb-1">City</label>
+                <Input
+                  type="text"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                />
+              </div>
+            </div>
 
-        <div className="flex justify-end pt-4">
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-lg bg-indigo-600 px-6 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500 transition disabled:opacity-50"
-          >
-            {saving ? "Saving Changes..." : "Save Settings"}
-          </button>
-        </div>
-      </form>
-    </div>
+            <div className="flex justify-end pt-4">
+              <Button type="submit" disabled={saving} variant="default">
+                <Save className="h-4 w-4 mr-2" />
+                {saving ? "Saving Changes..." : "Save Settings"}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </PageContainer>
   );
 };

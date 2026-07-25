@@ -1,6 +1,13 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { Building2, Plus, Trash2 } from "lucide-react";
+import { PageContainer } from "@/shared/components/page-container";
+import { Card, CardHeader, CardTitle, CardContent } from "@/shared/ui/card";
+import { Input } from "@/shared/ui/input";
+import { Button } from "@/shared/ui/button";
+import { Badge } from "@/shared/ui/badge";
+import { Skeleton } from "@/shared/ui/skeleton";
 import { departmentService } from "../../departments/services/department.service";
 import { Department } from "../../departments/types/department.types";
 
@@ -57,53 +64,50 @@ export const DepartmentManagementPage: React.FC = () => {
   };
 
   return (
-    <div className="p-8 space-y-8 max-w-7xl mx-auto">
+    <PageContainer className="py-8 space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-100">Department Management</h1>
-        <p className="text-sm text-slate-400">Configure academic departments, assign department heads, and monitor program associations</p>
+        <h1 className="text-2xl font-bold text-on-surface">Department Management</h1>
+        <p className="text-sm text-muted">Configure academic departments, assign department heads, and monitor program associations</p>
       </div>
 
-      {/* Create form */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6 backdrop-blur-md">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-300 mb-4">Add New Department</h3>
-        <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Department Name *</label>
-            <input
-              type="text"
-              placeholder="e.g. Computer Science & Engineering"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Short Code (Optional)</label>
-            <input
-              type="text"
-              placeholder="e.g. CSE"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          <div className="flex items-end">
-            <button
-              type="submit"
-              disabled={creating}
-              className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 transition disabled:opacity-50"
-            >
-              {creating ? "Creating..." : "Add Department"}
-            </button>
-          </div>
-        </form>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <Plus className="h-4 w-4 inline mr-2" />
+            Add New Department
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs text-muted mb-1">Department Name *</label>
+              <Input
+                placeholder="e.g. Computer Science & Engineering"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-muted mb-1">Short Code (Optional)</label>
+              <Input
+                placeholder="e.g. CSE"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+              />
+            </div>
+            <div className="flex items-end">
+              <Button type="submit" disabled={creating} variant="default" className="w-full">
+                {creating ? "Creating..." : "Add Department"}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
 
-      {/* List */}
-      <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/40 backdrop-blur-md">
-        <table className="w-full text-left text-sm text-slate-300">
-          <thead className="border-b border-slate-800 bg-slate-950/60 text-xs uppercase tracking-wider text-slate-400">
+      <div className="overflow-x-auto rounded-xl border border-border-light bg-surface">
+        <table className="w-full text-left text-sm text-on-surface">
+          <thead className="border-b border-border-light bg-surface-low text-xs uppercase tracking-wider text-muted">
             <tr>
               <th className="px-6 py-4">Department</th>
               <th className="px-6 py-4">Code</th>
@@ -113,35 +117,37 @@ export const DepartmentManagementPage: React.FC = () => {
               <th className="px-6 py-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/60">
+          <tbody className="divide-y divide-border-light">
             {departments.map((dept) => (
-              <tr key={dept.id} className="transition-colors hover:bg-slate-800/30">
-                <td className="px-6 py-4 font-medium text-slate-200">{dept.name}</td>
+              <tr key={dept.id} className="transition-colors hover:bg-surface-low">
+                <td className="px-6 py-4 font-medium text-on-surface">{dept.name}</td>
                 <td className="px-6 py-4">
                   {dept.code ? (
-                    <span className="rounded bg-slate-800 px-2 py-1 text-xs font-mono text-cyan-400">{dept.code}</span>
+                    <Badge variant="secondary">{dept.code}</Badge>
                   ) : (
-                    "—"
+                    "\u2014"
                   )}
                 </td>
-                <td className="px-6 py-4 text-slate-400">
-                  {dept.headFaculty?.user?.name || <span className="italic text-slate-600">Unassigned</span>}
+                <td className="px-6 py-4 text-muted">
+                  {dept.headFaculty?.user?.name || <span className="italic text-muted">Unassigned</span>}
                 </td>
-                <td className="px-6 py-4 text-slate-300">{dept._count?.facultyMembers ?? 0}</td>
-                <td className="px-6 py-4 text-slate-300">{dept._count?.programs ?? 0}</td>
+                <td className="px-6 py-4 text-on-surface">{dept._count?.facultyMembers ?? 0}</td>
+                <td className="px-6 py-4 text-on-surface">{dept._count?.programs ?? 0}</td>
                 <td className="px-6 py-4 text-right">
-                  <button
+                  <Button
                     onClick={() => handleDelete(dept.id, dept.name)}
-                    className="rounded-md bg-rose-600/20 px-3 py-1.5 text-xs font-medium text-rose-400 hover:bg-rose-600/30 transition"
+                    variant="outline"
+                    size="sm"
                   >
+                    <Trash2 className="h-3 w-3 mr-1" />
                     Delete
-                  </button>
+                  </Button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-    </div>
+    </PageContainer>
   );
 };

@@ -1,6 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { Search } from "lucide-react";
+import { PageContainer } from "@/shared/components/page-container";
+import { Input } from "@/shared/ui/input";
+import { Button } from "@/shared/ui/button";
 import { universityAdminService } from "../services/university-admin.service";
 import { FacultyMemberDetail } from "../types/university-admin.types";
 import { FacultyTable } from "../components/FacultyTable";
@@ -60,27 +64,25 @@ export const FacultyManagementPage: React.FC = () => {
   };
 
   return (
-    <div className="p-8 space-y-6 max-w-7xl mx-auto">
+    <PageContainer className="py-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-100">Faculty Management</h1>
-        <p className="text-sm text-slate-400">Verify faculty registrations, manage department assignments, and oversight</p>
+        <h1 className="text-2xl font-bold text-on-surface">Faculty Management</h1>
+        <p className="text-sm text-muted">Verify faculty registrations, manage department assignments, and oversight</p>
       </div>
 
-      {/* Filters bar */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center bg-slate-900/40 p-4 rounded-xl border border-slate-800 backdrop-blur-md">
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center bg-surface-low p-4 rounded-xl border border-border-light">
         <div className="flex flex-1 gap-4 w-full sm:w-auto">
-          <input
-            type="text"
+          <Input
             placeholder="Search by name, email, employee ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && loadFaculty()}
-            className="w-full sm:w-72 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full sm:w-72"
           />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="rounded-lg border border-border-light bg-surface px-3 py-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="">All Statuses</option>
             <option value="PENDING">Pending Approval</option>
@@ -94,12 +96,10 @@ export const FacultyManagementPage: React.FC = () => {
             />
           </div>
         </div>
-        <button
-          onClick={loadFaculty}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 transition"
-        >
+        <Button onClick={loadFaculty} variant="default" size="sm">
+          <Search className="h-4 w-4 mr-1" />
           Filter
-        </button>
+        </Button>
       </div>
 
       <FacultyTable
@@ -111,6 +111,6 @@ export const FacultyManagementPage: React.FC = () => {
         onReactivate={handleReactivate}
         onRemove={handleRemove}
       />
-    </div>
+    </PageContainer>
   );
 };
