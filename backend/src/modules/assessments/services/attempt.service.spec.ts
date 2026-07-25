@@ -6,6 +6,7 @@ import { PassFailEvaluationService } from './pass-fail-evaluation.service';
 import { AwardService } from '../../achievements/services/award.service';
 import { XpService } from '../../users/services/xp.service';
 import { AssessmentService } from './assessment.service';
+import { QuestionSelectionService } from './question-selection.service';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 
 describe('AttemptService', () => {
@@ -52,6 +53,10 @@ describe('AttemptService', () => {
     getAssessmentById: jest.fn(),
   };
 
+  const mockQuestionSelectionService = {
+    selectQuestions: jest.fn().mockResolvedValue({}),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -62,6 +67,7 @@ describe('AttemptService', () => {
         { provide: AwardService, useValue: mockAward },
         { provide: XpService, useValue: mockXpService },
         { provide: AssessmentService, useValue: mockAssessmentService },
+        { provide: QuestionSelectionService, useValue: mockQuestionSelectionService },
       ],
     }).compile();
 

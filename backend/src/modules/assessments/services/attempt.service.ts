@@ -19,6 +19,7 @@ import { AuditService } from '../../audit/services/audit.service';
 import { XpService } from '../../users/services/xp.service';
 import { AwardService } from '../../achievements/services/award.service';
 import { AssessmentService } from './assessment.service';
+import { QuestionSelectionService } from './question-selection.service';
 import {
   PassFailEvaluationService,
   AttemptAnswerWithRelations,
@@ -47,6 +48,7 @@ export class AttemptService {
     private xpService: XpService,
     private awardService: AwardService,
     private assessmentService: AssessmentService,
+    private questionSelectionService: QuestionSelectionService,
     private passFailEvaluationService: PassFailEvaluationService,
   ) { }
 
@@ -80,20 +82,30 @@ export class AttemptService {
       throw new ForbiddenException('Maximum attempts reached for this assessment.');
     }
 
-    const session = await this.assessmentService.createSession(userId, assessmentId);
+    // Use Redis cache-aside via QuestionSelectionService
+    const selection = await this.questionSelectionService.selectQuestions(assessmentId);
+
+    // Store the selected questions in a session for resume consistency
+    const questionSet = selection.questions.map(q => ({
+      questionId: q.id,
+      text: q.text,
+      options: q.options.map(o => ({ optionId: o.id, text: o.text })),
+    })) as any;
+
+    const session = await this.prisma.examSession.create({
+      data: {
+        userId,
+        assessmentId,
+        status: ExamStatus.ACTIVE,
+        warningsCount: 0,
+        scoreDeduction: 0,
+        questionSet,
+      },
+    });
 
     const attempt = await this.prisma.assessmentAttempt.create({
       data: { userId, assessmentId, score: 0, passed: false },
     });
-
-    // Use the SAME questionSet from the session — NOT a fresh selectQuestions call,
-    // which would independently shuffle and potentially return different questions.
-    const questionSet = (session.questionSet ?? []) as unknown as QuestionSetItem[];
-    const questions = questionSet.map(q => ({
-      id: q.questionId,
-      text: q.text,
-      options: (q.options ?? []).map(o => ({ id: o.optionId, text: o.text })),
-    }));
 
     return {
       success: true,
@@ -110,7 +122,7 @@ export class AttemptService {
       timeLimit: assessment.timeLimit,
       sampleSize: assessment.sampleSize,
       totalAvailable: questionSet.length,
-      questions,
+      questions: selection.questions,
       maxAttempts: assessment.maxAttempts,
       timeLimitEnabled: assessment.timeLimitEnabled,
       allowResume: assessment.allowResume,
@@ -136,7 +148,12 @@ export class AttemptService {
     });
 
     if (!session) {
-      const questionSet = await this.assessmentService.generateQuestionSet(attempt.assessmentId);
+      const selection = await this.questionSelectionService.selectQuestions(attempt.assessmentId);
+      const questionSet = selection.questions.map(q => ({
+        questionId: q.id,
+        text: q.text,
+        options: q.options.map(o => ({ optionId: o.id, text: o.text })),
+      })) as any;
       session = await this.prisma.examSession.create({
         data: {
           userId,
