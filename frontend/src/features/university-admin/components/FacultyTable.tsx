@@ -1,6 +1,10 @@
 "use client";
 
 import React from "react";
+import { UserCheck, ShieldAlert, UserX, RotateCcw, X, Check, Users } from "lucide-react";
+import { Badge } from "@/shared/ui/badge";
+import { Button } from "@/shared/ui/button";
+import { Skeleton } from "@/shared/ui/skeleton";
 import { FacultyMemberDetail } from "../types/university-admin.types";
 import { FacultyStatusBadge } from "./FacultyStatusBadge";
 
@@ -27,7 +31,7 @@ export const FacultyTable: React.FC<FacultyTableProps> = ({
     return (
       <div className="w-full space-y-3 p-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-12 w-full animate-pulse rounded-lg bg-slate-800/50" />
+          <Skeleton key={i} className="h-12 w-full" />
         ))}
       </div>
     );
@@ -35,16 +39,17 @@ export const FacultyTable: React.FC<FacultyTableProps> = ({
 
   if (facultyList.length === 0) {
     return (
-      <div className="flex h-48 w-full flex-col items-center justify-center rounded-xl border border-slate-800 bg-slate-900/40 text-slate-400">
+      <div className="flex h-48 w-full flex-col items-center justify-center rounded-xl border border-border-light bg-surface text-muted">
+        <Users className="h-8 w-8 mb-2" />
         <p className="text-sm font-medium">No faculty members found.</p>
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/40 backdrop-blur-md">
-      <table className="w-full text-left text-sm text-slate-300">
-        <thead className="border-b border-slate-800 bg-slate-950/60 text-xs uppercase tracking-wider text-slate-400">
+    <div className="overflow-x-auto rounded-xl border border-border-light bg-surface">
+      <table className="w-full text-left text-sm text-on-surface">
+        <thead className="border-b border-border-light bg-surface-low text-xs uppercase tracking-wider text-muted">
           <tr>
             <th className="px-6 py-4">Faculty Member</th>
             <th className="px-6 py-4">Department</th>
@@ -53,23 +58,21 @@ export const FacultyTable: React.FC<FacultyTableProps> = ({
             <th className="px-6 py-4 text-right">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800/60">
+        <tbody className="divide-y divide-border-light">
           {facultyList.map((item) => (
-            <tr key={item.id} className="transition-colors hover:bg-slate-800/30">
+            <tr key={item.id} className="transition-colors hover:bg-surface-low">
               <td className="px-6 py-4">
-                <div className="font-medium text-slate-200">{item.user?.name || "Unnamed"}</div>
-                <div className="text-xs text-slate-400">{item.user?.email}</div>
+                <div className="font-medium text-on-surface">{item.user?.name || "Unnamed"}</div>
+                <div className="text-xs text-muted">{item.user?.email}</div>
               </td>
               <td className="px-6 py-4">
                 {item.institutionDept ? (
-                  <span className="rounded bg-slate-800 px-2 py-1 text-xs font-mono text-cyan-400">
-                    {item.institutionDept.name}
-                  </span>
+                  <Badge variant="secondary">{item.institutionDept.name}</Badge>
                 ) : (
-                  <span className="text-slate-500">—</span>
+                  <span className="text-muted">&mdash;</span>
                 )}
               </td>
-              <td className="px-6 py-4 text-slate-300">{item.designation || "—"}</td>
+              <td className="px-6 py-4 text-on-surface">{item.designation || "\u2014"}</td>
               <td className="px-6 py-4">
                 <FacultyStatusBadge status={item.verificationStatus} accountStatus={item.user?.accountStatus} />
               </td>
@@ -78,20 +81,16 @@ export const FacultyTable: React.FC<FacultyTableProps> = ({
                   {item.verificationStatus === "PENDING" && (
                     <>
                       {onApprove && (
-                        <button
-                          onClick={() => onApprove(item.id)}
-                          className="rounded-md bg-emerald-600/20 px-3 py-1.5 text-xs font-medium text-emerald-400 hover:bg-emerald-600/30 transition"
-                        >
+                        <Button onClick={() => onApprove(item.id)} variant="outline" size="sm">
+                          <Check className="h-3 w-3 mr-1" />
                           Approve
-                        </button>
+                        </Button>
                       )}
                       {onReject && (
-                        <button
-                          onClick={() => onReject(item.id)}
-                          className="rounded-md bg-rose-600/20 px-3 py-1.5 text-xs font-medium text-rose-400 hover:bg-rose-600/30 transition"
-                        >
+                        <Button onClick={() => onReject(item.id)} variant="outline" size="sm">
+                          <X className="h-3 w-3 mr-1" />
                           Reject
-                        </button>
+                        </Button>
                       )}
                     </>
                   )}
@@ -100,30 +99,24 @@ export const FacultyTable: React.FC<FacultyTableProps> = ({
                     <>
                       {item.user?.accountStatus === "SUSPENDED" ? (
                         onReactivate && (
-                          <button
-                            onClick={() => onReactivate(item.id)}
-                            className="rounded-md bg-cyan-600/20 px-3 py-1.5 text-xs font-medium text-cyan-400 hover:bg-cyan-600/30 transition"
-                          >
+                          <Button onClick={() => onReactivate(item.id)} variant="outline" size="sm">
+                            <RotateCcw className="h-3 w-3 mr-1" />
                             Reactivate
-                          </button>
+                          </Button>
                         )
                       ) : (
                         onSuspend && (
-                          <button
-                            onClick={() => onSuspend(item.id)}
-                            className="rounded-md bg-amber-600/20 px-3 py-1.5 text-xs font-medium text-amber-400 hover:bg-amber-600/30 transition"
-                          >
+                          <Button onClick={() => onSuspend(item.id)} variant="outline" size="sm">
+                            <ShieldAlert className="h-3 w-3 mr-1" />
                             Suspend
-                          </button>
+                          </Button>
                         )
                       )}
                       {onRemove && (
-                        <button
-                          onClick={() => onRemove(item.id)}
-                          className="rounded-md bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-700 hover:text-red-400 transition"
-                        >
+                        <Button onClick={() => onRemove(item.id)} variant="outline" size="sm">
+                          <UserX className="h-3 w-3 mr-1" />
                           Remove
-                        </button>
+                        </Button>
                       )}
                     </>
                   )}
