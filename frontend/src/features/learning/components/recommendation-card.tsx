@@ -39,7 +39,7 @@ export function RecommendationCard({ recommendation, className }: Recommendation
         className,
       )}
     >
-      <div className={cn("rounded-lg p-2 shrink-0", config.color)}>
+      <div className={cn("rounded-md p-2 shrink-0", config.color)}>
         <Icon className="h-4 w-4" />
       </div>
       <div className="flex-1 min-w-0 space-y-0.5">
@@ -49,7 +49,7 @@ export function RecommendationCard({ recommendation, className }: Recommendation
             #{recommendation.priority}
           </span>
         </div>
-        <p className="text-xs text-muted">{recommendation.description}</p>
+        <p className="text-xs text-gray-800">{recommendation.description}</p>
       </div>
     </div>
   );

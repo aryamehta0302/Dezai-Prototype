@@ -11,10 +11,18 @@
 
 @theme inline {
   /* --- Brand --- */
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
+--color-primary: #366bd3;/* Updated: Dezai Navy */
+  --color-primary-hover: #1a2b5a;
   --color-primary-container: #eff6ff;
   --color-primary-foreground: #ffffff;
+  
+  /* --- New Custom Brand Colors --- */
+
+  --color-credential-gold: #fed65b; /* Added: Dezai Gold */
+  --color-secondary-fixed-dim: #e9c349;
+  --color-secondary-fixed: #735c00;
+
+
 
   --color-secondary: #667085;
   --color-secondary-hover: #475467;
@@ -27,8 +35,10 @@
   --color-surface: #ffffff;
   --color-surface-low: #f2f4f7;
   --color-surface-muted: #f2f4f7;
+  --color-surface-variant: #d9e3f4;
 
   /* --- Text --- */
+  --color-text-subtle: #1f2937;
   --color-on-surface: #101828;
   --color-on-surface-variant: #475467;
   --color-muted: #98a2b3;
@@ -115,9 +125,7 @@
    BASE STYLES
    ============================================================ */
 
-* {
-  border-color: var(--color-border-light);
-}
+
 
 body {
   background: var(--color-background);
@@ -133,8 +141,8 @@ body {
 
 .card-elevation {
   background: var(--color-surface);
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-lg);
+  border: 1px solid #D1D5DB;
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-level-1);
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
@@ -270,6 +278,8 @@ body {
 
 @layer base {
   * {
+   
+
     @apply border-border outline-ring/50;
   }
   body {
