@@ -9,6 +9,7 @@ import {
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { PrismaService } from '../../../database/prisma.service';
+import { RedisHealthService } from '../../../shared/infrastructure/redis-health.service';
 import { AuditAction, UserRole, Difficulty } from '@prisma/client';
 import { AuditService } from '../../audit/services/audit.service';
 import { EnterpriseQuestionBankService } from './enterprise-question-bank.service';
@@ -27,7 +28,16 @@ export class ComplianceAssessmentService {
     private auditService: AuditService,
     private enterpriseQuestionBankService: EnterpriseQuestionBankService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private redisHealth: RedisHealthService,
   ) {}
+
+  private pendingFetches = new Map<string, Promise<{
+    id: string;
+    text: string;
+    category: string | null;
+    timerSeconds: number;
+    options: { id: string; text: string }[];
+  }[]>>();
 
   // ─────────────────── QUESTION SELECTION ───────────────────
 
@@ -62,39 +72,31 @@ export class ComplianceAssessmentService {
       options: { id: string; text: string }[];
     }[];
 
-    const cached = await this.cacheManager.get<typeof allQuestions>(cacheKey);
+    // Circuit breaker: only attempt cache if Redis is healthy or backoff elapsed
+    let cached: typeof allQuestions | undefined;
+    if (this.redisHealth.shouldTry()) {
+      try {
+        cached = await this.cacheManager.get<typeof allQuestions>(cacheKey);
+        if (cached) this.redisHealth.recordSuccess();
+      } catch (err) {
+        this.redisHealth.recordFailure();
+        this.logger.warn(`Cache GET failed for ${cacheKey}: ${(err as Error).message}`);
+      }
+    }
 
     if (cached) {
       this.logger.debug(`Cache HIT for ${cacheKey}`);
       allQuestions = cached;
     } else {
       this.logger.debug(`Cache MISS for ${cacheKey}`);
-
-      const questionBank = await this.prisma.enterpriseQuestionBank.findUnique({
-        where: { id: assessment.questionBankId },
-        include: {
-          questions: {
-            include: { options: true },
-          },
-        },
-      });
-
-      const rawQuestions = questionBank?.questions ?? [];
-
-      // Strip isCorrect from options (never expose to client)
-      allQuestions = rawQuestions.map((q) => ({
-        id: q.id,
-        text: q.text,
-        category: q.category,
-        timerSeconds: q.timerSeconds,
-        options: q.options.map((o) => ({
-          id: o.id,
-          text: o.text,
-        })),
-      }));
-
-      if (allQuestions.length > 0) {
-        await this.cacheManager.set(cacheKey, allQuestions, 300_000);
+      // Deduplicate concurrent cache misses to prevent DB thundering herd
+      if (!this.pendingFetches.has(cacheKey)) {
+        this.pendingFetches.set(cacheKey, this.fetchEnterpriseFromDb(assessment, cacheKey));
+      }
+      try {
+        allQuestions = await this.pendingFetches.get(cacheKey)!;
+      } finally {
+        this.pendingFetches.delete(cacheKey);
       }
     }
 
@@ -137,6 +139,44 @@ export class ComplianceAssessmentService {
       totalAvailable: allQuestions.length,
       questions: selected,
     };
+  }
+
+  private async fetchEnterpriseFromDb(
+    assessment: { id: string; questionBankId: string },
+    cacheKey: string,
+  ) {
+    const questionBank = await this.prisma.enterpriseQuestionBank.findUnique({
+      where: { id: assessment.questionBankId },
+      include: {
+        questions: {
+          include: { options: true },
+        },
+      },
+    });
+
+    const rawQuestions = questionBank?.questions ?? [];
+    const allQuestions = rawQuestions.map((q) => ({
+      id: q.id,
+      text: q.text,
+      category: q.category,
+      timerSeconds: q.timerSeconds,
+      options: q.options.map((o) => ({
+        id: o.id,
+        text: o.text,
+      })),
+    }));
+
+    // Only write to cache if Redis is believed healthy (skip if circuit breaker is open)
+    if (allQuestions.length > 0 && this.redisHealth.isAvailable) {
+      try {
+        await this.cacheManager.set(cacheKey, allQuestions, 300_000);
+      } catch (err) {
+        this.redisHealth.recordFailure();
+        this.logger.warn(`Cache SET failed for ${cacheKey}: ${(err as Error).message}`);
+      }
+    }
+
+    return allQuestions;
   }
 
   private fisherYatesShuffle<T>(array: T[]): void {

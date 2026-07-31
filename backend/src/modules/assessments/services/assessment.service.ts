@@ -9,6 +9,7 @@ import {
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Cache } from "cache-manager";
 import { PrismaService } from "../../../database/prisma.service";
+import { RedisHealthService } from "../../../shared/infrastructure/redis-health.service";
 import { UserRole, AuditAction, ExamStatus, ViolationType, Difficulty, AchievementCategory, Prisma } from "@prisma/client";
 import { AuditService } from "../../audit/services/audit.service";
 import { PassFailEvaluationService } from './pass-fail-evaluation.service';
@@ -49,6 +50,7 @@ export class AssessmentService {
     private passFailEvaluationService: PassFailEvaluationService,
     private awardService: AwardService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private redisHealth: RedisHealthService,
   ) { }
 
   // ─────────────────── SPRINT 7: CACHE INVALIDATION ───────────────────
@@ -65,7 +67,15 @@ export class AssessmentService {
 
     for (const assessment of assessments) {
       const cacheKey = `qbank:${assessment.id}:questions`;
-      await this.cacheManager.del(cacheKey);
+      // Only attempt cache invalidation if Redis is believed healthy
+      if (this.redisHealth.isAvailable) {
+        try {
+          await this.cacheManager.del(cacheKey);
+        } catch (err) {
+          this.redisHealth.recordFailure();
+          this.logger.warn(`Cache DEL failed for ${cacheKey}: ${(err as Error).message}`);
+        }
+      }
       this.logger.debug(`Cache INVALIDATED: ${cacheKey}`);
     }
   }

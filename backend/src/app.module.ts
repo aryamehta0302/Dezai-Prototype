@@ -27,6 +27,7 @@ import { DepartmentsModule } from './modules/departments/departments.module';
 import { UniversityAdminModule } from './modules/university-admin/university-admin.module';
 import { PlatformAdminModule } from './modules/platform-admin/platform-admin.module';
 import { RbacScopeModule } from './shared/rbac-scope.module';
+import { InfrastructureModule } from './shared/infrastructure/infrastructure.module';
 
 
 @Module({
@@ -39,23 +40,44 @@ import { RbacScopeModule } from './shared/rbac-scope.module';
         const store = config.get<string>('CACHE_STORE', 'redis');
 
         if (store === 'redis') {
-          const { default: KeyvRedis } = await import('@keyv/redis');
-          const host = config.get<string>('REDIS_HOST', 'localhost');
-          const port = config.get<number>('REDIS_PORT', 6379);
-          const password = config.get<string>('REDIS_PASSWORD', '');
-          const uri = password
-            ? `redis://:${password}@${host}:${port}`
-            : `redis://${host}:${port}`;
-          return {
-            stores: [new KeyvRedis(uri)],
-            ttl: 300_000,
-          };
+          try {
+            const { default: KeyvRedis } = await import('@keyv/redis');
+            const host = config.get<string>('REDIS_HOST', 'localhost');
+            const port = config.get<number>('REDIS_PORT', 6379);
+            const password = config.get<string>('REDIS_PASSWORD', '');
+            const uri = password
+              ? `redis://:${password}@${host}:${port}`
+              : `redis://${host}:${port}`;
+
+            // Fail-fast Redis client: do not let cache operations hang forever
+            // when Redis is unreachable. The node-redis defaults (reconnect forever
+            // + queue commands when disconnected) cause every cacheManager.get()
+            // to block the HTTP request indefinitely, so the circuit breaker never
+            // gets a chance to run. With these options a downed Redis rejects
+            // quickly, the breaker opens, and we fall back to the database.
+            const client = new KeyvRedis({
+              url: uri,
+              socket: {
+                reconnectStrategy: false,
+                connectTimeout: 2_000,
+              },
+              disableOfflineQueue: true,
+            });
+
+            return {
+              stores: [client],
+              ttl: 300_000,
+            };
+          } catch (err) {
+            console.warn(`Redis connection failed at startup — falling back to in-memory cache: ${(err as Error).message}`);
+          }
         }
 
         return { ttl: 300_000 }; // in-memory fallback
       },
     }),
     DatabaseModule,
+    InfrastructureModule,
     RbacScopeModule,
     AuthModule,
     UsersModule,
