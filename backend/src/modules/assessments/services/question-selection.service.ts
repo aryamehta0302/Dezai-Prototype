@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, Inject, Logger } from "@nestjs/common";
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Cache } from "cache-manager";
 import { PrismaService } from "../../../database/prisma.service";
+import { RedisHealthService } from "../../../shared/infrastructure/redis-health.service";
 
 /**
  * Implements the 100:15 Dynamic Question Selection Engine.
@@ -18,10 +19,18 @@ import { PrismaService } from "../../../database/prisma.service";
 @Injectable()
 export class QuestionSelectionService {
   private readonly logger = new Logger(QuestionSelectionService.name);
+  private pendingFetches = new Map<string, Promise<{
+    id: string;
+    text: string;
+    category: string | null;
+    timerSeconds: number;
+    options: { id: string; text: string }[];
+  }[]>>();
 
   constructor(
     private prisma: PrismaService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private redisHealth: RedisHealthService,
   ) {}
 
   /**
@@ -57,40 +66,31 @@ export class QuestionSelectionService {
       options: { id: string; text: string }[];
     }[];
 
-    const cached = await this.cacheManager.get<typeof allQuestions>(cacheKey);
+    // Circuit breaker: only attempt cache if Redis is healthy or backoff elapsed
+    let cached: typeof allQuestions | undefined;
+    if (this.redisHealth.shouldTry()) {
+      try {
+        cached = await this.cacheManager.get<typeof allQuestions>(cacheKey);
+        if (cached) this.redisHealth.recordSuccess();
+      } catch (err) {
+        this.redisHealth.recordFailure();
+        this.logger.warn(`Cache GET failed for ${cacheKey}: ${(err as Error).message}`);
+      }
+    }
 
     if (cached) {
       this.logger.debug(`Cache HIT for ${cacheKey}`);
       allQuestions = cached;
     } else {
       this.logger.debug(`Cache MISS for ${cacheKey}`);
-
-      const questionBank = await this.prisma.questionBank.findUnique({
-        where: { id: assessment.questionBankId },
-        include: {
-          questions: {
-            include: { options: true },
-          },
-        },
-      });
-
-      const rawQuestions = questionBank?.questions ?? [];
-
-      // Map to clean shape (strip isCorrect from options)
-      allQuestions = rawQuestions.map((q) => ({
-        id: q.id,
-        text: q.text,
-        category: q.category,
-        timerSeconds: q.timerSeconds,
-        options: q.options.map((o) => ({
-          id: o.id,
-          text: o.text,
-        })),
-      }));
-
-      // Only cache non-empty question banks
-      if (allQuestions.length > 0) {
-        await this.cacheManager.set(cacheKey, allQuestions, 300_000); // 5 min TTL
+      // Deduplicate concurrent cache misses to prevent DB thundering herd
+      if (!this.pendingFetches.has(cacheKey)) {
+        this.pendingFetches.set(cacheKey, this.fetchFromDb(assessment, cacheKey));
+      }
+      try {
+        allQuestions = await this.pendingFetches.get(cacheKey)!;
+      } finally {
+        this.pendingFetches.delete(cacheKey);
       }
     }
 
@@ -149,6 +149,44 @@ export class QuestionSelectionService {
       totalAvailable: allQuestions.length,
       questions: selected,
     };
+  }
+
+  private async fetchFromDb(
+    assessment: { id: string; questionBankId: string },
+    cacheKey: string,
+  ) {
+    const questionBank = await this.prisma.questionBank.findUnique({
+      where: { id: assessment.questionBankId },
+      include: {
+        questions: {
+          include: { options: true },
+        },
+      },
+    });
+
+    const rawQuestions = questionBank?.questions ?? [];
+    const allQuestions = rawQuestions.map((q) => ({
+      id: q.id,
+      text: q.text,
+      category: q.category,
+      timerSeconds: q.timerSeconds,
+      options: q.options.map((o) => ({
+        id: o.id,
+        text: o.text,
+      })),
+    }));
+
+    // Only write to cache if Redis is believed healthy (skip if circuit breaker is open)
+    if (allQuestions.length > 0 && this.redisHealth.isAvailable) {
+      try {
+        await this.cacheManager.set(cacheKey, allQuestions, 300_000);
+      } catch (err) {
+        this.redisHealth.recordFailure();
+        this.logger.warn(`Cache SET failed for ${cacheKey}: ${(err as Error).message}`);
+      }
+    }
+
+    return allQuestions;
   }
 
   /**
