@@ -11,11 +11,15 @@ import {
   BarChart3,
   Brain,
   Check,
-  ChevronDown,
   CirclePlay,
+  ChevronDown,
+  Flame,
   GraduationCap,
   Menu,
   ShieldCheck,
+  Sword,
+  Trophy,
+  Unlock,
   X,
 } from "lucide-react";
 
@@ -240,7 +244,7 @@ export default function HomePage() {
       <section className="relative pt-28 pb-8 md:pt-28 md:pb-12">
         {/* Grainient background */}
         <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-          <div className="absolute left-1/2 top-0 h-[1100px] w-[600px] -translate-x-1/2 -translate-y-[400px] opacity-60 sm:h-[1600px] sm:w-[1080px] sm:-translate-y-[500px]">
+          <div className="absolute left-1/2 top-0 h-[1400px] w-[720px] -translate-x-1/2 -translate-y-[450px] opacity-60 sm:h-[1800px] sm:w-[1200px] sm:-translate-y-[600px]">
             <Grainient
               color1="#8fc5ff"
               color2="#584ceb"
@@ -308,7 +312,7 @@ export default function HomePage() {
 
         {/* Dashboard mockup — same section, sits on top of the BG */}
         <div className="mx-auto max-w-7xl px-5 md:px-8 mt-16">
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/50">
+          <div className="mx-auto max-w-3xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/50">
             <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3">
               <span className="size-3 rounded-full bg-[#FF5F56]" />
               <span className="size-3 rounded-full bg-[#FFBD2E]" />
@@ -318,12 +322,21 @@ export default function HomePage() {
               </div>
             </div>
             <div className="relative aspect-[16/9] bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-3 text-slate-300">
-                  <GraduationCap className="size-12" />
-                  <span className="text-sm font-medium">Platform preview</span>
+              <video
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="absolute inset-0 h-full w-full object-cover"
+              >
+                <source src="/landing_assets/vid3.mp4" type="video/mp4" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="flex flex-col items-center gap-3 text-slate-300">
+                    <CirclePlay className="size-12" />
+                    <span className="text-sm font-medium">Course preview video</span>
+                  </div>
                 </div>
-              </div>
+              </video>
             </div>
           </div>
         </div>
@@ -556,17 +569,19 @@ export default function HomePage() {
 
           <div className="grid gap-6 lg:grid-cols-4">
             {[
-              { icon: "🔥", title: "Daily Streaks", desc: "Consistency earns more XP. Break the streak, lose momentum." },
-              { icon: "⚔️", title: "Boss Battles", desc: "End-of-module assessments styled as timed challenges with randomized questions." },
-              { icon: "🏆", title: "Campus Rankings", desc: "Monthly leaderboards. Top 3 students earn automatic scholarship codes." },
-              { icon: "🔓", title: "Unlock Tiers", desc: "High XP unlocks premium university co-branded and industry-aligned credentials." },
+              { icon: Flame, title: "Daily Streaks", desc: "Consistency earns more XP. Break the streak, lose momentum." },
+              { icon: Sword, title: "Boss Battles", desc: "End-of-module assessments styled as timed challenges with randomized questions." },
+              { icon: Trophy, title: "Campus Rankings", desc: "Monthly leaderboards. Top 3 students earn automatic scholarship codes." },
+              { icon: Unlock, title: "Unlock Tiers", desc: "High XP unlocks premium university co-branded and industry-aligned credentials." },
             ].map((card) => (
               <div
                 key={card.title}
                 className="rounded-4xl border border-white/25 bg-white p-6 shadow-[inset_1px_1px_10px_2px_rgba(255,255,255,0.2)]"
                 style={{ boxShadow: "inset 1px 1px 10px 2px rgba(255,255,255,0.2), inset 0px 0px 24px 0px rgba(148,163,184,0.1)" }}
               >
-                <span className="text-2xl">{card.icon}</span>
+                <div className="grid size-9 place-items-center rounded-lg bg-orange-50 ring-1 ring-orange-100/50">
+                  <card.icon className="size-5 text-orange-600" />
+                </div>
                 <h3 className="mt-4 text-lg font-medium text-slate-900">{card.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-slate-500">{card.desc}</p>
               </div>
