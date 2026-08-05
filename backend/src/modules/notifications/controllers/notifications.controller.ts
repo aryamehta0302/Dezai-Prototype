@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Body,
   Query,
@@ -25,13 +26,14 @@ import {
  * All routes are protected by JWT authentication.
  *
  * ⚠️  ROUTE ORDER IS CRITICAL:
- *   Route 5 (PATCH /mark-all-read) and Route 6 (POST /read-all) are declared BEFORE Route 2 (PATCH /:id/read).
- *   NestJS matches routes top-to-bottom. If /:id/read appeared first,
- *   NestJS would attempt to match "mark-all-read" or "read-all" as a notification ID and return 404.
+ *   Static paths (mark-all-read, read-all, preferences, follows/...) are declared
+ *   BEFORE parameterized paths (:id, :type, :facultyUserId) so NestJS matches the
+ *   literal path instead of swallowing it as a parameter and returning 404.
  *
  * Dezai Terminology:
  *   - Notification (not Alert, not Message)
  *   - archived     (not deleted, not hidden)
+ *   - Follow       = subscribe to a faculty member for course-release alerts
  */
 @Controller('notifications')
 @UseGuards(JwtAuthGuard)
@@ -53,16 +55,30 @@ export class NotificationsController {
   async getNotifications(
     @Req() req,
     @Query('filter') filter: string = 'all',
+    @Query('type') type?: NotificationType,
   ): Promise<{ success: boolean; notifications: any[]; data: NotificationListResponseDto }> {
     const data = await this.notificationsService.getNotifications(
       req.user.id,
       filter,
+      type,
     );
     return {
       success: true,
       notifications: data.notifications,
       data,
     };
+  }
+
+  /**
+   * GET /api/notifications/summary
+   *
+   * Returns aggregated inbox counts (total, unread, archived, per-type)
+   * for the logged-in user.
+   */
+  @Get('summary')
+  async getSummary(@Req() req) {
+    const data = await this.notificationsService.getSummary(req.user.id);
+    return { success: true, data };
   }
 
   /**
@@ -98,15 +114,132 @@ export class NotificationsController {
    */
   @Post()
   async createNotification(
-    @Body() body: { userId: string; title: string; message: string; type: NotificationType },
+    @Body() body: { userId: string; title: string; message: string; type: NotificationType; actionUrl?: string },
   ) {
     const notification = await this.notificationsService.createNotification(
       body.userId,
       body.title,
       body.message,
       body.type,
+      body.actionUrl,
     );
     return { success: true, notification };
+  }
+
+  // ─────────────────────────── PREFERENCES ───────────────────────────
+
+  /**
+   * GET /api/notifications/preferences
+   *
+   * Returns each notification type's effective state for the logged-in user —
+   * the role default overridden by any explicit per-user preference.
+   */
+  @Get('preferences')
+  async getPreferences(@Req() req) {
+    const data = await this.notificationsService.getPreferences(req.user.id);
+    return { success: true, data };
+  }
+
+  /**
+   * PATCH /api/notifications/preferences/:type
+   *
+   * Body: { enabled: boolean }
+   * Opts a notification type in or out for the logged-in user.
+   */
+  @Patch('preferences/:type')
+  async updatePreference(
+    @Req() req,
+    @Param('type') type: NotificationType,
+    @Body() body: { enabled: boolean },
+  ) {
+    const data = await this.notificationsService.updatePreference(
+      req.user.id,
+      type,
+      body.enabled,
+    );
+    return { success: true, data };
+  }
+
+  /**
+   * POST /api/notifications/preferences/reset
+   *
+   * Clears all per-user overrides and falls back to role defaults.
+   */
+  @Post('preferences/reset')
+  async resetPreferences(@Req() req) {
+    const data = await this.notificationsService.resetPreferences(req.user.id);
+    return { success: true, data };
+  }
+
+  // ─────────────────────────── FACULTY FOLLOWS ───────────────────────────
+
+  /**
+   * GET /api/notifications/follows
+   *
+   * Faculty members the logged-in user follows (course-release alerts).
+   */
+  @Get('follows')
+  async getFollowing(@Req() req) {
+    const data = await this.notificationsService.getFollowing(req.user.id);
+    return { success: true, data };
+  }
+
+  /**
+   * GET /api/notifications/follows/followers
+   *
+   * Users following the logged-in user (faculty only meaningful).
+   */
+  @Get('follows/followers')
+  async getFollowers(@Req() req) {
+    const data = await this.notificationsService.getFollowers(req.user.id);
+    return { success: true, data };
+  }
+
+  /**
+   * GET /api/notifications/follows/search?q=
+   *
+   * Search faculty members to follow (excludes the logged-in user).
+   */
+  @Get('follows/search')
+  async searchFaculty(@Req() req, @Query('q') q?: string) {
+    const data = await this.notificationsService.searchFaculty(req.user.id, q ?? '');
+    return { success: true, data };
+  }
+
+  /**
+   * GET /api/notifications/follows/status/:facultyUserId
+   *
+   * Whether the logged-in user currently follows the given faculty member.
+   */
+  @Get('follows/status/:facultyUserId')
+  async getFollowStatus(@Req() req, @Param('facultyUserId') facultyUserId: string) {
+    const data = await this.notificationsService.getFollowStatus(
+      req.user.id,
+      facultyUserId,
+    );
+    return { success: true, data };
+  }
+
+  /**
+   * POST /api/notifications/follows/:facultyUserId
+   *
+   * Follow a faculty member to get notified when they publish a new course.
+   */
+  @Post('follows/:facultyUserId')
+  async follow(@Req() req, @Param('facultyUserId') facultyUserId: string) {
+    const data = await this.notificationsService.follow(req.user.id, facultyUserId);
+    return { success: true, data };
+  }
+
+  /**
+   * DELETE /api/notifications/follows/:facultyUserId
+   *
+   * Stop following a faculty member.
+   */
+  @Delete('follows/:facultyUserId')
+  async unfollow(@Req() req, @Param('facultyUserId') facultyUserId: string) {
+    const data = await this.notificationsService.unfollow(req.user.id, facultyUserId);
+    return { success: true, data };
   }
 
   /**
