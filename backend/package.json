@@ -15,7 +15,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "ts-node prisma/seeders/seed.ts",
-    "seed:status": "ts-node prisma/seeders/check-status.ts"
+    "seed:status": "ts-node prisma/seeders/check-status.ts",
+    "seed:notifications": "ts-node prisma/seeders/notifications-seed.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",

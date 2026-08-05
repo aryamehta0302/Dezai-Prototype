@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import { AuthGuard } from "@/features/auth/components/auth-guard";
 import { TopAppBar } from "@/shared/components/top-app-bar";
 import { UserRole } from "@/shared/types/common.types";
 import { useAuthStore } from "@/lib/stores/auth.store";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useNotificationStore } from "@/lib/stores/notification.store";
 
 export default function UniversityLayout({
     children,
@@ -13,6 +15,11 @@ export default function UniversityLayout({
 }) {
     const { user } = useAuthStore();
     const { logout } = useAuth();
+    const { initialize } = useNotificationStore();
+
+    useEffect(() => {
+        initialize();
+    }, [initialize]);
 
     return (
         <AuthGuard allowedRoles={[UserRole.UNIVERSITY_ADMIN, UserRole.FACULTY]}>
