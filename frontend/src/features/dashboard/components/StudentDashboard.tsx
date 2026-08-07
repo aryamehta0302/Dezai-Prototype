@@ -175,20 +175,16 @@ export function StudentDashboard() {
               Learning Analytics
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-  <div>
-    {!showSkeleton && !weakTopics.loading && weakTopics.data.length > 0 && (
-      <WeakTopicsCard topics={weakTopics.data} />
-    )}
-    {!showSkeleton && weakTopics.loading && (
-      <LoadingSkeleton className="h-44 rounded-xl" />
-    )}
-    {!showSkeleton && !weakTopics.loading && weakTopics.data.length === 0 && (
-      <div className="card-elevation p-5 text-center h-full flex flex-col items-center justify-center">
-        <p className="text-sm font-medium text-on-surface">No weak topics yet</p>
-        <p className="text-xs text-muted mt-1">Keep practicing to see insights here.</p>
-      </div>
-    )}
-  </div>
+            <div>
+              
+              {!showSkeleton && weakTopics.loading && (
+                <LoadingSkeleton className="h-44 rounded-xl" />
+              )}
+              {!showSkeleton && !weakTopics.loading && (
+            <WeakTopicsCard topics={weakTopics.data} />
+            )} 
+          
+            </div>
               <div>
                 {!showSkeleton &&
                   !difficultyAnalysis.loading &&
