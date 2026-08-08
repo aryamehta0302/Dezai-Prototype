@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
+import { UserRole } from "@/shared/types/common.types";
 import { PageContainer } from "@/shared/components/page-container";
 import { ProfileHeaderCard } from "../components/profile-header-card";
 import { ProfileStatBento } from "../components/profile-stat-bento";
@@ -13,7 +15,7 @@ import { LevelProgressCard } from "@/features/achievements/components/level-prog
 import { AchievementGrid } from "@/features/achievements/components/achievement-grid";
 import { LoadingSkeleton } from "@/shared/components/loading-skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
-import { User, Trophy, Activity, Award } from "lucide-react";
+import { User, Trophy, Activity, Award, ArrowLeft } from "lucide-react";
 
 function ProfilePageSkeleton() {
   return (
@@ -47,6 +49,16 @@ export function ProfilePage() {
 
   return (
     <PageContainer className="py-12 space-y-8">
+      {(user.role === UserRole.FACULTY) && (
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-primary transition-colors w-fit"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Link>
+      )}
+
       <ProfileHeaderCard user={user} />
 
       <ProfileStatBento stats={stats} />
