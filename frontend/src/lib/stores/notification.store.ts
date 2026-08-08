@@ -4,8 +4,6 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { apiClient } from "@/core/api/client";
 
-export type NotificationType = "REMINDER" | "CREDENTIAL" | "UPDATE" | "SYSTEM" | "ANNOUNCEMENT";
-
 export interface Notification {
   id: string;
   userId?: string;
@@ -13,7 +11,6 @@ export interface Notification {
   title: string;
   message: string;
   read: boolean;
-  archived?: boolean;
   createdAt: string;
   actionUrl?: string;
 }
@@ -23,10 +20,7 @@ export interface NotificationState {
   unreadCount: number;
 
   initialize: () => void;
-  setNotifications: (notifications: Notification[]) => void;
   markAsRead: (id: string) => void;
-  markAsUnread: (id: string) => void;
-  archive: (id: string) => void;
   markAllAsRead: () => void;
   addNotification: (notification: Notification) => void;
 }
@@ -51,12 +45,6 @@ export const useNotificationStore = create<NotificationState>()(
           });
       },
 
-      setNotifications: (notifications) =>
-        set({
-          notifications,
-          unreadCount: notifications.filter((n) => !n.read && !n.archived).length,
-        }),
-
       markAsRead: (id) => {
         set((state) => {
           const updated = state.notifications.map((n) =>
@@ -64,39 +52,11 @@ export const useNotificationStore = create<NotificationState>()(
           );
           return {
             notifications: updated,
-            unreadCount: updated.filter((n) => !n.read && !n.archived).length,
+            unreadCount: updated.filter((n) => !n.read).length,
           };
         });
         // Fire API in background
         apiClient.patch(`/notifications/${id}/read`, {}).catch(() => {});
-      },
-
-      markAsUnread: (id) => {
-        set((state) => {
-          const updated = state.notifications.map((n) =>
-            n.id === id ? { ...n, read: false } : n
-          );
-          return {
-            notifications: updated,
-            unreadCount: updated.filter((n) => !n.read && !n.archived).length,
-          };
-        });
-        // Fire API in background
-        apiClient.patch(`/notifications/${id}/unread`, {}).catch(() => {});
-      },
-
-      archive: (id) => {
-        set((state) => {
-          const updated = state.notifications.map((n) =>
-            n.id === id ? { ...n, archived: true } : n
-          );
-          return {
-            notifications: updated,
-            unreadCount: updated.filter((n) => !n.read && !n.archived).length,
-          };
-        });
-        // Fire API in background
-        apiClient.patch(`/notifications/${id}/archive`, {}).catch(() => {});
       },
 
       markAllAsRead: () => {
@@ -119,3 +79,4 @@ export const useNotificationStore = create<NotificationState>()(
     }
   )
 );
+

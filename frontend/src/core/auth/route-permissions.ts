@@ -93,10 +93,6 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
     pathPrefix: "/profile",
     allowedRoles: RoleGroups.ALL,
   },
-  {
-    pathPrefix: "/notifications",
-    allowedRoles: RoleGroups.ALL,
-  },
 
   // ─── Onboarding (any authenticated but un-roled user) ───
   {

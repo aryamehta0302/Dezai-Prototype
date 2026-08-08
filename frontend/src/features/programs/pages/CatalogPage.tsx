@@ -8,7 +8,7 @@ import { CourseCardSkeleton } from "@/shared/components/loading-skeleton";
 import { useCourses } from "../hooks/useCourses";
 import { SearchX, Loader2 } from "lucide-react";
 
-export function CatalogPage({ initialSearch }: { initialSearch?: string }) {
+export function CatalogPage() {
   const {
     courses,
     filters,
@@ -17,7 +17,7 @@ export function CatalogPage({ initialSearch }: { initialSearch?: string }) {
     hasActiveFilters,
     totalResults,
     isLoading,
-  } = useCourses(initialSearch ? { search: initialSearch } : undefined);
+  } = useCourses();
 
   return (
     <div className="min-h-screen bg-background">

@@ -11,17 +11,9 @@
  */
 
 // Export public API from this feature
-export { NotificationsCenterPage } from './pages/NotificationsCenterPage';
-export { notificationsApi } from './services/notifications-api.service';
-export type {
-  NotificationItem,
-  NotificationFilter,
-  NotificationType,
-  NotificationSummary,
-  NotificationListResponse,
-  NotificationSummaryResponse,
-} from './types/notification.types';
-export {
-  NOTIFICATION_TYPE_META,
-  NOTIFICATION_TYPE_ORDER,
-} from './types/notification.types';
+// Example:
+// export { NotificationBell } from './components/notification-bell';
+// export { NotificationList } from './components/notification-list';
+// export { useNotifications } from './hooks/useNotifications';
+// export { notificationService } from './services/notification.service';
+// export type { Notification, NotificationPrefs } from './types/notification.types';

@@ -1,16 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { cn } from "@/shared/utils/cn";
-import { Input } from "@/shared/ui/input";
-import { useNotificationStore } from "@/lib/stores/notification.store";
-import { formatDate } from "@/shared/utils/format";
 import {
   Search,
   Bell,
-  Check,
   Menu,
   X,
   GraduationCap,
@@ -22,6 +17,7 @@ import {
   Settings,
   ChevronDown,
 } from "lucide-react";
+import { useState } from "react";
 
 interface TopAppBarProps {
   variant?: "default" | "student" | "admin" | "university" | "employee" | "enterprise";
@@ -61,13 +57,8 @@ export function TopAppBar({
   onNotificationClick,
 }: TopAppBarProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotificationStore();
-  const unread = unreadCount || notificationCount;
 
   const getNav = () => {
     if (variant === "employee") return employeeNav;
@@ -115,124 +106,22 @@ export function TopAppBar({
           </nav>
         )}
 
-        {/* Search */}
-        {user && (
-          <form
-            role="search"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const q = searchQuery.trim();
-              router.push(q ? `/catalog?q=${encodeURIComponent(q)}` : "/catalog");
-            }}
-            className="relative hidden md:block"
-          >
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-            <Input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search courses..."
-              className="h-9 w-44 pl-9 lg:w-64"
-            />
-          </form>
-        )}
-
         {/* Right Side */}
         <div className="flex items-center gap-2">
 
           {/* Notifications */}
           {user && (
-            <div className="relative">
-              <button
-                onClick={() => {
-                  if (onNotificationClick) {
-                    onNotificationClick();
-                    return;
-                  }
-                  setNotifOpen((v) => !v);
-                }}
-                className="relative rounded-lg p-2 text-on-surface-variant hover:bg-surface-low transition-colors"
-                aria-label="Notifications"
-                aria-expanded={notifOpen}
-              >
-                <Bell className="h-5 w-5" />
-                {unread > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
-                    {unread > 9 ? "9+" : unread}
-                  </span>
-                )}
-              </button>
-
-              {notifOpen && !onNotificationClick && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
-                  <div className="absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-border-light bg-white p-1.5 shadow-level-3">
-                    <div className="mb-1 flex items-center justify-between border-b border-border-light px-3 py-2">
-                      <p className="text-sm font-semibold text-on-surface">Notifications</p>
-                      {unread > 0 && (
-                        <button
-                          onClick={markAllAsRead}
-                          className="flex items-center gap-1 text-xs text-primary hover:underline"
-                        >
-                          <Check className="h-3 w-3" />
-                          Mark all read
-                        </button>
-                      )}
-                    </div>
-                    <div className="max-h-80 overflow-y-auto">
-                      {notifications.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted">
-                          <Bell className="h-8 w-8 opacity-30" />
-                          <p className="text-xs font-medium">No notifications yet</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-0.5">
-                          {notifications.map((n) => (
-                            <button
-                              key={n.id}
-                              onClick={() => {
-                                markAsRead(n.id);
-                                setNotifOpen(false);
-                                if (n.actionUrl) router.push(n.actionUrl);
-                              }}
-                              className={cn(
-                                "flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-2.5 text-left transition-colors",
-                                n.read ? "hover:bg-surface-low" : "bg-primary/5 hover:bg-primary/10"
-                              )}
-                            >
-                              <span className="flex items-center gap-2 text-sm font-medium text-on-surface">
-                                {!n.read && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
-                                {n.title}
-                              </span>
-                              <span className="w-full truncate text-xs text-muted">{n.message}</span>
-                              <span className="text-[10px] text-muted">{formatDate(n.createdAt)}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <div className="border-t border-border-light p-1.5">
-                      <Link
-                        href="/notifications"
-                        onClick={() => setNotifOpen(false)}
-                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
-                      >
-                        <Bell className="h-4 w-4" />
-                        View all notifications
-                      </Link>
-                      <Link
-                        href="/notifications/settings"
-                        onClick={() => setNotifOpen(false)}
-                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-on-surface-variant hover:bg-surface-low transition-colors"
-                      >
-                        <Settings className="h-4 w-4" />
-                        Notification settings
-                      </Link>
-                    </div>
-                  </div>
-                </>
+            <button
+              onClick={onNotificationClick}
+              className="relative rounded-lg p-2 text-on-surface-variant hover:bg-surface-low transition-colors"
+            >
+              <Bell className="h-5 w-5" />
+              {notificationCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+                  {notificationCount > 9 ? "9+" : notificationCount}
+                </span>
               )}
-            </div>
+            </button>
           )}
 
           {/* Profile Dropdown */}
