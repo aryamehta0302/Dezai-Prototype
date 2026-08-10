@@ -27,7 +27,8 @@ import { NotificationWidget } from "./widgets/NotificationWidget";
 
 export function StudentDashboard() {
   const data = useDashboardData();
-  const { showAllRecs, toggleRecs } = useDashboardStore();
+  const showAllRecs = useDashboardStore(state => state.showAllRecs);
+  const toggleRecs = useDashboardStore(state => state.toggleRecs);
 
   const {
     user,

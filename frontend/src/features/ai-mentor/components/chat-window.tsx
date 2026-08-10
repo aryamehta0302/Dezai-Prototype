@@ -22,7 +22,12 @@ export const ChatWindow = ({ messages, isLoading }: ChatWindowProps) => {
 
   return (
     <ScrollArea className="flex-1 border-b border-border bg-background p-4">
-      <div className="space-y-4 pr-4">
+      <div 
+        className="space-y-4 pr-4"
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions"
+      >
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-center text-muted-foreground">
             <div>
@@ -42,9 +47,10 @@ export const ChatWindow = ({ messages, isLoading }: ChatWindowProps) => {
               {/* Avatar */}
               <div
                 className={cn(
-                  'h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold text-white',
+                  'h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold text-white shrink-0',
                   message.sender === 'USER' ? 'bg-primary' : 'bg-emerald-600',
                 )}
+                aria-hidden="true"
               >
                 {message.sender === 'USER' ? 'You' : 'AI'}
               </div>
@@ -58,6 +64,9 @@ export const ChatWindow = ({ messages, isLoading }: ChatWindowProps) => {
                     : 'bg-muted text-foreground',
                 )}
               >
+                <span className="sr-only">
+                  {message.sender === 'USER' ? 'You said:' : 'AI said:'}
+                </span>
                 <p className="whitespace-pre-wrap break-words">{message.content}</p>
                 <p
                   className={cn(
@@ -75,11 +84,11 @@ export const ChatWindow = ({ messages, isLoading }: ChatWindowProps) => {
         )}
 
         {isLoading && (
-          <div className="flex gap-3">
-            <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center text-xs font-semibold text-white">
+          <div className="flex gap-3" role="status" aria-label="AI Mentor is typing">
+            <div className="h-8 w-8 rounded-full bg-emerald-600 flex items-center justify-center text-xs font-semibold text-white shrink-0" aria-hidden="true">
               AI
             </div>
-            <div className="bg-muted rounded-lg px-4 py-2">
+            <div className="bg-muted rounded-lg px-4 py-2" aria-hidden="true">
               <div className="flex gap-1">
                 <div className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce" />
                 <div className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce delay-100" />

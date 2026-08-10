@@ -114,6 +114,7 @@ export function TopAppBar({
             <button
               onClick={onNotificationClick}
               className="relative rounded-lg p-2 text-on-surface-variant hover:bg-surface-low transition-colors"
+              aria-label="Notifications"
             >
               <Bell className="h-5 w-5" />
               {notificationCount > 0 && (
@@ -130,6 +131,9 @@ export function TopAppBar({
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
                 className="flex items-center gap-2 rounded-lg p-1.5 hover:bg-surface-low transition-colors"
+                aria-label="User menu"
+                aria-expanded={profileOpen}
+                aria-haspopup="true"
               >
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary overflow-hidden">
                   {user.avatar ? (
@@ -201,6 +205,8 @@ export function TopAppBar({
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
               className="md:hidden rounded-lg p-2 text-on-surface-variant hover:bg-surface-low"
+              aria-label="Toggle mobile menu"
+              aria-expanded={mobileOpen}
             >
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>

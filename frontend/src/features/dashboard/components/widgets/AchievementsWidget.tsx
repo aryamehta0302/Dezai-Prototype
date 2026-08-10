@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { LoadingSkeleton } from "@/shared/components/loading-skeleton";
 import { LevelProgressCard } from "@/features/achievements/components/level-progress-card";
 import { AchievementGrid } from "@/features/achievements/components/achievement-grid";
@@ -12,7 +13,7 @@ interface AchievementsWidgetProps {
   isLoading: boolean;
 }
 
-export function AchievementsWidget({
+export const AchievementsWidget = memo(function AchievementsWidget({
   achievements,
   xp,
   unlockedCount,
@@ -39,4 +40,5 @@ export function AchievementsWidget({
       )}
     </section>
   );
-}
+});
+

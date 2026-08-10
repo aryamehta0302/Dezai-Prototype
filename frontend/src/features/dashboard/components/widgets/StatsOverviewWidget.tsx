@@ -8,6 +8,7 @@ import {
   Sparkles,
   Award,
 } from "lucide-react";
+import { memo } from "react";
 import { LoadingSkeleton } from "@/shared/components/loading-skeleton";
 import type { DashboardStats } from "@/features/learning/types/learning.types";
 
@@ -18,7 +19,7 @@ interface StatsOverviewWidgetProps {
   isLoading: boolean;
 }
 
-export function StatsOverviewWidget({
+export const StatsOverviewWidget = memo(function StatsOverviewWidget({
   stats,
   globalRank,
   unlockedCount,
@@ -83,4 +84,5 @@ export function StatsOverviewWidget({
       </div>
     </div>
   );
-}
+});
+
