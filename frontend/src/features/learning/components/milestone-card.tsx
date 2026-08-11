@@ -42,13 +42,14 @@ export function MilestoneCard({ milestone, className }: MilestoneCardProps) {
     >
       <div
         className={cn(
-          "rounded-lg p-2.5 shrink-0",
+          "rounded-lg p-2.5 shrink-0  bg-surface-variant ",
           milestone.isUnlocked
-            ? "bg-primary/15 text-primary"
-            : "bg-surface-low text-muted",
-        )}
+            ? "rounded-md p-2.5 shrink-0"
+            : "g-primary/15 text-primary",
+        )
+      }
       >
-        <Icon className="h-5 w-5" />
+        <Icon className="h-5 w-5 " />
       </div>
       <div className="flex-1 min-w-0 space-y-1.5">
         <div className="flex items-center justify-between gap-2">
@@ -61,10 +62,10 @@ export function MilestoneCard({ milestone, className }: MilestoneCardProps) {
             </span>
           )}
         </div>
-        <p className="text-xs text-muted">{milestone.description}</p>
+        <p className="text-xs text-gray-500">{milestone.description}</p>
         <div className="space-y-1">
           <Progress value={milestone.progress} className="h-1.5" />
-          <p className="text-[10px] text-muted text-right">
+          <p className="text-[10px] text-gray-500 text-right">
             {milestone.current} / {milestone.target}
           </p>
         </div>

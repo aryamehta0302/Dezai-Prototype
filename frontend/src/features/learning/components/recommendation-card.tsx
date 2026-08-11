@@ -30,7 +30,7 @@ export function RecommendationCard({ recommendation, className }: Recommendation
   return (
     <div
       className={cn(
-        "card-elevation p-4 flex items-start gap-3 border-l-4",
+        "card-elevation p-3 sm:p-4 flex items-start gap-2 sm:gap-3 border-l-4 transition-all hover:shadow-md",
         recommendation.type === 'WEAK_TOPIC' && "border-l-destructive",
         recommendation.type === 'PRACTICE_ASSESSMENT' && "border-l-warning",
         recommendation.type === 'NEXT_LESSON' && "border-l-primary",
@@ -39,17 +39,17 @@ export function RecommendationCard({ recommendation, className }: Recommendation
         className,
       )}
     >
-      <div className={cn("rounded-lg p-2 shrink-0", config.color)}>
+      <div className={cn("rounded-md p-2 shrink-0", config.color)}>
         <Icon className="h-4 w-4" />
       </div>
       <div className="flex-1 min-w-0 space-y-0.5">
-        <div className="flex items-center justify-between gap-2">
-          <h4 className="font-semibold text-sm text-on-surface">{recommendation.title}</h4>
-          <span className="text-[10px] text-muted uppercase shrink-0">
+        <div className="flex items-start sm:items-center justify-between gap-2 flex-col sm:flex-row">
+          <h4 className="font-semibold text-sm text-on-surface line-clamp-2 sm:line-clamp-1">{recommendation.title}</h4>
+          <span className="text-[10px] text-muted uppercase shrink-0 self-start sm:self-auto bg-surface-low px-1.5 py-0.5 rounded">
             #{recommendation.priority}
           </span>
         </div>
-        <p className="text-xs text-muted">{recommendation.description}</p>
+        <p className="text-xs text-muted line-clamp-2">{recommendation.description}</p>
       </div>
     </div>
   );

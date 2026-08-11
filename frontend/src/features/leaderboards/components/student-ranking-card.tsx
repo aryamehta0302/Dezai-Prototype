@@ -74,10 +74,10 @@ export function StudentRankingCard({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+            <div className="h-9 w-9 rounded-md bg-surface-variant flex items-center justify-center text-primary">
               <Trophy className="h-5 w-5" />
             </div>
-            <span className="text-xs font-bold text-muted uppercase tracking-wider">
+            <span className="text-xs font-bold text-primary uppercase tracking-wider">
               Your Ranking
             </span>
           </div>

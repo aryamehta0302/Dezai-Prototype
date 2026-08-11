@@ -51,8 +51,8 @@ export function ContinueLearningWidget({
             </div>
           ) : (
             <div className="card-elevation py-10 text-center space-y-3">
-              <div className="h-10 w-10 rounded-full bg-surface-low flex items-center justify-center mx-auto">
-                <Clock className="h-5 w-5 text-secondary" />
+              <div className="h-10 w-10 rounded-full bg-[#d9e3f4] flex items-center justify-center mx-auto">
+                <Clock className="h-5 w-5 text-secondary " />
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-medium text-on-surface">

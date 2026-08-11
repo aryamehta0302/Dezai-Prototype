@@ -22,7 +22,7 @@ export function EnrolledCourseCard({ course, className }: EnrolledCourseCardProp
     <Link
       href={`/programs/${course.courseSlug}`}
       className={cn(
-        "group card-elevation flex flex-col overflow-hidden",
+        "group card-elevation flex flex-col overflow-hidden ",
         className
       )}
     >
@@ -60,12 +60,12 @@ export function EnrolledCourseCard({ course, className }: EnrolledCourseCardProp
           <h3 className="font-semibold text-on-surface text-sm line-clamp-2 group-hover:text-primary transition-colors">
             {course.courseTitle}
           </h3>
-          <p className="text-xs text-muted mt-1">{course.universityName}</p>
+          <p className="text-xs text-gray-500 mt-1">{course.universityName}</p>
         </div>
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-muted">
+            <span className="text-gray-800">
               {course.completedLessons}/{course.totalLessons} lessons
             </span>
             <span className={cn("font-medium", isCompleted ? "text-success" : "text-primary")}>

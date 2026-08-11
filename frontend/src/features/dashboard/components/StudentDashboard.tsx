@@ -28,7 +28,8 @@ import { WelcomeModal } from "./welcome-modal";
 
 export function StudentDashboard() {
   const data = useDashboardData();
-  const { showAllRecs, toggleRecs } = useDashboardStore();
+  const showAllRecs = useDashboardStore(state => state.showAllRecs);
+  const toggleRecs = useDashboardStore(state => state.toggleRecs);
 
   const {
     user,
@@ -79,7 +80,7 @@ export function StudentDashboard() {
           {!showSkeleton && (
             <div className="pt-3">
               <Link href="/catalog">
-                <Button className="gap-2 px-6">
+                <Button className="gap-2 px-6 rounded-md">
                   <BookOpen className="h-4 w-4" />
                   Explore Courses
                 </Button>
@@ -118,7 +119,7 @@ export function StudentDashboard() {
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-on-surface flex items-center gap-2">
-                <Lightbulb className="h-5 w-5 text-warning" />
+                <Lightbulb className="h-5 w-5 text-secondary-fixed" />
                 Recommendations
               </h2>
             </div>
@@ -177,16 +178,16 @@ export function StudentDashboard() {
               Learning Analytics
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                {!showSkeleton &&
-                  !weakTopics.loading &&
-                  weakTopics.data.length > 0 && (
-                    <WeakTopicsCard topics={weakTopics.data} />
-                  )}
-                {!showSkeleton && weakTopics.loading && (
-                  <LoadingSkeleton className="h-44 rounded-xl" />
-                )}
-              </div>
+            <div>
+              
+              {!showSkeleton && weakTopics.loading && (
+                <LoadingSkeleton className="h-44 rounded-xl" />
+              )}
+              {!showSkeleton && !weakTopics.loading && (
+            <WeakTopicsCard topics={weakTopics.data} />
+            )} 
+          
+            </div>
               <div>
                 {!showSkeleton &&
                   !difficultyAnalysis.loading &&

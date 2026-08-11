@@ -1,5 +1,5 @@
 "use client";
-
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/shared/utils/cn";
@@ -74,16 +74,18 @@ export function TopAppBar({
       <div className="mx-auto flex h-[72px] max-w-[var(--container-max)] items-center justify-between px-6 sm:px-8 lg:px-12">
         {/* Logo */}
         <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
-            <GraduationCap className="h-5 w-5 text-white" />
-          </div>
-          <span className="text-xl font-bold text-on-surface font-[family-name:var(--font-heading)]">
-            Dezai<span className="text-primary">.ai</span>
-          </span>
+        <Image 
+        src="/dezai.png"
+        alt="Dezai.ai Logo" 
+        width={70} 
+        height={55} 
+        className="object-contain"
+        />
+
         </Link>
 
         {/* Desktop Nav */}
-        {user && nav.length > 0 && (
+        {/* {user && nav.length > 0 && (
           <nav className="hidden md:flex items-center gap-1">
             {nav.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
@@ -104,7 +106,30 @@ export function TopAppBar({
               );
             })}
           </nav>
-        )}
+        )} */}
+        {/* Desktop Nav */}
+{user && nav.length > 0 && (
+  <nav className="hidden md:flex items-center gap-8 ml-6">
+    {nav.map((item) => {
+      const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+      return (
+        <Link
+          key={item.href}
+          href={item.href}
+          className={cn(
+            "flex items-center gap-2.5 py-1.5 text-sm transition-all border-b-[3px]",
+            isActive
+              ? "text-primary font-bold border-credential-gold"  // Navy text & Gold underline
+              : "text-slate-500 font-medium border-transparent hover:text-[#0F172A]" // Clean inactive state
+          )}
+        >
+          <item.icon className={cn("h-4 w-4", isActive ? "stroke-[2.5px]" : "stroke-2")} />
+          {item.label}
+        </Link>
+      );
+    })}
+  </nav>
+)}
 
         {/* Right Side */}
         <div className="flex items-center gap-2">
@@ -114,6 +139,7 @@ export function TopAppBar({
             <button
               onClick={onNotificationClick}
               className="relative rounded-lg p-2 text-on-surface-variant hover:bg-surface-low transition-colors"
+              aria-label="Notifications"
             >
               <Bell className="h-5 w-5" />
               {notificationCount > 0 && (
@@ -130,6 +156,9 @@ export function TopAppBar({
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
                 className="flex items-center gap-2 rounded-lg p-1.5 hover:bg-surface-low transition-colors"
+                aria-label="User menu"
+                aria-expanded={profileOpen}
+                aria-haspopup="true"
               >
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary overflow-hidden">
                   {user.avatar ? (
@@ -201,6 +230,8 @@ export function TopAppBar({
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
               className="md:hidden rounded-lg p-2 text-on-surface-variant hover:bg-surface-low"
+              aria-label="Toggle mobile menu"
+              aria-expanded={mobileOpen}
             >
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -221,8 +252,8 @@ export function TopAppBar({
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-on-surface-variant hover:bg-surface-low"
+                    ?"text-primary font-bold  "  // Navy text & Gold underline
+              : "text-slate-500 font-medium border-transparent hover:text-[#0F172A]" // Clean inactive state
                 )}
               >
                 <item.icon className="h-4 w-4" />
