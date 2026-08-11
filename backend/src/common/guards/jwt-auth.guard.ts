@@ -10,6 +10,16 @@ import { jwtVerify } from 'jose';
 export class JwtAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
+
+    // TEMPORARY LOGIN BYPASS
+    request.user = {
+      id: 'mock-user-id',
+      email: 'admin@dezai.com',
+      role: 'DEZAI_ADMIN',
+      onboarded: true,
+    };
+    return true;
+
     const authHeader = request.headers.authorization;
 
     if (!authHeader) {
