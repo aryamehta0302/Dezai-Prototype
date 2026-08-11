@@ -60,13 +60,13 @@ export function ActivityTimeline({ events, className }: ActivityTimelineProps) {
         const Icon = config.icon;
 
         return (
-          <li key={event.id} className="flex gap-4">
-            <div className={cn("rounded-md p-2 h-9 w-9 flex items-center justify-center shrink-0", config.color)}>
+          <li key={event.id} className="flex gap-3 sm:gap-4">
+            <div className={cn("rounded-full p-2 h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center shrink-0", config.color)}>
               <Icon className="h-4 w-4" aria-hidden="true" />
             </div>
-            <div className="space-y-0.5 min-w-0 flex-1 pt-1">
-              <p className="text-sm text-on-surface">{event.description}</p>
-              <p className="text-[11px] text-text-subtle">{formatTimeAgo(event.timestamp)}</p>
+            <div className="space-y-0.5 min-w-0 flex-1 pt-0.5 sm:pt-1">
+              <p className="text-sm text-on-surface break-words leading-snug">{event.description}</p>
+              <p className="text-[10px] sm:text-[11px] text-muted">{formatTimeAgo(event.timestamp)}</p>
             </div>
           </li>
         );

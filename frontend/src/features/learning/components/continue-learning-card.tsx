@@ -43,12 +43,13 @@ export function ContinueLearningCard({ course, className }: ContinueLearningCard
           </>
         ) : (
           <div className="h-full w-full bg-gradient-to-br from-primary/10 via-secondary-container to-primary/5 flex items-center justify-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 group-hover:bg-primary/30 transition-colors">
-              <Play className="h-5 w-5 text-primary ml-0.5" />
+            <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 group-hover:bg-primary/30 transition-colors">
+              <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping opacity-75 group-hover:opacity-100" />
+              <Play className="h-5 w-5 text-primary ml-0.5 relative z-10" />
             </div>
           </div>
         )}
-        <div className="absolute inset-0 bg-black/5 group-hover:bg-black/0 transition-colors" />
+        <div className="absolute inset-0 bg-black/5 group-hover:bg-black/0 transition-colors pointer-events-none" />
       </div>
 
       {/* Content */}
@@ -71,7 +72,10 @@ export function ContinueLearningCard({ course, className }: ContinueLearningCard
             </span>
             <span className="font-medium text-primary">{course.progress}%</span>
           </div>
-          <Progress value={course.progress} className="h-2" />
+          <Progress 
+            value={course.progress} 
+            className="h-2.5 bg-primary/10 [&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-indigo-500" 
+          />
         </div>
 
         <div className="flex items-center gap-1.5 text-xs text-muted">

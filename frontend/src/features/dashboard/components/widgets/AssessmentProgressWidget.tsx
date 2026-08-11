@@ -3,6 +3,7 @@
 import { Layers, ChevronDown, ChevronRight } from "lucide-react";
 import { LoadingSkeleton } from "@/shared/components/loading-skeleton";
 import { MilestoneCard } from "@/features/learning/components/milestone-card";
+import { memo } from "react";
 import { useDashboardStore } from "../../store/dashboard.store";
 import type { Milestone } from "@/features/learning/types/learning-intelligence.types";
 
@@ -13,13 +14,14 @@ interface AssessmentProgressWidgetProps {
   isLoading: boolean;
 }
 
-export function AssessmentProgressWidget({
+export const AssessmentProgressWidget = memo(function AssessmentProgressWidget({
   milestones,
   unlockedMilestones,
   totalCount,
   isLoading,
 }: AssessmentProgressWidgetProps) {
-  const { showAllMilestones, toggleMilestones } = useDashboardStore();
+  const showAllMilestones = useDashboardStore(state => state.showAllMilestones);
+  const toggleMilestones = useDashboardStore(state => state.toggleMilestones);
 
   return (
     <section className="space-y-4">
@@ -71,4 +73,5 @@ export function AssessmentProgressWidget({
       ) : null}
     </section>
   );
-}
+});
+

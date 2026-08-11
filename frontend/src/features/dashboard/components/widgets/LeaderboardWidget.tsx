@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { StudentRankingCard } from "@/features/leaderboards/components/student-ranking-card";
 
 interface LeaderboardWidgetProps {
@@ -9,7 +10,7 @@ interface LeaderboardWidgetProps {
   streakCount: number;
 }
 
-export function LeaderboardWidget({
+export const LeaderboardWidget = memo(function LeaderboardWidget({
   globalRank,
   weeklyRank,
   xp,
@@ -25,4 +26,5 @@ export function LeaderboardWidget({
       streakCount={streakCount}
     />
   );
-}
+});
+
