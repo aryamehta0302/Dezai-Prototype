@@ -24,7 +24,7 @@ export const AchievementsWidget = memo(function AchievementsWidget({
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-on-surface">Achievements</h2>
         {!isLoading && (
-          <span className="text-xs text-secondary">
+          <span className="text-xs text-gray-800">
             {unlockedCount} / {achievements.length} unlocked
           </span>
         )}

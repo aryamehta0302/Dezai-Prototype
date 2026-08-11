@@ -32,28 +32,28 @@ export function LearningPatternCard({ pattern, className }: LearningPatternCardP
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2 p-3 rounded-lg bg-surface-low/50">
-          <div className="flex items-center gap-2 text-xs text-muted">
-            <PeriodIcon className="h-3.5 w-3.5" />
+        <div className="space-y-2 p-3 rounded-sm bg-surface-variant/70">
+          <div className="flex items-center gap-2 text-xs text-text-subtle">
+            <PeriodIcon className="h-3.5 w-3.5 text-primary" />
             Peak Time
           </div>
           <p className="text-lg font-bold text-on-surface">{periodLabel}</p>
-          <p className="text-[10px] text-muted">{pattern.mostActiveHour}:00 — most active hour</p>
+          <p className="text-[10px] text-text-subtle">{pattern.mostActiveHour}:00 — most active hour</p>
         </div>
 
-        <div className="space-y-2 p-3 rounded-lg bg-surface-low/50">
-          <div className="flex items-center gap-2 text-xs text-muted">
+        <div className="space-y-2 p-3 rounded-sm bg-surface-variant/70">
+          <div className="flex items-center gap-2 text-xs text-text-subtle">
             <CalendarDays className="h-3.5 w-3.5" />
             Best Day
           </div>
           <p className="text-lg font-bold text-on-surface">{pattern.mostActiveDay}</p>
-          <p className="text-[10px] text-muted">Most consistent day</p>
+          <p className="text-[10px] text-text-subtle">Most consistent day</p>
         </div>
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-muted flex items-center gap-1.5">
+          <span className="text-text-subtle flex items-center gap-1.5">
             <BarChart3 className="h-3 w-3" />
             Consistency Score
           </span>
@@ -64,7 +64,7 @@ export function LearningPatternCard({ pattern, className }: LearningPatternCardP
 
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-muted flex items-center gap-1.5">
+          <span className="text-text-subtle flex items-center gap-1.5">
             <Clock className="h-3 w-3" />
             Avg Session
           </span>
@@ -77,28 +77,35 @@ export function LearningPatternCard({ pattern, className }: LearningPatternCardP
       </div>
 
       {pattern.weeklyActivity.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted">Weekly Activity</p>
-          <div className="flex gap-1">
-            {pattern.weeklyActivity.map((day) => {
-              const maxCount = Math.max(...pattern.weeklyActivity.map((d) => d.count), 1);
-              const height = Math.max((day.count / maxCount) * 40, 4);
-              return (
-                <div key={day.day} className="flex-1 flex flex-col items-center gap-1">
-                  <div
-                    className="w-full rounded-sm bg-primary/30"
-                    style={{ height: `${height}px` }}
-                    title={`${day.day}: ${day.count} activities`}
-                  />
-                  <span className="text-[8px] text-muted uppercase">{day.day.slice(0, 3)}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+<div className="space-y-2">
+  <p className="text-xs font-medium text-text-subtle">Weekly Activity</p>
+  <div className="flex items-end gap-1 h-10">
+    {pattern.weeklyActivity.map((day) => {
+      const maxCount = Math.max(...pattern.weeklyActivity.map((d) => d.count), 1);
+      const height = Math.max((day.count / maxCount) * 40, 4);
+      return (
+        <div
+          key={day.day}
+          className="flex-1 rounded-sm bg-text-subtle/50"
+          style={{ height: `${height}px` }}
+          title={`${day.day}: ${day.count} activities`}
+        />
+      );
+    })}
+  </div>
+  <div className="flex gap-1">
+    {pattern.weeklyActivity.map((day) => (
+      <span
+        key={day.day}
+        className="flex-1 text-center text-[9px] text-text-subtle uppercase"
+      >
+        {day.day.slice(0, 3)}
+      </span>
+    ))}
+  </div>
+</div>)}
 
-      <p className="text-xs text-muted italic">{pattern.patternSummary}</p>
+      <p className="text-xs text-text-subtle italic">{pattern.patternSummary}</p>
     </div>
   );
 }

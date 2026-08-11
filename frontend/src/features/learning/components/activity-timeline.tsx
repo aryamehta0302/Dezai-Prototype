@@ -47,8 +47,8 @@ export function ActivityTimeline({ events, className }: ActivityTimelineProps) {
   if (events.length === 0) {
     return (
       <div className={cn("text-center py-8", className)}>
-        <Clock className="h-8 w-8 text-muted/20 mx-auto mb-2" aria-hidden="true" />
-        <p className="text-sm text-muted">No recent activity</p>
+        <Clock className="h-8 w-8 text-text-subtle/20 mx-auto mb-2" aria-hidden="true" />
+        <p className="text-sm text-text-subtle">No recent activity</p>
       </div>
     );
   }

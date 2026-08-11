@@ -21,7 +21,7 @@ export function CatalogPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-white border-b border-border-light">
+      <div>
         <PageContainer className="py-8">
           <h1 className="text-2xl font-bold text-on-surface">Course Catalog</h1>
           <p className="text-muted mt-1">
@@ -30,7 +30,7 @@ export function CatalogPage() {
         </PageContainer>
       </div>
 
-      <PageContainer className="py-8 space-y-6">
+      <PageContainer className="py-3 space-y-6">
         <CourseFilters
           filters={filters}
           onFilterChange={updateFilter}
