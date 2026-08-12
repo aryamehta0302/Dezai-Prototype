@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from "@nestjs/common";
 import { PrismaService } from "../../../database/prisma.service";
-import { UserRole, TrackType, AuditAction } from "@prisma/client";
+import { UserRole, TrackType, AuditAction, ProgramCategory, ProgramTier } from "@prisma/client";
 import { AuditService } from "../../audit/services/audit.service";
 import {
   CreateProgramDto,
@@ -22,7 +22,7 @@ export class ProgramsService {
   constructor(
     private prisma: PrismaService,
     private auditService: AuditService
-  ) {}
+  ) { }
 
   // ─────────────────── OWNERSHIP GUARD ───────────────────
 
@@ -161,6 +161,8 @@ export class ProgramsService {
       data: {
         title: data.title,
         description: data.description,
+        category: data.category ?? ProgramCategory.AI,
+        tier: data.tier ?? ProgramTier.TIER_1,
         institutionId,
         facultyId,
       },
@@ -194,7 +196,12 @@ export class ProgramsService {
   async updateProgram(id: string, data: UpdateProgramDto, userId: string) {
     const program = await this.prisma.program.update({
       where: { id },
-      data,
+      data: {
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        tier: data.tier,
+      },
     });
     await this.auditService.logAction(
       userId,
