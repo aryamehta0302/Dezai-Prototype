@@ -16,8 +16,19 @@ type ApiRequestOptions = RequestInit & {
  * const data = await apiClient.get('/users/me');
  */
 class ApiClient {
+    /**
+     * Deduplicates concurrent getSession() calls during hydration.
+     * Multiple authenticated requests that fire simultaneously (e.g., from
+     * layout useEffect hooks) share a single getSession() network call
+     * instead of each independently racing to /api/auth/session.
+     *
+     * The promise is cleared synchronously after resolution via .finally(),
+     * so subsequent request batches always get a fresh session fetch.
+     */
+    private sessionReadyPromise: Promise<string | null> | null = null;
+
     private async getAuthToken(): Promise<string | null> {
-        // Check if we are on server or client
+        // Server-side: use NextAuth's auth() — no race possible
         if (typeof window === "undefined") {
             try {
                 const session = await auth();
@@ -25,15 +36,24 @@ class ApiClient {
             } catch {
                 return null;
             }
-        } else {
-            try {
-                const session = await getSession();
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                return (session as any)?.accessToken || null;
-            } catch {
-                return null;
-            }
         }
+
+        // Client-side: deduplicate concurrent getSession() calls
+        if (!this.sessionReadyPromise) {
+            this.sessionReadyPromise = getSession()
+                .then((session) => {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    return (session as any)?.accessToken || null;
+                })
+                .catch(() => null)
+                .finally(() => {
+                    // Clear after resolution so future calls (logout, refresh, expiry)
+                    // trigger a fresh session fetch instead of returning stale data.
+                    this.sessionReadyPromise = null;
+                });
+        }
+
+        return this.sessionReadyPromise;
     }
 
     private async request<T>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
