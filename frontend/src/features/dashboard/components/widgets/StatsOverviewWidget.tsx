@@ -8,6 +8,7 @@ import {
   Sparkles,
   Award,
 } from "lucide-react";
+import { memo } from "react";
 import { LoadingSkeleton } from "@/shared/components/loading-skeleton";
 import type { DashboardStats } from "@/features/learning/types/learning.types";
 
@@ -18,7 +19,7 @@ interface StatsOverviewWidgetProps {
   isLoading: boolean;
 }
 
-export function StatsOverviewWidget({
+export const StatsOverviewWidget = memo(function StatsOverviewWidget({
   stats,
   globalRank,
   unlockedCount,
@@ -34,46 +35,46 @@ export function StatsOverviewWidget({
         Overview
       </h3>
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1 p-3 rounded-lg bg-surface-low">
-          <span className="text-xs text-secondary flex items-center gap-1.5">
+        <div className="space-y-1 p-3 rounded-sm bg-surface-variant">
+          <span className="text-xs  text-black flex items-center gap-1.5">
             <BookOpen className="h-3 w-3" /> Enrolled
           </span>
           <p className="text-lg font-bold text-on-surface">
             {stats.enrolledCourses}
           </p>
         </div>
-        <div className="space-y-1 p-3 rounded-lg bg-surface-low">
-          <span className="text-xs text-secondary flex items-center gap-1.5">
+        <div className="space-y-1 p-3 rounded-sm bg-surface-variant">
+          <span className="text-xs text-black flex items-center gap-1.5">
             <Trophy className="h-3 w-3" /> Completed
           </span>
           <p className="text-lg font-bold text-on-surface">
             {stats.completedCourses}
           </p>
         </div>
-        <div className="space-y-1 p-3 rounded-lg bg-surface-low">
-          <span className="text-xs text-secondary flex items-center gap-1.5">
+        <div className="space-y-1 p-3 rounded-sm bg-surface-variant">
+          <span className="text-xs text-black flex items-center gap-1.5">
             <Flame className="h-3 w-3" /> Streak
           </span>
           <p className="text-lg font-bold text-on-surface">
             {stats.learningStreak}d
           </p>
         </div>
-        <div className="space-y-1 p-3 rounded-lg bg-surface-low">
-          <span className="text-xs text-secondary flex items-center gap-1.5">
+        <div className="space-y-1 p-3 rounded-sm bg-surface-variant">
+          <span className="text-xs text-black flex items-center gap-1.5">
             <Clock className="h-3 w-3" /> Hours
           </span>
           <p className="text-lg font-bold text-on-surface">
             {stats.hoursLearned}
           </p>
         </div>
-        <div className="space-y-1 p-3 rounded-lg bg-surface-low">
-          <span className="text-xs text-secondary flex items-center gap-1.5">
+        <div className="space-y-1 p-3 rounded-sm bg-surface-variant">
+          <span className="text-xs text-black flex items-center gap-1.5">
             <Sparkles className="h-3 w-3" /> Unlocked
           </span>
           <p className="text-lg font-bold text-on-surface">{unlockedCount}</p>
         </div>
-        <div className="space-y-1 p-3 rounded-lg bg-surface-low">
-          <span className="text-xs text-secondary flex items-center gap-1.5">
+        <div className="space-y-1 p-3 rounded-sm bg-surface-variant">
+          <span className="text-xs text-black flex items-center gap-1.5">
             <Award className="h-3 w-3" /> Rank
           </span>
           <p className="text-lg font-bold text-on-surface">
@@ -83,4 +84,5 @@ export function StatsOverviewWidget({
       </div>
     </div>
   );
-}
+});
+

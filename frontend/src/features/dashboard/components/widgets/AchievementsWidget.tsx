@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { LoadingSkeleton } from "@/shared/components/loading-skeleton";
 import { LevelProgressCard } from "@/features/achievements/components/level-progress-card";
 import { AchievementGrid } from "@/features/achievements/components/achievement-grid";
@@ -12,7 +13,7 @@ interface AchievementsWidgetProps {
   isLoading: boolean;
 }
 
-export function AchievementsWidget({
+export const AchievementsWidget = memo(function AchievementsWidget({
   achievements,
   xp,
   unlockedCount,
@@ -23,7 +24,7 @@ export function AchievementsWidget({
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-on-surface">Achievements</h2>
         {!isLoading && (
-          <span className="text-xs text-secondary">
+          <span className="text-xs text-gray-800">
             {unlockedCount} / {achievements.length} unlocked
           </span>
         )}
@@ -39,4 +40,5 @@ export function AchievementsWidget({
       )}
     </section>
   );
-}
+});
+

@@ -60,19 +60,20 @@ export function AchievementGrid({ achievements }: AchievementGridProps) {
           <div
             key={achievement.id}
             className={cn(
-              'card-elevation p-5',
+              'card-elevation p-5 relative',
               achievement.isUnlocked
                 ? 'bg-surface border-success/20'
-                : 'bg-surface-low border-border-light grayscale',
+                : 'bg-surface-low border-border-light ',
             )}
           >
             <div className="flex gap-4">
-              <div className={cn(
-                'h-12 w-12 rounded-xl flex items-center justify-center shrink-0',
-                achievement.isUnlocked
-                  ? 'bg-success/10 text-success'
-                  : 'bg-muted/10 text-muted',
-              )}>
+            <div className={cn(
+            'h-12 w-12 rounded-sm flex items-center justify-center shrink-0', // rounded-full instead of rounded-xl
+            achievement.isUnlocked
+            ? 'bg-success/10 text-success'
+            : 'bg-surface-variant text-primary', // light navy tint instead of gray, even when locked
+            )}>
+
                 {achievement.isUnlocked ? (
                   <Icon className="h-6 w-6" />
                 ) : (
@@ -89,7 +90,7 @@ export function AchievementGrid({ achievements }: AchievementGridProps) {
                     <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
                   )}
                 </div>
-                <p className="text-xs text-muted line-clamp-2 leading-relaxed">
+                <p className="text-xs text-gray-800 line-clamp-2 leading-relaxed">
                   {achievement.description}
                 </p>
 
@@ -106,7 +107,7 @@ export function AchievementGrid({ achievements }: AchievementGridProps) {
                     <div
                       className={cn(
                         'h-full rounded-full transition-all duration-700',
-                        achievement.isUnlocked ? 'bg-success' : 'bg-primary/30',
+                        achievement.isUnlocked ? 'bg-success' : 'bg-primary',
                       )}
                       style={{ width: `${achievement.progress}%` }}
                     />

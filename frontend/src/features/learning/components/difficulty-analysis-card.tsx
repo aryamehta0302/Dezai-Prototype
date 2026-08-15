@@ -40,7 +40,7 @@ export function DifficultyAnalysisCard({ analysis, className }: DifficultyAnalys
           return (
             <div key={item.difficulty} className="space-y-1">
               <div className="flex items-center justify-between text-xs">
-                <Badge variant="outline" className={cn("rounded-md px-2 font-semibold", colors.text)}>
+                <Badge variant="outline" className={cn("rounded-sm px-2 font-semibold", colors.text)}>
                   {item.difficulty}
                 </Badge>
                 <span className={cn("font-bold shrink-0 ml-2", colors.text)}>
@@ -51,7 +51,7 @@ export function DifficultyAnalysisCard({ analysis, className }: DifficultyAnalys
                 value={item.accuracy}
                 className={cn("h-2", colors.track)}
               />
-              <p className="text-[10px] text-muted">
+              <p className="text-[10px] text-subtle">
                 {item.correctAttempts}/{item.totalAttempts} correct
               </p>
             </div>

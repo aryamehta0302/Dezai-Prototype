@@ -42,12 +42,14 @@ export function InsightCard({ insight, className }: InsightCardProps) {
         className,
       )}
     >
-      <div className="rounded-lg p-2 shrink-0 bg-inherit">
+      <div className="h-10 w-10 rounded-lg p-2 shrink-0 bg-inherit">
         <Icon className="h-4 w-4" />
       </div>
-      <div className="space-y-1">
-        <h4 className="font-semibold text-sm">{insight.title}</h4>
-        <p className="text-xs opacity-80">{insight.message}</p>
+      <div className="space-y-1 flex-1">
+       <div className="flex items-center justify-between gap-2">
+          <h4 className="font-bold text-sm">{insight.title}</h4>
+        </div>
+        <p className="text-xs opacity-80 leading-relaxed">{insight.message}</p>
       </div>
     </div>
   );

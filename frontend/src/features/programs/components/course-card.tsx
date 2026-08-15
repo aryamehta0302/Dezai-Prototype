@@ -22,7 +22,7 @@ export function CourseCard({ course, className }: CourseCardProps) {
   return (
     <Link
       href={`/programs/${slug}`}
-      className={cn("group card-elevation flex flex-col overflow-hidden", className)}
+      className={cn("group card-elevation border border-text-subtle flex flex-col overflow-hidden", className)}
     >
       <div className={cn("relative h-40 flex items-center justify-center overflow-hidden bg-gradient-to-br", getCourseGradient(course.id))}>
         <img
@@ -39,7 +39,7 @@ export function CourseCard({ course, className }: CourseCardProps) {
           <h3 className="font-semibold text-on-surface text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors">
             {course.title}
           </h3>
-          <p className="text-xs text-muted line-clamp-2">
+          <p className="text-xs text-text-subtle line-clamp-2">
             {course.description}
           </p>
         </div>
@@ -57,10 +57,10 @@ export function CourseCard({ course, className }: CourseCardProps) {
           </div>
 
           <div className="flex items-center justify-between pt-2 border-t border-border-light">
-            <span className="text-base font-bold text-on-surface">
+            <span className="text-lg font-bold text-on-surface">
               Free
             </span>
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className="text-xs border  rounded-md shadow-sm bg-[#ffe088]">
               {totalLessons > 0 ? `${totalLessons} lessons` : "Coming soon"}
             </Badge>
           </div>

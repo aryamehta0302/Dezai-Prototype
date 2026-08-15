@@ -27,23 +27,38 @@ export function CourseFilters({
   const [searchInput, setSearchInput] = useState(filters.search);
   const debouncedSearch = useDebounce(searchInput, 300);
 
-  const categories = useMemo(() => [
-    { value: "ALL", label: "All Categories", count: totalResults },
+  // Source of truth for filter values lives on the backend via courseService.
+  // Fallback list keeps the UI usable if the request fails or returns empty.
+  const [categories, setCategories] = useState<
+    { value: string; label: string; count: number }[]
+  >([
+    { value: "ALL", label: "All Domains", count: totalResults },
     { value: "AI", label: "Artificial Intelligence", count: totalResults },
     { value: "COMMERCE", label: "Commerce & Business", count: 0 },
     { value: "DESIGN", label: "Design", count: 0 },
-  ], [totalResults]);
+  ]);
 
   const tiers = useMemo(() => courseService.getTiers(), []);
+
+  useEffect(() => {
+    let cancelled = false;
+    courseService.getCategories().then((cats) => {
+      if (cancelled || cats.length === 0) return;
+      setCategories(cats);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     onFilterChange("search", debouncedSearch);
   }, [debouncedSearch, onFilterChange]);
 
   return (
-    <div className="space-y-4">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+    <div className="space-y-4 border-1 border-[#D1D5DB] rounded-md p-4 shadow-sm bg-white">
+      <div className="relative ">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-subtle" />
         <Input
           placeholder="Search courses..."
           value={searchInput}
@@ -52,38 +67,54 @@ export function CourseFilters({
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Select
-          value={filters.category as string}
-          onValueChange={(v) => onFilterChange("category", (v ?? "ALL") as CourseFilter["category"])}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            {categories.map((cat) => (
-              <SelectItem key={cat.value} value={cat.value}>
-                {cat.label} ({cat.count})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor="course-filter-domain"
+            className="text-xs font-medium text-text-subtle"
+          >
+            Domain
+          </label>
+          <Select
+            value={filters.category as string}
+            onValueChange={(v) => onFilterChange("category", (v ?? "ALL") as CourseFilter["category"])}
+          >
+            <SelectTrigger id="course-filter-domain" className="w-[180px]">
+              <SelectValue placeholder="Select a domain" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((cat) => (
+                <SelectItem key={cat.value} value={cat.value}>
+                  {cat.label} ({cat.count})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-        <Select
-          value={filters.tier as string}
-          onValueChange={(v) => onFilterChange("tier", (v ?? "ALL") as CourseFilter["tier"])}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Tier" />
-          </SelectTrigger>
-          <SelectContent>
-            {tiers.map((t) => (
-              <SelectItem key={t.value} value={t.value}>
-                {t.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor="course-filter-tier"
+            className="text-xs font-medium text-text-subtle"
+          >
+            Tier
+          </label>
+          <Select
+            value={filters.tier as string}
+            onValueChange={(v) => onFilterChange("tier", (v ?? "ALL") as CourseFilter["tier"])}
+          >
+            <SelectTrigger id="course-filter-tier" className="w-[180px]">
+              <SelectValue placeholder="Select a tier" />
+            </SelectTrigger>
+            <SelectContent>
+              {tiers.map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={onReset} className="gap-1 text-muted">
@@ -92,7 +123,7 @@ export function CourseFilters({
           </Button>
         )}
 
-        <span className="ml-auto text-sm text-muted">
+        <span className="ml-auto text-sm text-text-subtle">
           {totalResults} course{totalResults !== 1 ? "s" : ""}
         </span>
       </div>
