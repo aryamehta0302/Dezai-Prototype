@@ -5,7 +5,9 @@
   "description": "Dezai AI EdTech Platform — Backend API",
   "scripts": {
     "dev": "nest start --watch",
+    "predev": "prisma generate",
     "build": "nest build",
+    "prebuild": "prisma generate",
     "start": "nest start",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,test}/**/*.ts\"",
