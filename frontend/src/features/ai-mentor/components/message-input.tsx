@@ -34,19 +34,23 @@ export const MessageInput = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        disabled={isLoading}
+      placeholder={placeholder}
+      disabled={isLoading}
+      maxLength={5000}
         rows={3}
         className="resize-none"
+        aria-label="Message to AI Mentor"
+        aria-describedby="message-hint"
       />
       <div className="flex justify-between items-center">
-        <p className="text-xs text-muted-foreground">
+        <p id="message-hint" className="text-xs text-muted-foreground">
           {value.length}/5000 • Press Cmd+Enter to send
         </p>
         <Button
           onClick={onSend}
           disabled={!value.trim() || isLoading}
           size="sm"
+          aria-label={isLoading ? "Sending message" : "Send message"}
         >
           {isLoading ? (
             <>

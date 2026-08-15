@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
-import { AuditAction, AuditLog } from '@prisma/client';
+import { AuditAction, AuditLog, UserRole } from '@prisma/client';
+import { hashUserId } from '../../../common/utils/audit-hash.util';
 
 @Injectable()
 export class AuditService {
@@ -13,11 +14,29 @@ export class AuditService {
     userId: string | null,
     action: AuditAction,
     details?: string,
-    ipAddress?: string
+    ipAddress?: string,
+    userRoleOverride?: UserRole
   ): Promise<AuditLog> {
+    let userRole: UserRole = UserRole.STUDENT;
+    if (userRoleOverride) {
+      userRole = userRoleOverride;
+    } else if (userId) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { role: true },
+      });
+      if (user) {
+        userRole = user.role;
+      }
+    }
+
+    const userHash = userId ? hashUserId(userId) : hashUserId('SYSTEM_ACTOR');
+
     return this.prisma.auditLog.create({
       data: {
         userId,
+        userHash,
+        userRole,
         action,
         details,
         ipAddress,

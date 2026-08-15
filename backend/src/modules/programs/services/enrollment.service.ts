@@ -1,9 +1,16 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
+import { AuditService } from '../../audit/services/audit.service';
+import { AuditAction, EnrollmentStatus, Prisma } from '@prisma/client';
+
+type TxClient = Omit<PrismaService, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
 
 @Injectable()
 export class EnrollmentService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private auditService: AuditService,
+  ) { }
 
   /**
    * Enroll a student in a program. If already enrolled, return existing enrollment.
@@ -27,13 +34,80 @@ export class EnrollmentService {
       return existing;
     }
 
-    return this.prisma.enrollment.create({
+    const enrollment = await this.prisma.enrollment.create({
       data: {
         userId,
         programId,
         progress: 0,
+        status: EnrollmentStatus.ACTIVE,
       },
     });
+
+    await this.auditService.logAction(
+      userId,
+      AuditAction.ENROLLMENT_CREATED,
+      `User ${userId} enrolled in program ${programId} (Enrollment ID: ${enrollment.id})`,
+    );
+
+    return enrollment;
+  }
+
+  /**
+   * Drop enrollment: cleanup bookmarks/notes/progress, mark status DROPPED.
+   */
+  async dropEnrollment(userId: string, programId: string) {
+    const enrollment = await this.prisma.enrollment.findUnique({
+      where: { userId_programId: { userId, programId } },
+      include: {
+        program: {
+          include: {
+            tracks: {
+              include: {
+                modules: {
+                  include: { lessons: { select: { id: true } } },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!enrollment) {
+      throw new NotFoundException(`Enrollment not found for user ${userId} in program ${programId}`);
+    }
+
+    const lessonIds = this.getProgramLessonIds(enrollment.program);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.bookmark.deleteMany({
+        where: { userId, lessonId: { in: lessonIds } },
+      });
+
+      await tx.note.deleteMany({
+        where: { userId, lessonId: { in: lessonIds } },
+      });
+
+      await tx.progress.deleteMany({
+        where: { userId, lessonId: { in: lessonIds } },
+      });
+
+      await tx.enrollment.update({
+        where: { userId_programId: { userId, programId } },
+        data: {
+          status: EnrollmentStatus.DROPPED,
+          progress: 0,
+        },
+      });
+    });
+
+    await this.auditService.logAction(
+      userId,
+      AuditAction.ENROLLMENT_DROPPED,
+      `User ${userId} dropped enrollment in program ${programId} — bookmarks, notes, and progress cleaned up`,
+    );
+
+    return { success: true };
   }
 
   /**
@@ -67,11 +141,8 @@ export class EnrollmentService {
     const allCompletedIds = completed.map((c) => c.lessonId);
 
     return enrollments.map((e) => {
-      // Filter the global completed list to only those in THIS program's lessons
       const programLessonIds = new Set(
-        e.program.tracks.flatMap((t) =>
-          t.modules.flatMap((m) => m.lessons.map((l) => l.id))
-        )
+        this.getProgramLessonIds(e.program)
       );
 
       const filteredIds = allCompletedIds.filter((id) => programLessonIds.has(id));
@@ -85,11 +156,13 @@ export class EnrollmentService {
 
   /**
    * Re-calculate and update the program completion progress of a student.
+   * Accepts optional tx for transactional composition.
    * Calculates: (completed lessons / total lessons in program) * 100
    */
-  async updateEnrollmentProgress(userId: string, programId: string) {
-    // 1. Get all lesson IDs in this program
-    const program = await this.prisma.program.findUnique({
+  async updateEnrollmentProgress(userId: string, programId: string, tx?: TxClient) {
+    const client = tx ?? this.prisma;
+
+    const program = await client.program.findUnique({
       where: { id: programId },
       include: {
         tracks: {
@@ -104,32 +177,38 @@ export class EnrollmentService {
 
     if (!program) return;
 
-    const allLessons = program.tracks.flatMap((t) =>
-      t.modules.flatMap((m) => m.lessons.map((l) => l.id))
-    );
-
+    const allLessons = this.getProgramLessonIds(program);
     if (allLessons.length === 0) return;
 
-    // 2. Count completed lessons by this user
-    const completedCount = await this.prisma.progress.count({
+    const completedCount = await client.progress.count({
       where: {
         userId,
         lessonId: { in: allLessons },
       },
     });
 
-    // 3. Compute percentage
     const progressPercent = Math.round((completedCount / allLessons.length) * 100);
 
-    // 4. Update enrollment progress
-    return this.prisma.enrollment.update({
+    const isComplete = progressPercent >= 100;
+
+    return client.enrollment.update({
       where: {
         userId_programId: { userId, programId },
       },
       data: {
         progress: progressPercent,
-        completedAt: progressPercent >= 100 ? new Date() : null,
+        status: isComplete ? EnrollmentStatus.COMPLETED : undefined,
+        completedAt: isComplete ? new Date() : null,
       },
     });
+  }
+
+  /**
+   * Extract all lesson IDs from a program's track/module structure.
+   */
+  private getProgramLessonIds(program: { tracks: { modules: { lessons: { id: string }[] }[] }[] }): string[] {
+    return program.tracks.flatMap((t) =>
+      t.modules.flatMap((m) => m.lessons.map((l) => l.id))
+    );
   }
 }

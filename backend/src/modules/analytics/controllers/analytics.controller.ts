@@ -1,20 +1,30 @@
 import {
   Controller,
   Get,
+  Post,
+  Body,
   Param,
   UseGuards,
   Req,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   AnalyticsService,
   FacultyAnalyticsResponseDto,
   ProgramAnalyticsResponseDto,
   StudentMetricsResponseDto,
+  FacultyProgramDto,
+  ModuleCompletionStatDto,
+  StudentDetailedProgressResponseDto,
+  ProgramInsightsResponseDto,
+  InterventionDto,
 } from '../services/analytics.service';
+import { ProgramsService } from '../../programs/services/programs.service';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
+import { FacultyDataAccessInterceptor } from '../../../common/interceptors/faculty-data-access.interceptor';
 
 /**
  * AnalyticsController
@@ -36,8 +46,12 @@ import { UserRole } from '@prisma/client';
  */
 @Controller('analytics')
 @UseGuards(JwtAuthGuard)
+@UseInterceptors(FacultyDataAccessInterceptor)
 export class AnalyticsController {
-  constructor(private readonly analyticsService: AnalyticsService) {}
+  constructor(
+    private readonly analyticsService: AnalyticsService,
+    private readonly programsService: ProgramsService,
+  ) {}
 
   /**
    * GET /api/analytics/faculty
@@ -80,6 +94,18 @@ export class AnalyticsController {
   }
 
   /**
+   * GET /api/analytics/faculty/programs
+   * Returns a list of all programs taught by the faculty.
+   */
+  @Get('faculty/programs')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
+  async getFacultyPrograms(@Req() req): Promise<{ success: boolean; data: FacultyProgramDto[] }> {
+    const data = await this.analyticsService.getFacultyPrograms(req.user.id);
+    return { success: true, data };
+  }
+
+  /**
    * GET /api/analytics/programs/:id
    *
    * Returns aggregate metrics for a specific Program.
@@ -89,7 +115,8 @@ export class AnalyticsController {
   @Get('programs/:id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
-  async getProgramAnalytics(@Param('id') programId: string): Promise<{ success: boolean; data: ProgramAnalyticsResponseDto }> {
+  async getProgramAnalytics(@Param('id') programId: string, @Req() req): Promise<{ success: boolean; data: ProgramAnalyticsResponseDto }> {
+    await this.programsService.validateProgramOwnership(req.user.id, programId, req.user.role as UserRole);
     const data = await this.analyticsService.getProgramAnalytics(programId);
     return { success: true, data };
   }
@@ -104,8 +131,87 @@ export class AnalyticsController {
   @Get('programs/:id/students')
   @UseGuards(RolesGuard)
   @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
-  async getStudentMetrics(@Param('id') programId: string): Promise<{ success: boolean; data: StudentMetricsResponseDto }> {
+  async getStudentMetrics(@Param('id') programId: string, @Req() req): Promise<{ success: boolean; data: StudentMetricsResponseDto }> {
+    await this.programsService.validateProgramOwnership(req.user.id, programId, req.user.role as UserRole);
     const data = await this.analyticsService.getStudentMetrics(programId);
+    return { success: true, data };
+  }
+
+  /**
+   * GET /api/analytics/programs/:id/modules/stats
+   * Returns module completion statistics for a program.
+   */
+  @Get('programs/:id/modules/stats')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
+  async getModuleCompletionStats(@Param('id') programId: string, @Req() req): Promise<{ success: boolean; data: ModuleCompletionStatDto[] }> {
+    await this.programsService.validateProgramOwnership(req.user.id, programId, req.user.role as UserRole);
+    const data = await this.analyticsService.getModuleCompletionStats(programId);
+    return { success: true, data };
+  }
+
+  /**
+   * GET /api/analytics/programs/:programId/students/:userId
+   * Returns detailed student progress and proctoring violation logs.
+   */
+  @Get('programs/:programId/students/:userId')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
+  async getStudentDetailedProgress(
+    @Param('programId') programId: string,
+    @Param('userId') userId: string,
+    @Req() req,
+  ): Promise<{ success: boolean; data: StudentDetailedProgressResponseDto }> {
+    await this.programsService.validateProgramOwnership(req.user.id, programId, req.user.role as UserRole);
+    const data = await this.analyticsService.getStudentDetailedProgress(programId, userId);
+    return { success: true, data };
+  }
+
+  /**
+   * GET /api/analytics/programs/:id/insights
+   * Returns cohort insights, flagged at-risk students and academic health metrics.
+   */
+  @Get('programs/:id/insights')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
+  async getProgramInsights(@Param('id') programId: string, @Req() req): Promise<{ success: boolean; data: ProgramInsightsResponseDto }> {
+    await this.programsService.validateProgramOwnership(req.user.id, programId, req.user.role as UserRole);
+    const data = await this.analyticsService.getProgramInsights(programId);
+    return { success: true, data };
+  }
+
+  /**
+   * POST /api/analytics/programs/:id/interventions
+   * Logs a new outreach intervention to a student (creates student notification and logs audit).
+   */
+  @Post('programs/:id/interventions')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
+  async createIntervention(
+    @Param('id') programId: string,
+    @Req() req,
+    @Body() body: { userId: string; message: string },
+  ): Promise<{ success: boolean; data: any }> {
+    await this.programsService.validateProgramOwnership(req.user.id, programId, req.user.role as UserRole);
+    const data = await this.analyticsService.createIntervention(
+      programId,
+      req.user.id,
+      body.userId,
+      body.message,
+    );
+    return { success: true, data };
+  }
+
+  /**
+   * GET /api/analytics/programs/:id/interventions
+   * Returns history of sent outreach interventions for a program.
+   */
+  @Get('programs/:id/interventions')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.FACULTY, UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
+  async getInterventionsList(@Param('id') programId: string, @Req() req): Promise<{ success: boolean; data: InterventionDto[] }> {
+    await this.programsService.validateProgramOwnership(req.user.id, programId, req.user.role as UserRole);
+    const data = await this.analyticsService.getInterventionsList(programId);
     return { success: true, data };
   }
 }

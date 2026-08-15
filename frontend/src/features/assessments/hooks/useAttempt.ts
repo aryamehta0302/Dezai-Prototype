@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, startTransition } from "react";
 import { assessmentAttemptService } from "../services/assessment-attempt.service";
 import { Attempt } from "../types/assessment.types";
 import { useTimer } from "../../quizzes/hooks/useTimer";
 import { toast } from "sonner";
 
-export function useAttempt(assessmentId: string, accessToken?: string) {
+export function useAttempt(assessmentId: string, accessToken?: string, slug?: string) {
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -26,34 +26,180 @@ export function useAttempt(assessmentId: string, accessToken?: string) {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const hasUnsavedChanges = useRef(false);
   const answersRef = useRef(answers);
+  const isSubmittingRef = useRef(false);
+
+  // Sprint 7: Offline Sync Queue
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator !== "undefined" ? navigator.onLine : true
+  );
+  const syncQueueRef = useRef<Record<string, string>>({});
+  const [syncStatus, setSyncStatus] = useState<"saved" | "syncing" | "offline" | "error">("saved");
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryCountRef = useRef(0);
 
   // Sync answers ref
   useEffect(() => {
     answersRef.current = answers;
   }, [answers]);
 
+  // Sprint 7: Online/Offline detection
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      setSyncStatus(prev => prev === "offline" ? "saved" : prev);
+      // Flush queued answers on reconnect
+      flushSyncQueue();
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      setSyncStatus("offline");
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+    };
+  }, []);
+
+  // Guard to prevent initializeAttempt from running twice (React Strict Mode)
+  const initializedRef = useRef(false);
+
+  // Ref for timer to break circular dependency with handleTimeUp
+  const handleTimeUpRef = useRef(async () => {});
+  // Timer Setup (default 30 min = 1800s, overridden by attempt.timeLimit)
+  const timer = useTimer(1800, () => handleTimeUpRef.current());
+
+  // Submit attempt
+  const submit = async () => {
+    if (!attempt || !accessToken) return;
+
+    try {
+      // Perform a final autosave if needed
+      if (hasUnsavedChanges.current) {
+        await assessmentAttemptService.autoSaveAnswers(
+          attempt.attemptId,
+          answersRef.current,
+          accessToken
+        );
+        hasUnsavedChanges.current = false;
+      }
+
+      setSaveStatus("saving");
+      const res = await assessmentAttemptService.submitAttempt(attempt.attemptId, accessToken, answersRef.current);
+      timer.pause();
+      return res;
+    } catch (err) {
+      console.error("Failed to submit assessment:", err);
+      const message = err instanceof Error ? err.message : "Failed to submit assessment";
+      toast.error(message);
+      throw err;
+    }
+  };
+
   // Handle Timeout Callback
   const handleTimeUp = useCallback(async () => {
     if (!attempt || isTerminated) return;
     toast.error("Time is up! Submitting your assessment...");
     await submit();
-  }, [attempt, isTerminated]);
+  }, [attempt, isTerminated, submit]);
 
-  // Timer Setup (30 minutes = 1800s default)
-  const timer = useTimer(1800, handleTimeUp);
+  useEffect(() => {
+    handleTimeUpRef.current = handleTimeUp;
+  }, [handleTimeUp]);
+
+  const [error, setError] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<"max_attempts" | "already_completed" | "generic" | null>(null);
+  const [attemptStatus, setAttemptStatus] = useState<{
+    attemptsRemaining: number;
+    maxAttempts: number;
+    everPassed: boolean;
+    canAttempt: boolean;
+    bestScore: number | null;
+    bestPercentage: number | null;
+  } | null>(null);
 
   // Load or Restore Attempt
   const initializeAttempt = useCallback(async () => {
     if (!accessToken) return;
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
+    let activeAttemptId: string | null = null;
+    setError(null);
+
+    let completedAttemptId: string | null = null;
 
     try {
       setSaveStatus("idle");
-      // 1. Try starting/getting an active attempt
-      const data = await assessmentAttemptService.startAttempt(assessmentId, accessToken);
+
+      // Check attempt status first
+      const status = await assessmentAttemptService.getAttemptStatus(assessmentId, accessToken);
+      setAttemptStatus({
+        attemptsRemaining: status.attemptsRemaining,
+        maxAttempts: status.maxAttempts,
+        everPassed: status.everPassed,
+        canAttempt: status.canAttempt,
+        bestScore: status.bestScore,
+        bestPercentage: status.bestPercentage,
+      });
+
+      if (!status.canAttempt) {
+        if (status.hasActiveAttempt && status.activeAttemptId) {
+          // Active attempt exists — let the resume flow handle it below
+        } else if (status.attemptsRemaining === 0) {
+          setError("Maximum attempts reached for this assessment.");
+          setErrorType("max_attempts");
+          return;
+        } else if (status.everPassed) {
+          setError("You have already passed this assessment.");
+          setErrorType("already_completed");
+          return;
+        } else {
+          setError("You cannot start a new attempt at this time.");
+          setErrorType("generic");
+          return;
+        }
+      }
+
+      let data: Attempt;
+
+      try {
+        data = await assessmentAttemptService.startAttempt(assessmentId, accessToken);
+      } catch (startErr) {
+        const msg = startErr instanceof Error ? startErr.message : "";
+        if (!msg.includes("active attempt already exists")) {
+          setError(msg || "Failed to start assessment attempt");
+          setErrorType("generic");
+          return;
+        }
+
+        activeAttemptId = status.activeAttemptId ?? null;
+
+        // Stale status — re-fetch to get the real activeAttemptId
+        if (!status.hasActiveAttempt || !activeAttemptId) {
+          const freshStatus = await assessmentAttemptService.getAttemptStatus(assessmentId, accessToken);
+          activeAttemptId = freshStatus.activeAttemptId ?? null;
+          if (!activeAttemptId) {
+            setError("No active attempt found to resume");
+            setErrorType("generic");
+            return;
+          }
+        }
+
+        data = await assessmentAttemptService.resumeAttempt(activeAttemptId, accessToken);
+      }
       
       setAttempt(data);
       setWarningsCount(data.warningsCount);
       setScoreDeduction(data.scoreDeduction);
+
+      if (data.timeLimit) {
+        timer.reset(data.timeLimit);
+      }
 
       if (data.status === "TERMINATED") {
         setIsTerminated(true);
@@ -61,12 +207,10 @@ export function useAttempt(assessmentId: string, accessToken?: string) {
         return;
       }
 
-      // If there are pre-saved answers (e.g. from a resumed attempt)
       if (data.answers) {
         setAnswers(data.answers);
       }
 
-      // Restore warning modal / lockout if active on the server
       const ackCount = typeof window !== "undefined"
         ? parseInt(localStorage.getItem(`ack_warnings_${data.sessionId}`) || "0", 10)
         : 0;
@@ -89,16 +233,22 @@ export function useAttempt(assessmentId: string, accessToken?: string) {
         timer.start();
       }
 
-      // Adjust timer if remainingTime was returned
       if (data.remainingTime !== undefined) {
         timer.reset(data.remainingTime);
         timer.start();
       }
-    } catch (err: any) {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      if (message.includes("already completed")) {
+        setError("This attempt has already been submitted. You can review it below.");
+        setErrorType("already_completed");
+        return;
+      }
       console.error("Failed to initialize attempt:", err);
-      toast.error(err.message || "Failed to load assessment");
+      setError(message || "Failed to load assessment");
+      setErrorType("generic");
     }
-  }, [assessmentId, accessToken]);
+  }, [assessmentId, accessToken, slug]);
 
   // Save Answers to Backend
   const saveCurrentAnswers = useCallback(async () => {
@@ -120,14 +270,18 @@ export function useAttempt(assessmentId: string, accessToken?: string) {
     }
   }, [attempt, accessToken]);
 
-  // Periodic Auto-Save interval (every 30s)
+  // Debounced Auto-Save (2s after last change)
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    const interval = setInterval(() => {
+    if (!hasUnsavedChanges.current) return;
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
       saveCurrentAnswers();
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [saveCurrentAnswers]);
+    }, 2000);
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, [answers, saveCurrentAnswers]);
 
   // Save on beforeunload / exit
   useEffect(() => {
@@ -137,11 +291,64 @@ export function useAttempt(assessmentId: string, accessToken?: string) {
         e.preventDefault();
         e.returnValue = "You have unsaved answers. Are you sure you want to leave?";
       }
+
+      // Sprint 7: sendBeacon fallback for queued answers
+      const queuedAnswers = syncQueueRef.current;
+      if (attempt && Object.keys(queuedAnswers).length > 0) {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+        const payload = JSON.stringify({
+          attemptId: attempt.attemptId,
+          answers: queuedAnswers,
+          clientTimestamp: Date.now(),
+        });
+        // sendBeacon is best-effort — no auth header possible
+        navigator.sendBeacon(
+          `${apiUrl}/assessments/attempts/sync`,
+          new Blob([payload], { type: "application/json" })
+        );
+      }
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [saveCurrentAnswers]);
+  }, [saveCurrentAnswers, attempt]);
+
+  // Sprint 7: Flush sync queue with exponential backoff
+  const flushSyncQueue = useCallback(async () => {
+    if (!attempt || !accessToken) return;
+    const queue = syncQueueRef.current;
+    if (Object.keys(queue).length === 0) return;
+    if (!navigator.onLine) {
+      setSyncStatus("offline");
+      return;
+    }
+
+    try {
+      setSyncStatus("syncing");
+      await assessmentAttemptService.syncAnswers(
+        {
+          attemptId: attempt.attemptId,
+          answers: { ...queue },
+          clientTimestamp: Date.now(),
+        },
+        accessToken
+      );
+      // Clear the queue on success
+      syncQueueRef.current = {};
+      retryCountRef.current = 0;
+      setSyncStatus("saved");
+    } catch {
+      retryCountRef.current++;
+      if (retryCountRef.current <= 3) {
+        const delay = 5000 * Math.pow(2, retryCountRef.current - 1); // 5s, 10s, 20s
+        setSyncStatus("error");
+        retryTimeoutRef.current = setTimeout(() => flushSyncQueue(), delay);
+      } else {
+        setSyncStatus("error");
+        retryCountRef.current = 0;
+      }
+    }
+  }, [attempt, accessToken]);
 
   // Answer selection handler
   const selectOption = (questionId: string, optionId: string) => {
@@ -153,6 +360,14 @@ export function useAttempt(assessmentId: string, accessToken?: string) {
     }));
     hasUnsavedChanges.current = true;
     setSaveStatus("idle");
+
+    // Sprint 7: Push to sync queue and flush if online
+    syncQueueRef.current[questionId] = optionId;
+    if (navigator.onLine) {
+      flushSyncQueue();
+    } else {
+      setSyncStatus("offline");
+    }
   };
 
   // Flag question handler
@@ -168,36 +383,10 @@ export function useAttempt(assessmentId: string, accessToken?: string) {
     });
   };
 
-  // Submit attempt
-  const submit = async () => {
-    if (!attempt || !accessToken) return;
-
-    try {
-      // Perform a final autosave if needed
-      if (hasUnsavedChanges.current) {
-        await assessmentAttemptService.autoSaveAnswers(
-          attempt.attemptId,
-          answers,
-          accessToken
-        );
-        hasUnsavedChanges.current = false;
-      }
-
-      setSaveStatus("saving");
-      const res = await assessmentAttemptService.submitAttempt(attempt.attemptId, accessToken);
-      timer.pause();
-      return res;
-    } catch (err: any) {
-      console.error("Failed to submit assessment:", err);
-      toast.error(err.message || "Failed to submit assessment");
-      throw err;
-    }
-  };
-
   // Log Proctoring Violation
   const handleViolation = useCallback(
     async (type: "TAB_SWITCH" | "FOCUS_LOSS" | "COPY_PASTE") => {
-      if (!attempt || isTerminated || !accessToken) return;
+      if (!attempt || isTerminated || !accessToken || isSubmittingRef.current) return;
 
       // Ignore FOCUS_LOSS while warning or lockout screen is active
       if ((showWarningModal || isScreenLocked) && type === "FOCUS_LOSS") return;
@@ -252,7 +441,9 @@ export function useAttempt(assessmentId: string, accessToken?: string) {
       }, 1000);
       return () => clearTimeout(t);
     } else if (lockoutCountdown === 0 && isScreenLocked) {
-      setIsScreenLocked(false);
+      startTransition(() => {
+        setIsScreenLocked(false);
+      });
       timer.start();
     }
   }, [lockoutCountdown, isScreenLocked, timer]);
@@ -269,6 +460,9 @@ export function useAttempt(assessmentId: string, accessToken?: string) {
     saveStatus,
     saveCurrentAnswers,
     submit,
+    error,
+    errorType,
+    attemptStatus,
     
     // Proctoring states/handlers
     warningsCount,
@@ -283,5 +477,11 @@ export function useAttempt(assessmentId: string, accessToken?: string) {
     setIsFullscreenActive,
     handleViolation,
     initializeAttempt,
+    isSubmittingRef,
+
+    // Sprint 7: Sync states
+    isOnline,
+    syncStatus,
+    flushSyncQueue,
   };
 }

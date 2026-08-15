@@ -29,6 +29,7 @@ export interface AuthState {
   isLoading: boolean;
 
   syncSession: (user: AuthUser) => void;
+  setUser: (user: AuthUser) => void;
   clearSession: () => void;
   setLoading: (loading: boolean) => void;
 
@@ -37,6 +38,9 @@ export interface AuthState {
   isFaculty: () => boolean;
   isUniversityAdmin: () => boolean;
   isDezaiAdmin: () => boolean;
+  isOrgAdmin: () => boolean;
+  isOrgManager: () => boolean;
+  isEmployee: () => boolean;
   hasRole: (role: UserRole) => boolean;
 }
 
@@ -54,6 +58,9 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false,
         }),
 
+      setUser: (user) =>
+        set({ user }),
+
       clearSession: () =>
         set({
           user: null,
@@ -67,6 +74,9 @@ export const useAuthStore = create<AuthState>()(
       isFaculty: () => get().user?.role === UserRole.FACULTY,
       isUniversityAdmin: () => get().user?.role === UserRole.UNIVERSITY_ADMIN,
       isDezaiAdmin: () => get().user?.role === UserRole.DEZAI_ADMIN,
+      isOrgAdmin: () => get().user?.role === UserRole.ORGANIZATION_ADMIN,
+      isOrgManager: () => get().user?.role === UserRole.ORGANIZATION_MANAGER,
+      isEmployee: () => get().user?.role === UserRole.EMPLOYEE,
       hasRole: (role) => get().user?.role === role,
     }),
     {

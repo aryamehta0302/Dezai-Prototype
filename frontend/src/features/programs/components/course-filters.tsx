@@ -41,9 +41,9 @@ export function CourseFilters({
   }, [debouncedSearch, onFilterChange]);
 
   return (
-    <div className="space-y-4">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+    <div className="space-y-4 border-1 border-[#D1D5DB] rounded-md p-4 shadow-sm bg-white">
+      <div className="relative ">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-subtle" />
         <Input
           placeholder="Search courses..."
           value={searchInput}
@@ -92,7 +92,7 @@ export function CourseFilters({
           </Button>
         )}
 
-        <span className="ml-auto text-sm text-muted">
+        <span className="ml-auto text-sm text-text-subtle">
           {totalResults} course{totalResults !== 1 ? "s" : ""}
         </span>
       </div>

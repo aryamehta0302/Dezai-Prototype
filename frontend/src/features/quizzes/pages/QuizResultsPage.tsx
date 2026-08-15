@@ -24,7 +24,7 @@ interface QuizResultsPageProps {
 
 export function QuizResultsPage({ slug, quizId }: QuizResultsPageProps) {
   const searchParams = useSearchParams();
-  const quiz = quizService.getQuiz(quizId);
+  const quiz = quizService.getQuiz(quizId, slug);
 
   const score = Number(searchParams.get("score") || 0);
   const total = Number(searchParams.get("total") || 0);

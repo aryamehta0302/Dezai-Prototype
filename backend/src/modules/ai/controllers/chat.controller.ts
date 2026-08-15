@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Delete,
+  Patch,
   Param,
   Body,
   UseGuards,
@@ -13,10 +14,12 @@ import {
 } from '@nestjs/common';
 import { ChatService } from '../services/chat.service';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
+import { InstitutionActiveGuard } from '../../../common/guards/institution-active.guard';
 import {
   CreateChatSessionDto,
   SendMessageDto,
   UpdateSessionContextDto,
+  UpdateSessionTitleDto,
   ChatSessionResponseDto,
   ChatMessageResponseDto,
 } from '../dto/chat.dto';
@@ -27,6 +30,7 @@ import {
  * All endpoints require JWT authentication.
  */
 @Controller('ai-mentor')
+@UseGuards(InstitutionActiveGuard)
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
@@ -183,6 +187,39 @@ export class ChatController {
   ): Promise<{ success: boolean; session: ChatSessionResponseDto }> {
     const userId = req.user.id;
     const session = await this.chatService.updateSessionContext(
+      sessionId,
+      userId,
+      dto,
+    );
+
+    return {
+      success: true,
+      session,
+    };
+  }
+
+  /**
+   * PATCH /api/ai-mentor/sessions/:id/title
+   * Update session title
+   * 
+   * URL Parameters:
+   * - id: string (session UUID)
+   * 
+   * Body:
+   * {
+   *   title: string (max 200 chars)
+   * }
+   */
+  @Patch('sessions/:id/title')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async updateSessionTitle(
+    @Req() req,
+    @Param('id') sessionId: string,
+    @Body() dto: UpdateSessionTitleDto,
+  ): Promise<{ success: boolean; session: ChatSessionResponseDto }> {
+    const userId = req.user.id;
+    const session = await this.chatService.updateSessionTitle(
       sessionId,
       userId,
       dto,

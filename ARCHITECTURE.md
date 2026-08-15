@@ -57,6 +57,7 @@ frontend/src/
 │   ├── projects/                 # Sandbox and project submissions
 │   ├── ai-mentor/                # AI study assistant chatbot interface
 │   ├── institution/              # University admin dashboard views
+│   ├── enterprise/               # Enterprise B2B workspace (org, team, departments, settings)
 │   ├── settings/                 # Settings panel (profile, billing, notifications)
 │   │
 │   # -- Existing Prototype Modules (to be merged incrementally) --
@@ -218,7 +219,7 @@ backend/src/
 │   │   └── auth.module.ts        # Module config
 │   ├── users/
 │   ├── institutions/             # University partners
-│   ├── academy/                  # Institutional courses metadata
+│   ├── academy/                  # Enterprise B2B module — Org, Dept, Employee & RBAC management
 │   ├── programs/                 # Curriculums & courses modules
 │   ├── learning/                 # Lesson status and player logic
 │   ├── assessments/              # Quizzes & grading models

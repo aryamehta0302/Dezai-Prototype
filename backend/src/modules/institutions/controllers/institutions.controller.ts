@@ -19,7 +19,6 @@ import { UserRole } from '@prisma/client';
 import {
   CreateInstitutionDto,
   UpdateInstitutionDto,
-  UpdateFacultyVerificationDto,
 } from '../dto/institution.dto';
 
 @Controller('institutions')
@@ -68,33 +67,10 @@ export class InstitutionsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.DEZAI_ADMIN)
   @HttpCode(HttpStatus.CREATED)
-  async createInstitution(@Body() body: CreateInstitutionDto) {
-    return this.institutionsService.createInstitution(body);
+  async createInstitution(@Req() req, @Body() body: CreateInstitutionDto) {
+    return this.institutionsService.createInstitution(req.user.id, body);
   }
 
-  /**
-   * PATCH /api/institutions/faculty/:facultyMemberId/verify
-   * Update a faculty member's verification status (PENDING → APPROVED | REJECTED).
-   * Protected — UNIVERSITY_ADMIN (same institution) or DEZAI_ADMIN.
-   *
-   * NOTE: This specific nested route MUST be declared before /:id and /:id/faculty
-   * to prevent NestJS from treating "faculty" as an :id value.
-   */
-  @Patch('faculty/:facultyMemberId/verify')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.UNIVERSITY_ADMIN, UserRole.DEZAI_ADMIN)
-  async verifyFaculty(
-    @Req() req,
-    @Param('facultyMemberId') facultyMemberId: string,
-    @Body() body: UpdateFacultyVerificationDto,
-  ) {
-    return this.institutionsService.updateFacultyVerificationStatus(
-      req.user.id,
-      req.user.role,
-      facultyMemberId,
-      body.verificationStatus,
-    );
-  }
 
   /**
    * GET /api/institutions/:id
@@ -116,10 +92,11 @@ export class InstitutionsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.DEZAI_ADMIN)
   async updateInstitution(
+    @Req() req,
     @Param('id') id: string,
     @Body() body: UpdateInstitutionDto,
   ) {
-    return this.institutionsService.updateInstitution(id, body);
+    return this.institutionsService.updateInstitution(req.user.id, id, body);
   }
 
   /**

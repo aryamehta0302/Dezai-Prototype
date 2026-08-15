@@ -3,10 +3,21 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Inject,
+  Logger,
 } from "@nestjs/common";
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
+import { Cache } from "cache-manager";
 import { PrismaService } from "../../../database/prisma.service";
-import { UserRole, AuditAction, ExamStatus, ViolationType, Difficulty } from "@prisma/client";
+import { RedisHealthService } from "../../../shared/infrastructure/redis-health.service";
+import { UserRole, AuditAction, ExamStatus, ViolationType, Difficulty, AchievementCategory, Prisma } from "@prisma/client";
 import { AuditService } from "../../audit/services/audit.service";
+import { PassFailEvaluationService } from './pass-fail-evaluation.service';
+import { AwardService } from '../../achievements/services/award.service';
+import type {
+  ResultAnalyticsResponseDto,
+  MissedQuestionsAnalyticsResponseDto,
+} from '../dto/result.dto';
 import {
   CreateQuestionBankDto,
   UpdateQuestionBankDto,
@@ -27,12 +38,47 @@ function shuffleArray<T>(array: T[]): T[] {
   return result;
 }
 
+
+
 @Injectable()
 export class AssessmentService {
+  private readonly logger = new Logger(AssessmentService.name);
+
   constructor(
     private prisma: PrismaService,
-    private auditService: AuditService
+    private auditService: AuditService,
+    private passFailEvaluationService: PassFailEvaluationService,
+    private awardService: AwardService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private redisHealth: RedisHealthService,
   ) { }
+
+  // ─────────────────── SPRINT 7: CACHE INVALIDATION ───────────────────
+
+  /**
+   * Invalidates cached question pools for all assessments linked to a question bank.
+   * Called when questions or banks are created/updated/deleted.
+   */
+  private async invalidateQuestionBankCache(bankId: string): Promise<void> {
+    const assessments = await this.prisma.assessment.findMany({
+      where: { questionBankId: bankId },
+      select: { id: true },
+    });
+
+    for (const assessment of assessments) {
+      const cacheKey = `qbank:${assessment.id}:questions`;
+      // Only attempt cache invalidation if Redis is believed healthy
+      if (this.redisHealth.isAvailable) {
+        try {
+          await this.cacheManager.del(cacheKey);
+        } catch (err) {
+          this.redisHealth.recordFailure();
+          this.logger.warn(`Cache DEL failed for ${cacheKey}: ${(err as Error).message}`);
+        }
+      }
+      this.logger.debug(`Cache INVALIDATED: ${cacheKey}`);
+    }
+  }
 
   // ─────────────────── OWNERSHIP GUARD ───────────────────
 
@@ -161,6 +207,8 @@ export class AssessmentService {
       `QuestionBank "${bank.title}" (ID: ${bank.id}) created by ${userRole}`
     );
 
+    await this.invalidateQuestionBankCache(bank.id);
+
     return this.getQuestionBankById(bank.id);
   }
 
@@ -178,10 +226,15 @@ export class AssessmentService {
       AuditAction.ASSESSMENT_PUBLISHED,
       `QuestionBank "${bank.title}" (ID: ${bank.id}) updated`
     );
+
+    await this.invalidateQuestionBankCache(id);
+
     return bank;
   }
 
   async deleteQuestionBank(id: string, userId: string) {
+    await this.invalidateQuestionBankCache(id);
+
     const bank = await this.prisma.questionBank.delete({ where: { id } });
     await this.auditService.logAction(
       userId,
@@ -224,6 +277,8 @@ export class AssessmentService {
       `Question (ID: ${question.id}) added to QuestionBank "${bank.title}" (ID: ${bankId})`
     );
 
+    await this.invalidateQuestionBankCache(bankId);
+
     return question;
   }
 
@@ -252,6 +307,8 @@ export class AssessmentService {
       `Question (ID: ${questionId}) updated`
     );
 
+    await this.invalidateQuestionBankCache(existing.questionBankId);
+
     return question;
   }
 
@@ -272,6 +329,8 @@ export class AssessmentService {
       AuditAction.ASSESSMENT_PUBLISHED,
       `Question (ID: ${questionId}) deleted from QuestionBank (ID: ${existing.questionBankId})`
     );
+
+    await this.invalidateQuestionBankCache(existing.questionBankId);
   }
 
   async duplicateQuestion(questionId: string, userId: string) {
@@ -305,6 +364,8 @@ export class AssessmentService {
       AuditAction.ASSESSMENT_PUBLISHED,
       `Question (ID: ${questionId}) duplicated as (ID: ${duplicate.id})`
     );
+
+    await this.invalidateQuestionBankCache(original.questionBankId);
 
     return duplicate;
   }
@@ -377,6 +438,9 @@ export class AssessmentService {
         passingScore: data.passingScore ?? 80,
         sampleSize: data.sampleSize ?? 15,
         timeLimit: data.timeLimit ?? 1800,
+        maxAttempts: data.maxAttempts ?? 8,
+        timeLimitEnabled: data.timeLimitEnabled ?? true,
+        allowResume: data.allowResume ?? true,
       },
     });
 
@@ -407,6 +471,9 @@ export class AssessmentService {
         passingScore: data.passingScore,
         sampleSize: data.sampleSize,
         timeLimit: data.timeLimit,
+        maxAttempts: data.maxAttempts,
+        timeLimitEnabled: data.timeLimitEnabled,
+        allowResume: data.allowResume,
       },
     });
 
@@ -519,168 +586,30 @@ export class AssessmentService {
     }
 
     const passedCount = attempts.filter((a) => a.passed).length;
-    const scores = attempts.map((a) => a.score);
-    const sum = scores.reduce((acc, s) => acc + s, 0);
+    const percentages = attempts.map((a) =>
+      a.score > assessment.sampleSize
+        ? a.score
+        : this.passFailEvaluationService.calculatePercentage(a.score, assessment.sampleSize)
+    );
+    const sum = percentages.reduce((acc, s) => acc + s, 0);
 
     return {
       total,
       passRate: Math.round((passedCount / total) * 100 * 100) / 100,
       averageScore: Math.round((sum / total) * 100) / 100,
-      highestScore: Math.max(...scores),
-      lowestScore: Math.min(...scores),
+      highestScore: Math.max(...percentages),
+      lowestScore: Math.min(...percentages),
     };
   }
 
   // ─────────────────── EXAM SESSIONS & PROCTORING ───────────────────
-
-  // Helper to retrieve mock questions matching frontend data
-  private getMockQuestionsData(assessmentId: string) {
-    if (assessmentId === 'quiz-1') {
-      return [
-        { id: "q-1-1", text: "What is the primary advantage of transformer architecture over RNNs?", options: ["Faster training through parallelization", "Lower memory usage", "Simpler implementation", "Better for small datasets"], correctAnswer: 0 },
-        { id: "q-1-2", text: "Which of the following is NOT a key consideration in an AI readiness assessment?", options: ["Data infrastructure maturity", "Organizational culture", "Office location", "Technical talent availability"], correctAnswer: 2 },
-        { id: "q-1-3", text: "What does 'responsible AI' primarily focus on?", options: ["Maximizing profit", "Fairness, transparency, and accountability", "Speed of deployment", "Reducing headcount"], correctAnswer: 1 },
-        { id: "q-1-4", text: "In a Build vs Buy vs Partner decision for AI, what favors 'Buy'?", options: ["Unique competitive advantage needed", "Commodity use case with mature vendors", "No existing solutions in market", "Unlimited budget"], correctAnswer: 1 },
-        { id: "q-1-5", text: "Which framework is commonly used for AI ethics governance?", options: ["Scrum", "NIST AI RMF", "Waterfall", "Six Sigma"], correctAnswer: 1 },
-        { id: "q-1-6", text: "What is the 'hallucination' problem in generative AI?", options: ["Models generate visually distorted images", "Models produce plausible but factually incorrect outputs", "Models require too much memory", "Models cannot process images"], correctAnswer: 1 },
-        { id: "q-1-7", text: "Which is the most critical success factor for enterprise AI adoption?", options: ["Latest hardware", "Executive sponsorship and change management", "Largest dataset possible", "Most parameters in the model"], correctAnswer: 1 },
-        { id: "q-1-8", text: "What is the purpose of an AI governance committee?", options: ["To write code", "To oversee ethical use, risk, and compliance of AI systems", "To replace management", "To train AI models"], correctAnswer: 1 },
-        { id: "q-1-9", text: "Data privacy regulations in India are governed by which act?", options: ["GDPR", "CCPA", "Digital Personal Data Protection Act, 2023", "IT Act, 2000 only"], correctAnswer: 2 },
-        { id: "q-1-10", text: "What is the ROI measurement challenge unique to AI projects?", options: ["They always lose money", "Benefits are often indirect and accrue over time", "They never show results", "AI projects have fixed costs"], correctAnswer: 1 },
-      ];
-    } else if (assessmentId === 'quiz-2') {
-      return [
-        { id: "q-2-1", text: "Which algorithm is best suited for binary classification?", options: ["Linear Regression", "Logistic Regression", "K-Means", "PCA"], correctAnswer: 1 },
-        { id: "q-2-2", text: "What is overfitting?", options: ["Model performs poorly on all data", "Model performs well on training data but poorly on test data", "Model is too simple", "Model has too few features"], correctAnswer: 1 },
-        { id: "q-2-3", text: "What does the R² score measure?", options: ["Classification accuracy", "Proportion of variance explained by the model", "Training speed", "Number of features"], correctAnswer: 1 },
-        { id: "q-2-4", text: "Which is an unsupervised learning algorithm?", options: ["Random Forest", "K-Means Clustering", "Logistic Regression", "SVM"], correctAnswer: 1 },
-        { id: "q-2-5", text: "What is cross-validation used for?", options: ["Data cleaning", "Estimating model performance on unseen data", "Feature selection only", "Data visualization"], correctAnswer: 1 },
-        { id: "q-2-6", text: "In a confusion matrix, what is a 'false positive'?", options: ["Correctly predicted positive", "Incorrectly predicted as positive when actually negative", "Correctly predicted negative", "Missing data"], correctAnswer: 1 },
-        { id: "q-2-7", text: "What is the purpose of regularization?", options: ["Speed up training", "Prevent overfitting by penalizing complex models", "Increase model complexity", "Remove features"], correctAnswer: 1 },
-        { id: "q-2-8", text: "Which activation function is commonly used in hidden layers of neural networks?", options: ["Sigmoid", "ReLU", "Softmax", "Step function"], correctAnswer: 1 },
-        { id: "q-2-9", text: "What does 'gradient descent' optimize?", options: ["Data quality", "Loss function (minimizes error)", "Feature count", "Training time"], correctAnswer: 1 },
-        { id: "q-2-10", text: "What is feature scaling important for?", options: ["Reducing dataset size", "Ensuring features contribute equally to the model", "Adding new features", "Removing outliers"], correctAnswer: 1 },
-      ];
-    } else {
-      // Default fallback for dynamically generated quizzes (quiz-3 to quiz-12)
-      return Array.from({ length: 8 }, (_, j) => ({
-        id: `q-${assessmentId}-${j + 1}`,
-        text: `Question ${j + 1}: Which of the following best describes the key concept from Module ${Math.ceil((j + 1) / 2)}?`,
-        options: ["Option A - Correct answer", "Option B - Common misconception", "Option C - Related but incorrect", "Option D - Unrelated concept"],
-        correctAnswer: 0,
-      }));
-    }
-  }
-
-  async ensureAssessmentExists(assessmentId: string) {
-    let assessment = await this.prisma.assessment.findUnique({
-      where: { id: assessmentId },
-    });
-
-    if (!assessment) {
-      // 1. Ensure default institution exists
-      const inst = await this.prisma.institution.upsert({
-        where: { id: 'default-institution-id' },
-        update: {},
-        create: {
-          id: 'default-institution-id',
-          name: 'Dezai Technical University',
-          description: 'Default institution for V1 demonstration and development.',
-        },
-      });
-
-      // 2. Ensure default program exists
-      const program = await this.prisma.program.upsert({
-        where: { id: 'default-program-id' },
-        update: {},
-        create: {
-          id: 'default-program-id',
-          title: 'Strategic AI Leadership',
-          description: 'Master general and specialized generative AI models.',
-          institutionId: inst.id,
-        },
-      });
-
-      // 3. Ensure default track exists
-      const track = await this.prisma.programTrack.upsert({
-        where: { id: 'default-track-id' },
-        update: {},
-        create: {
-          id: 'default-track-id',
-          programId: program.id,
-          type: 'ROOTS',
-          title: 'Roots Track',
-        },
-      });
-
-      // 4. Ensure default module exists
-      const module = await this.prisma.module.upsert({
-        where: { id: 'default-module-id' },
-        update: {},
-        create: {
-          id: 'default-module-id',
-          trackId: track.id,
-          title: 'Core AI Frameworks',
-          order: 1,
-        },
-      });
-
-      // 5. Ensure question bank exists
-      const qBank = await this.prisma.questionBank.upsert({
-        where: { id: `qbank-${assessmentId}` },
-        update: {},
-        create: {
-          id: `qbank-${assessmentId}`,
-          title: `${assessmentId} Question Bank`,
-          institutionId: inst.id,
-        },
-      });
-
-      // 6. Create assessment
-      assessment = await this.prisma.assessment.create({
-        data: {
-          id: assessmentId,
-          moduleId: module.id,
-          questionBankId: qBank.id,
-          title: `${assessmentId.replace('-', ' ').toUpperCase()} Assessment`,
-          passingScore: 70,
-          sampleSize: 10,
-        },
-      });
-
-      // 7. Seed questions for the mock quizzes
-      const questionsData = this.getMockQuestionsData(assessmentId);
-      for (const q of questionsData) {
-        const question = await this.prisma.questionBankQuestion.create({
-          data: {
-            id: q.id,
-            questionBankId: qBank.id,
-            text: q.text,
-          },
-        });
-
-        for (let idx = 0; idx < q.options.length; idx++) {
-          await this.prisma.questionOption.create({
-            data: {
-              id: `${q.id}-opt-${idx}`,
-              questionId: question.id,
-              text: q.options[idx],
-              isCorrect: idx === q.correctAnswer,
-            },
-          });
-        }
-      }
-    }
-
-    return assessment;
-  }
 
   /**
  * Samples `sampleSize` random questions from the assessment's question bank,
  * shuffles question order and each question's option order, and returns
  * a locked, JSON-serializable structure to store on the ExamSession.
  */
-  private async generateQuestionSet(assessmentId: string) {
+  async generateQuestionSet(assessmentId: string) {
     const assessment = await this.prisma.assessment.findUnique({
       where: { id: assessmentId },
       include: {
@@ -726,10 +655,22 @@ export class AssessmentService {
   }
 
   async createSession(userId: string, assessmentId: string) {
-    // Ensure the assessment exists (seeding if missing)
-    await this.ensureAssessmentExists(assessmentId);
+    const assessment = await this.prisma.assessment.findUnique({
+      where: { id: assessmentId },
+    });
 
-    // Check for existing active session
+    if (!assessment) {
+      throw new NotFoundException(`Assessment with ID ${assessmentId} not found`);
+    }
+
+    const existingAttempts = await this.prisma.assessmentAttempt.findMany({
+      where: { userId, assessmentId },
+    });
+
+    if (existingAttempts.length >= assessment.maxAttempts) {
+      throw new BadRequestException('Maximum attempts reached');
+    }
+
     const activeSession = await this.prisma.examSession.findFirst({
       where: {
         userId,
@@ -742,22 +683,8 @@ export class AssessmentService {
       return activeSession;
     }
 
-    // Check attempt count (max 3 free attempts)
-    const attemptsCount = await this.prisma.assessmentAttempt.count({
-      where: {
-        userId,
-        assessmentId,
-      },
-    });
-
-    if (attemptsCount >= 3) {
-      throw new BadRequestException('Maximum attempts (3) exceeded for this assessment.');
-    }
-
-    // Generate this student's locked, shuffled question set
     const questionSet = await this.generateQuestionSet(assessmentId);
 
-    // Create new exam session
     return this.prisma.examSession.create({
       data: {
         userId,
@@ -771,7 +698,7 @@ export class AssessmentService {
   }
 
   async getActiveSession(userId: string, assessmentId?: string) {
-    const whereClause: any = {
+    const whereClause: Record<string, unknown> = {
       userId,
       status: ExamStatus.ACTIVE,
     };
@@ -779,7 +706,7 @@ export class AssessmentService {
       whereClause.assessmentId = assessmentId;
     }
     return this.prisma.examSession.findFirst({
-      where: whereClause,
+      where: whereClause as Prisma.ExamSessionWhereInput,
     });
   }
 
@@ -866,6 +793,13 @@ export class AssessmentService {
           completedAt: new Date(),
         },
       });
+
+      await this.auditService.logAction(
+        userId,
+        AuditAction.ASSESSMENT_PUBLISHED,
+        `AttemptTerminated: sessionId=${sessionId}, userId=${userId}`,
+      );
+      await this.awardService.checkAndAward(userId, AchievementCategory.ASSESSMENT);
     }
 
     return updatedSession;
@@ -876,6 +810,22 @@ export class AssessmentService {
 
     if (session.status !== ExamStatus.ACTIVE) {
       throw new BadRequestException('Exam session is not active or already submitted.');
+    }
+
+    const assessment = await this.prisma.assessment.findUnique({
+      where: { id: session.assessmentId },
+    });
+
+    const existingAttempts = await this.prisma.assessmentAttempt.count({
+      where: {
+        userId,
+        assessmentId: session.assessmentId,
+        completedAt: { not: null },
+      },
+    });
+
+    if (assessment && existingAttempts >= assessment.maxAttempts) {
+      throw new BadRequestException('Maximum attempts reached');
     }
 
     // Use the LOCKED question set from session creation, not the live bank
@@ -921,6 +871,11 @@ export class AssessmentService {
 
     const passed = percentage >= session.assessment.passingScore;
 
+    // Store correctCount (score) adjusted for proctoring deduction
+    const finalScore = session.scoreDeduction > 0
+      ? Math.max(0, Math.round((percentage / 100) * totalQuestions))
+      : score;
+
     // Update session status to SUBMITTED
     await this.prisma.examSession.update({
       where: { id: sessionId },
@@ -935,7 +890,7 @@ export class AssessmentService {
       data: {
         userId,
         assessmentId: session.assessmentId,
-        score: percentage,
+        score: finalScore,
         passed,
         completedAt: new Date(),
         attemptAnswers: {
@@ -952,8 +907,408 @@ export class AssessmentService {
 
     return {
       attemptId: attempt.id,
-      score: percentage,
+      score: finalScore,
       passed,
+    };
+  }
+
+  // ─────────────────── FACULTY OWNERSHIP VALIDATION ───────────────────
+
+  async validateAssessmentFacultyOwnership(
+    assessmentId: string,
+    userId: string,
+  ): Promise<true> {
+    const assessment = await this.prisma.assessment.findUnique({
+      where: { id: assessmentId },
+      include: {
+        module: {
+          include: {
+            track: {
+              include: {
+                program: {
+                  include: {
+                    faculty: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!assessment) {
+      throw new NotFoundException(`Assessment with ID ${assessmentId} not found`);
+    }
+
+    const program = assessment.module.track.program;
+
+    // Check if the faculty member owns this program
+    const faculty = await this.prisma.facultyMember.findUnique({
+      where: { userId },
+    });
+
+    if (!faculty) {
+      throw new ForbiddenException('Faculty profile not found');
+    }
+
+    if (program.facultyId !== faculty.id && program.institutionId !== faculty.institutionId) {
+      throw new ForbiddenException(
+        'You do not have access to this assessment',
+      );
+    }
+
+    return true;
+  }
+
+  // ─────────────────── RESULT ANALYTICS ───────────────────
+
+  /**
+   * Aggregates completed attempt data for faculty analytics:
+   * total attempts, unique students, average score/percentage,
+   * pass rate, and score distribution buckets.
+   */
+  async getResultAnalytics(
+    assessmentId: string,
+  ): Promise<ResultAnalyticsResponseDto> {
+    const assessment = await this.prisma.assessment.findUnique({
+      where: { id: assessmentId },
+    });
+
+    if (!assessment) {
+      throw new NotFoundException(`Assessment with ID ${assessmentId} not found`);
+    }
+
+    const attempts = await this.prisma.assessmentAttempt.findMany({
+      where: {
+        assessmentId,
+        completedAt: { not: null },
+      },
+      select: {
+        score: true,
+        passed: true,
+        userId: true,
+      },
+    });
+
+    const totalAttempts = attempts.length;
+
+    if (totalAttempts === 0) {
+      return {
+        assessmentId,
+        totalAttempts: 0,
+        uniqueStudents: 0,
+        averageScore: 0,
+        averagePercentage: 0,
+        passRate: 0,
+        passedAttempts: 0,
+        failedAttempts: 0,
+        scoreDistribution: [
+          { range: '0-20%', count: 0 },
+          { range: '21-40%', count: 0 },
+          { range: '41-60%', count: 0 },
+          { range: '61-80%', count: 0 },
+          { range: '81-100%', count: 0 },
+        ],
+      };
+    }
+
+    const uniqueStudents = new Set(attempts.map((a) => a.userId)).size;
+    const passedAttempts = attempts.filter((a) => a.passed).length;
+    const failedAttempts = totalAttempts - passedAttempts;
+    const passRate = this.passFailEvaluationService.calculatePercentage(
+      passedAttempts,
+      totalAttempts,
+    );
+
+    const scores = attempts.map((a) =>
+      a.score > assessment.sampleSize
+        ? Math.round((a.score / 100) * assessment.sampleSize)
+        : a.score
+    );
+    const scoreSum = scores.reduce((acc, s) => acc + s, 0);
+    const averageScore = Math.round((scoreSum / totalAttempts) * 100) / 100;
+
+    // Calculate percentages for each attempt
+    const percentages = attempts.map((a) =>
+      a.score > assessment.sampleSize
+        ? a.score
+        : this.passFailEvaluationService.calculatePercentage(
+            a.score,
+            assessment.sampleSize,
+          ),
+    );
+    const percentageSum = percentages.reduce((acc, p) => acc + p, 0);
+    const averagePercentage =
+      Math.round((percentageSum / totalAttempts) * 100) / 100;
+
+    // Score distribution buckets
+    const buckets = [
+      { range: '0-20%', min: 0, max: 20, count: 0 },
+      { range: '21-40%', min: 21, max: 40, count: 0 },
+      { range: '41-60%', min: 41, max: 60, count: 0 },
+      { range: '61-80%', min: 61, max: 80, count: 0 },
+      { range: '81-100%', min: 81, max: 100, count: 0 },
+    ];
+
+    for (const pct of percentages) {
+      for (const bucket of buckets) {
+        if (pct >= bucket.min && pct <= bucket.max) {
+          bucket.count += 1;
+          break;
+        }
+      }
+    }
+
+    return {
+      assessmentId,
+      totalAttempts,
+      uniqueStudents,
+      averageScore,
+      averagePercentage,
+      passRate,
+      passedAttempts,
+      failedAttempts,
+      scoreDistribution: buckets.map((b) => ({
+        range: b.range,
+        count: b.count,
+      })),
+    };
+  }
+
+  // ─────────────────── MISSED QUESTIONS ANALYTICS ───────────────────
+
+  /**
+   * Aggregates per-question wrong-answer rates across all completed
+   * attempts for a given assessment. Sorted by wrongRate DESC
+   * (hardest questions first).
+   */
+  async getMissedQuestionsAnalytics(
+    assessmentId: string,
+  ): Promise<MissedQuestionsAnalyticsResponseDto> {
+    const assessment = await this.prisma.assessment.findUnique({
+      where: { id: assessmentId },
+      include: {
+        questionBank: {
+          include: {
+            questions: {
+              select: {
+                id: true,
+                text: true,
+                category: true,
+                difficulty: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!assessment) {
+      throw new NotFoundException(`Assessment with ID ${assessmentId} not found`);
+    }
+
+    // Get all attempt answers for completed attempts of this assessment
+    const answers = await this.prisma.attemptAnswer.findMany({
+      where: {
+        attempt: {
+          assessmentId,
+          completedAt: { not: null },
+        },
+      },
+      select: {
+        questionId: true,
+        isCorrect: true,
+      },
+    });
+
+    // Aggregate per question
+    const questionStatsMap = new Map<
+      string,
+      { totalAnswered: number; totalWrong: number }
+    >();
+
+    for (const ans of answers) {
+      const stats = questionStatsMap.get(ans.questionId) ?? {
+        totalAnswered: 0,
+        totalWrong: 0,
+      };
+      stats.totalAnswered += 1;
+      if (!ans.isCorrect) {
+        stats.totalWrong += 1;
+      }
+      questionStatsMap.set(ans.questionId, stats);
+    }
+
+    // Build response, joining with question metadata
+    const questionMap = new Map(
+      assessment.questionBank.questions.map((q) => [q.id, q]),
+    );
+
+    const questions = Array.from(questionStatsMap.entries())
+      .map(([questionId, stats]) => {
+        const qMeta = questionMap.get(questionId);
+        const wrongRate = this.passFailEvaluationService.calculatePercentage(
+          stats.totalWrong,
+          stats.totalAnswered,
+        );
+
+        return {
+          questionId,
+          questionText: qMeta?.text ?? 'Unknown question',
+          category: qMeta?.category ?? null,
+          difficulty: qMeta?.difficulty ?? null,
+          totalAnswered: stats.totalAnswered,
+          totalWrong: stats.totalWrong,
+          wrongRate,
+        };
+      })
+      .sort((a, b) => b.wrongRate - a.wrongRate);
+
+    return {
+      assessmentId,
+      questions,
+    };
+  }
+
+  async getFacultyInsightsStreamData(userId: string, role: UserRole) {
+    let programIds: string[] = [];
+
+    if (role === UserRole.DEZAI_ADMIN) {
+      const programs = await this.prisma.program.findMany({ select: { id: true } });
+      programIds = programs.map((p) => p.id);
+    } else if (role === UserRole.UNIVERSITY_ADMIN) {
+      const admin = await this.prisma.institutionAdmin.findUnique({
+        where: { userId },
+      });
+      if (admin) {
+        const programs = await this.prisma.program.findMany({
+          where: { institutionId: admin.institutionId },
+          select: { id: true },
+        });
+        programIds = programs.map((p) => p.id);
+      }
+    } else if (role === UserRole.FACULTY) {
+      const faculty = await this.prisma.facultyMember.findUnique({
+        where: { userId },
+      });
+      if (faculty) {
+        const programs = await this.prisma.program.findMany({
+          where: { facultyId: faculty.id },
+          select: { id: true },
+        });
+        programIds = programs.map((p) => p.id);
+      }
+    }
+
+    if (programIds.length === 0) {
+      return {
+        timestamp: new Date().toISOString(),
+        summary: {
+          totalAtRisk: 0,
+          totalLowProgress: 0,
+          totalInactive: 0,
+          totalStudentsMonitored: 0,
+        },
+        alerts: [],
+      };
+    }
+
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: { programId: { in: programIds } },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            lastActiveAt: true,
+            attempts: {
+              select: {
+                assessmentId: true,
+                passed: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    let totalAtRisk = 0;
+    let totalLowProgress = 0;
+    let totalInactive = 0;
+    const alerts: any[] = [];
+
+    for (const e of enrollments) {
+      const isInactive = !e.user.lastActiveAt || e.user.lastActiveAt < sevenDaysAgo;
+      const isLowProgress = e.progress < 25;
+
+      const failuresPerAssessment = new Map<string, number>();
+      e.user.attempts.forEach((att) => {
+        if (!att.passed) {
+          failuresPerAssessment.set(att.assessmentId, (failuresPerAssessment.get(att.assessmentId) ?? 0) + 1);
+        }
+      });
+
+      let hasRepeatedFailures = false;
+      failuresPerAssessment.forEach((count) => {
+        if (count >= 2) {
+          hasRepeatedFailures = true;
+        }
+      });
+
+      const reasons: string[] = [];
+      if (isInactive) {
+        reasons.push("inactivity");
+        totalInactive++;
+        alerts.push({
+          type: "INACTIVE",
+          userId: e.user.id,
+          userName: e.user.name || "Unknown Student",
+          detail: `Inactive for ${
+            e.user.lastActiveAt
+              ? Math.floor((Date.now() - e.user.lastActiveAt.getTime()) / (1000 * 60 * 60 * 24))
+              : "many"
+          } days`,
+        });
+      }
+      if (isLowProgress) {
+        reasons.push("low progress");
+        totalLowProgress++;
+        alerts.push({
+          type: "LOW_PROGRESS",
+          userId: e.user.id,
+          userName: e.user.name || "Unknown Student",
+          detail: `Low syllabus progress (${e.progress}%)`,
+        });
+      }
+
+      const isAtRisk = hasRepeatedFailures || reasons.length > 1;
+      if (isAtRisk) {
+        totalAtRisk++;
+        alerts.push({
+          type: "AT_RISK",
+          userId: e.user.id,
+          userName: e.user.name || "Unknown Student",
+          detail: hasRepeatedFailures
+            ? "Repeated quiz failures (2+ attempts)"
+            : "Multiple risk factors (inactive and low progress)",
+        });
+      }
+    }
+
+    return {
+      timestamp: new Date().toISOString(),
+      summary: {
+        totalAtRisk,
+        totalLowProgress,
+        totalInactive,
+        totalStudentsMonitored: enrollments.length,
+      },
+      alerts,
     };
   }
 }

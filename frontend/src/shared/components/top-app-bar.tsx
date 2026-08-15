@@ -1,5 +1,5 @@
 "use client";
-
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/shared/utils/cn";
@@ -20,7 +20,7 @@ import {
 import { useState } from "react";
 
 interface TopAppBarProps {
-  variant?: "default" | "student" | "admin" | "university";
+  variant?: "default" | "student" | "admin" | "university" | "employee" | "enterprise";
   user?: {
     name: string;
     email: string;
@@ -39,6 +39,16 @@ const studentNav = [
   { href: "/profile", label: "Profile", icon: User },
 ];
 
+const employeeNav = [
+  { href: "/enterprise/credentials", label: "My Compliance", icon: Award },
+];
+
+const enterpriseNav = [
+  { href: "/enterprise/dashboard", label: "Compliance Dashboard", icon: LayoutDashboard },
+  { href: "/enterprise/admin/departments", label: "Departments", icon: BookOpen },
+  { href: "/enterprise/admin/directory", label: "Org Directory", icon: User },
+];
+
 export function TopAppBar({
   variant = "default",
   user,
@@ -50,23 +60,32 @@ export function TopAppBar({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
-  const nav = variant === "student" || variant === "default" ? studentNav : [];
+  const getNav = () => {
+    if (variant === "employee") return employeeNav;
+    if (variant === "enterprise") return enterpriseNav;
+    if (variant === "student" || variant === "default") return studentNav;
+    return [];
+  };
+
+  const nav = getNav();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border-light bg-white/95 backdrop-blur-sm">
-      <div className="mx-auto flex h-16 max-w-[var(--container-max)] items-center justify-between px-4 sm:px-6 lg:px-12">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-white">
+      <div className="mx-auto flex h-[72px] max-w-[var(--container-max)] items-center justify-between px-6 sm:px-8 lg:px-12">
         {/* Logo */}
         <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
-            <GraduationCap className="h-5 w-5 text-white" />
-          </div>
-          <span className="text-xl font-bold text-on-surface font-[family-name:var(--font-heading)]">
-            Dezai<span className="text-primary">.ai</span>
-          </span>
+        <Image 
+        src="/dezai.png"
+        alt="Dezai.ai Logo" 
+        width={70} 
+        height={55} 
+        className="object-contain"
+        />
+
         </Link>
 
         {/* Desktop Nav */}
-        {user && nav.length > 0 && (
+        {/* {user && nav.length > 0 && (
           <nav className="hidden md:flex items-center gap-1">
             {nav.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
@@ -75,10 +94,10 @@ export function TopAppBar({
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    "flex items-center gap-2 rounded-xl px-4 h-11 text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-on-surface-variant hover:bg-surface-low hover:text-on-surface"
+                      ? "bg-primary-container text-primary"
+                      : "text-secondary hover:bg-surface-low hover:text-on-surface"
                   )}
                 >
                   <item.icon className="h-4 w-4" />
@@ -87,23 +106,40 @@ export function TopAppBar({
               );
             })}
           </nav>
-        )}
+        )} */}
+        {/* Desktop Nav */}
+{user && nav.length > 0 && (
+  <nav className="hidden md:flex items-center gap-8 ml-6">
+    {nav.map((item) => {
+      const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+      return (
+        <Link
+          key={item.href}
+          href={item.href}
+          className={cn(
+            "flex items-center gap-2.5 py-1.5 text-sm transition-all border-b-[3px]",
+            isActive
+              ? "text-primary font-bold border-credential-gold"  // Navy text & Gold underline
+              : "text-slate-500 font-medium border-transparent hover:text-[#0F172A]" // Clean inactive state
+          )}
+        >
+          <item.icon className={cn("h-4 w-4", isActive ? "stroke-[2.5px]" : "stroke-2")} />
+          {item.label}
+        </Link>
+      );
+    })}
+  </nav>
+)}
 
         {/* Right Side */}
         <div className="flex items-center gap-2">
-          {/* Search */}
-          {user && (
-            <button className="hidden sm:flex items-center gap-2 rounded-lg border border-border-light bg-surface-low px-3 py-1.5 text-sm text-muted hover:border-border transition-colors">
-              <Search className="h-4 w-4" />
-              <span className="hidden lg:inline">Search courses...</span>
-            </button>
-          )}
 
           {/* Notifications */}
           {user && (
             <button
               onClick={onNotificationClick}
               className="relative rounded-lg p-2 text-on-surface-variant hover:bg-surface-low transition-colors"
+              aria-label="Notifications"
             >
               <Bell className="h-5 w-5" />
               {notificationCount > 0 && (
@@ -120,9 +156,16 @@ export function TopAppBar({
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
                 className="flex items-center gap-2 rounded-lg p-1.5 hover:bg-surface-low transition-colors"
+                aria-label="User menu"
+                aria-expanded={profileOpen}
+                aria-haspopup="true"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                  {user.name.charAt(0).toUpperCase()}
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary overflow-hidden">
+                  {user.avatar ? (
+                    <img src={user.avatar} alt="" className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                  ) : (
+                    user.name.charAt(0).toUpperCase()
+                  )}
                 </div>
                 <span className="hidden lg:block text-sm font-medium text-on-surface">
                   {user.name.split(" ")[0]}
@@ -147,7 +190,7 @@ export function TopAppBar({
                       Profile
                     </Link>
                     <Link
-                      href="/settings/profile"
+                      href="/profile/settings"
                       onClick={() => setProfileOpen(false)}
                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-on-surface-variant hover:bg-surface-low transition-colors"
                     >
@@ -187,6 +230,8 @@ export function TopAppBar({
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
               className="md:hidden rounded-lg p-2 text-on-surface-variant hover:bg-surface-low"
+              aria-label="Toggle mobile menu"
+              aria-expanded={mobileOpen}
             >
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -207,8 +252,8 @@ export function TopAppBar({
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-on-surface-variant hover:bg-surface-low"
+                    ?"text-primary font-bold  "  // Navy text & Gold underline
+              : "text-slate-500 font-medium border-transparent hover:text-[#0F172A]" // Clean inactive state
                 )}
               >
                 <item.icon className="h-4 w-4" />

@@ -37,8 +37,8 @@ function flattenLessons(tracks: ApiTrack[]): ApiModule["lessons"] {
 }
 
 export const courseService = {
-  async loadPrograms(): Promise<ApiProgram[]> {
-    if (cachedPrograms) return cachedPrograms;
+  async loadPrograms(bypassCache = false): Promise<ApiProgram[]> {
+    if (cachedPrograms && !bypassCache) return cachedPrograms;
     const res = await programsApi.getAll();
     if (res.success) {
       cachedPrograms = res.programs;
@@ -54,7 +54,7 @@ export const courseService = {
   },
 
   async getCourses(filters?: Partial<CourseFilter>): Promise<ApiProgram[]> {
-    let courses = await this.loadPrograms();
+    let courses = await this.loadPrograms(true); // Fetch fresh list
 
     if (filters) {
       if (filters.search) {
@@ -77,9 +77,10 @@ export const courseService = {
   },
 
   async getBySlug(slug: string): Promise<ApiProgram | null> {
-    await this.loadPrograms();
+    await this.loadPrograms(true); // Always bypass cache for detail view to get assessments
     return cachedSlugMap?.get(slug) ?? null;
   },
+
 
   async getById(id: string): Promise<ApiProgram | null> {
     try {

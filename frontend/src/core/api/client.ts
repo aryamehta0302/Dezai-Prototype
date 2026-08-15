@@ -5,6 +5,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:3001/api";
 
 type ApiRequestOptions = RequestInit & {
     params?: Record<string, string | number>;
+    public?: boolean;
 };
 
 /**
@@ -15,20 +16,48 @@ type ApiRequestOptions = RequestInit & {
  * const data = await apiClient.get('/users/me');
  */
 class ApiClient {
+    /**
+     * Deduplicates concurrent getSession() calls during hydration.
+     * Multiple authenticated requests that fire simultaneously (e.g., from
+     * layout useEffect hooks) share a single getSession() network call
+     * instead of each independently racing to /api/auth/session.
+     *
+     * The promise is cleared synchronously after resolution via .finally(),
+     * so subsequent request batches always get a fresh session fetch.
+     */
+    private sessionReadyPromise: Promise<string | null> | null = null;
+
     private async getAuthToken(): Promise<string | null> {
-        // Check if we are on server or client
+        // Server-side: use NextAuth's auth() — no race possible
         if (typeof window === "undefined") {
-            const session = await auth();
-            return session?.accessToken || null;
-        } else {
-            const session = await getSession();
-            // @ts-ignore - accessToken exists in session type augmentation
-            return session?.accessToken || null;
+            try {
+                const session = await auth();
+                return session?.accessToken || null;
+            } catch {
+                return null;
+            }
         }
+
+        // Client-side: deduplicate concurrent getSession() calls
+        if (!this.sessionReadyPromise) {
+            this.sessionReadyPromise = getSession()
+                .then((session) => {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    return (session as any)?.accessToken || null;
+                })
+                .catch(() => null)
+                .finally(() => {
+                    // Clear after resolution so future calls (logout, refresh, expiry)
+                    // trigger a fresh session fetch instead of returning stale data.
+                    this.sessionReadyPromise = null;
+                });
+        }
+
+        return this.sessionReadyPromise;
     }
 
     private async request<T>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
-        const token = await this.getAuthToken();
+        const token = options.public ? null : await this.getAuthToken();
         const headers = new Headers(options.headers);
 
         if (token) {
@@ -69,7 +98,7 @@ class ApiClient {
         return this.request<T>(endpoint, { ...options, method: "GET" });
     }
 
-    public post<T>(endpoint: string, body?: any, options?: ApiRequestOptions) {
+    public post<T>(endpoint: string, body?: unknown, options?: ApiRequestOptions) {
         return this.request<T>(endpoint, {
             ...options,
             method: "POST",
@@ -77,7 +106,7 @@ class ApiClient {
         });
     }
 
-    public put<T>(endpoint: string, body?: any, options?: ApiRequestOptions) {
+    public put<T>(endpoint: string, body?: unknown, options?: ApiRequestOptions) {
         return this.request<T>(endpoint, {
             ...options,
             method: "PUT",
@@ -85,7 +114,7 @@ class ApiClient {
         });
     }
 
-    public patch<T>(endpoint: string, body?: any, options?: ApiRequestOptions) {
+    public patch<T>(endpoint: string, body?: unknown, options?: ApiRequestOptions) {
         return this.request<T>(endpoint, {
             ...options,
             method: "PATCH",

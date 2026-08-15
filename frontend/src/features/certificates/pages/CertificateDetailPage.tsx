@@ -1,47 +1,94 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { PageContainer } from "@/shared/components/page-container";
 import { EmptyState } from "@/shared/components/empty-state";
 import { CertificatePreview } from "../components/certificate-preview";
 import { CertificateQRCode } from "../components/certificate-qr-code";
-import { certificateService } from "../services/certificate.service";
 import { Button } from "@/shared/ui/button";
-import { Award, Download, ArrowLeft, Share2 } from "lucide-react";
+import { Award, Download, ArrowLeft, Share2, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { credentialsService } from "@/features/credentials/services/credentials.service";
+import { mapCredentialToCertificate } from "@/features/credentials/utils/mapping";
+import { downloadCertificatePDF } from "../utils/pdf";
+import type { MockCertificate } from "@/lib/mock-data/certificates";
 
 interface CertificateDetailPageProps {
   id: string;
 }
 
 export function CertificateDetailPage({ id }: CertificateDetailPageProps) {
-  const certificate = certificateService.getCertificate(id);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [certificate, setCertificate] = useState<MockCertificate | null>(null);
 
-  if (!certificate) {
+  useEffect(() => {
+    async function loadCredential() {
+      try {
+        setLoading(true);
+        setError(false);
+        // id here can be the verification code or database ID
+        const cred = await credentialsService.getCredentialDetails(id);
+        if (cred) {
+          setCertificate(mapCredentialToCertificate(cred));
+        } else {
+          setError(true);
+        }
+      } catch (err) {
+        console.error(err);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (id) {
+      loadCredential();
+    }
+  }, [id]);
+
+  if (loading) {
+    return (
+      <PageContainer className="py-16 flex flex-col items-center justify-center min-h-[50vh] gap-4">
+        <Loader2 className="h-10 w-10 text-primary animate-spin" />
+        <p className="text-on-surface-variant text-sm">Loading certificate ledger...</p>
+      </PageContainer>
+    );
+  }
+
+  if (error || !certificate) {
     return (
       <PageContainer className="py-16">
         <EmptyState
           icon={Award}
           title="Certificate not found"
-          description="This certificate doesn't exist or has been revoked."
+          description="This certificate doesn't exist on the Dezai ledger or has been revoked."
         />
       </PageContainer>
     );
   }
 
   const handleDownload = () => {
-    toast.success("Certificate PDF download started (demo)");
+    try {
+      downloadCertificatePDF(certificate);
+      toast.success("Certificate downloaded successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to generate certificate PDF.");
+    }
   };
 
   const handleShare = () => {
+    const verifyUrl = `${window.location.origin}/verify/${certificate.id}`;
     if (navigator.share) {
       navigator.share({
-        title: `Certificate — ${certificate.courseTitle}`,
+        title: `Dezai Certificate — ${certificate.courseTitle}`,
         text: `I earned a certificate for ${certificate.courseTitle} on Dezai.ai!`,
-        url: `https://dezai.ai/verify/${certificate.id}`,
+        url: verifyUrl,
       });
     } else {
-      navigator.clipboard.writeText(`https://dezai.ai/verify/${certificate.id}`);
+      navigator.clipboard.writeText(verifyUrl);
       toast.success("Verification link copied to clipboard!");
     }
   };

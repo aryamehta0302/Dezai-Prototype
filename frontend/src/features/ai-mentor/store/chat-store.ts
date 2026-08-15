@@ -16,6 +16,7 @@ interface ChatStore {
   addSession: (session: ChatSession) => void;
   removeSession: (sessionId: string) => void;
   addMessage: (message: ChatMessage) => void;
+  updateSessionMessages: (sessionId: string, messages: ChatMessage[]) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
@@ -62,6 +63,18 @@ export const useChatStore = create<ChatStore>()(
       addMessage: (message) =>
         set((state) => ({
           currentMessages: [...state.currentMessages, message],
+          sessions: state.sessions.map((s) =>
+            s.id === state.currentSessionId
+              ? { ...s, messages: [...(s.messages || []), message] }
+              : s
+          ),
+        })),
+
+      updateSessionMessages: (sessionId, messages) =>
+        set((state) => ({
+          sessions: state.sessions.map((s) =>
+            s.id === sessionId ? { ...s, messages } : s
+          ),
         })),
 
       setIsLoading: (loading) => set({ isLoading: loading }),

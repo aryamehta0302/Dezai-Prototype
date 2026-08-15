@@ -412,6 +412,66 @@ Implemented the complete Faculty Experience, Dashboard 2.0, Notification Center,
 | CREATED | [backend/src/modules/notifications/services/notifications.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/notifications/services/notifications.service.ts) |
 | MODIFIED | [frontend/src/features/dashboard/components/FacultyDashboard.tsx](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/components/FacultyDashboard.tsx) |
 
+---
+
+## 11. Sprint 5: Assessment Module Completion (Manan Panchal)
+
+Implemented the assessment module completion covering rich result retrieval, attempt tracking with limits, centralised pass/fail evaluation, faculty analytics, and credential eligibility signalling.
+
+### Module Ownership
+* **Scope:** `modules/assessments/*` — Results, History, Attempt Status, Analytics, Credential Eligibility.
+* **Schema:** No changes — all Prisma models were pre-defined in the locked schema.
+
+### Implemented Components
+
+1. **PassFailEvaluationService** ([pass-fail-evaluation.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/pass-fail-evaluation.service.ts)):
+   * Pure computation service with zero database dependencies.
+   * `evaluate()` — Full scoring: score, percentage, passed, status, missedQuestions.
+   * `getStatus()` — Derives `NOT_STARTED | IN_PROGRESS | PASSED | FAILED`.
+   * `calculatePercentage()` — Rounded to 2 decimal places.
+   * `getMissedQuestions()` — Extracts incorrect answers sorted by category.
+
+2. **Response DTOs** ([result.dto.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/dto/result.dto.ts)):
+   * `GetAttemptResultResponseDto`, `AttemptHistoryResponseDto`, `MyHistoryResponseDto`, `AttemptStatusResponseDto`, `ResultAnalyticsResponseDto`, `MissedQuestionsAnalyticsResponseDto`.
+
+3. **Enhanced AttemptService** ([attempt.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/attempt.service.ts)):
+   * `startAttempt()` — Enforces `MAX_ATTEMPTS_DEFAULT = 3` and active attempt detection.
+   * `submitAttempt()` — Delegates scoring to PassFailEvaluationService, fires audit log, checks credential eligibility.
+   * `getAttemptResult()` — Rich result with percentage, timeTaken, faculty access.
+   * `getAttemptHistory()` — Dual-role: students see own, faculty see all.
+   * `getMyHistory()` — Cross-assessment history for student.
+   * `getAttemptStatus()` — Remaining attempts, best score, active attempt.
+   * `checkCredentialEligibility()` — Traverses Module → Track → Program, creates notification.
+
+4. **Enhanced AssessmentService** ([assessment.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/assessment.service.ts)):
+   * `validateAssessmentFacultyOwnership()` — Traverses Assessment → Module → Track → Program → Faculty.
+   * `getResultAnalytics()` — Pass rate, score distribution, unique students.
+   * `getMissedQuestionsAnalytics()` — Per-question wrong rates sorted DESC.
+
+5. **ResultsController** ([results.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/results.controller.ts)):
+   * 4 route handlers for attempt-status, attempt history, result analytics, missed questions.
+   * Multi-segment paths avoid collision with existing `:id` routes.
+
+6. **Updated AttemptController** ([attempt.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/attempt.controller.ts)):
+   * Added `my-history` route before parameterised routes.
+   * Enhanced `getAttemptResult` with dual-role support.
+
+7. **Module Wiring** ([assessments.module.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/assessments.module.ts)):
+   * Registered `ResultsController` and `PassFailEvaluationService`.
+
+8. **API Documentation** ([assessment-results.md](file:///d:/git/dezai/Dezai-Prototype/docs/API/assessment-results.md)):
+   * Full contract for all 6 new endpoints.
+
+### Endpoint Summary (6 New)
+
+| # | Method | Route | Auth | Description |
+|---|---|---|---|---|
+| 1 | GET | `/api/assessments/attempts/:attemptId/result` | JWT + STUDENT/FACULTY | Full attempt result with question breakdown |
+| 2 | GET | `/api/assessments/:assessmentId/attempts/history` | JWT + STUDENT/FACULTY | Assessment-scoped attempt history |
+| 3 | GET | `/api/assessments/attempts/my-history` | JWT + STUDENT | Cross-assessment student history |
+| 4 | GET | `/api/assessments/:assessmentId/attempt-status` | JWT + STUDENT | Remaining attempts & status |
+| 5 | GET | `/api/assessments/:assessmentId/result-analytics` | JWT + FACULTY | Pass rate, score distribution |
+| 6 | GET | `/api/assessments/:assessmentId/missed-questions-analytics` | JWT + FACULTY | Per-question wrong rates |
 
 ## 11. Sprint 4: Leaderboards & Notifications (Leaderboards & Notifications Lead)
 
@@ -469,3 +529,559 @@ Implemented the backend modules, database schema migrations, and documentation f
 | CREATED | [docs/API/notifications.md](file:///d:/Dezai-Prototype-main/docs/API/notifications.md) |
 | CREATED | [docs/API/leaderboards.md](file:///d:/Dezai-Prototype-main/docs/API/leaderboards.md) |
 
+---
+
+## 12. Sprint 5: Leaderboard Frontend Components (Krish Parmar)
+
+**Sprint:** 5 | **Date:** 2026-06-22
+
+### Overview
+
+Sprint 5 extended the leaderboard backend (completed in Sprint 4) with two new student-facing frontend components that surface XP rankings and top performers directly on the student dashboard.
+
+All 5 backend leaderboard API endpoints were already production-complete from Sprint 4. No backend, schema, or route changes were required in Sprint 5.
+
+### Components Added
+
+1. **`StudentRankingCard`** (`frontend/src/features/leaderboards/components/student-ranking-card.tsx`)
+   - Displays the authenticated student's global rank (`#N`), total XP, and streak count.
+   - Rank badge adapts color: gold (rank 1), silver (rank 2), bronze (rank 3), Top 10, or default.
+   - Reads data from `useEnrollmentStore()` → `globalRank`, `xpEarned`, `streakCount` — all already populated by `fetchStats()` on dashboard mount via `GET /api/learning/stats`.
+   - Conditionally rendered: only shown when `globalRank > 0` and data is loaded.
+
+2. **`TopPerformerList`** (`frontend/src/features/leaderboards/components/top-performer-list.tsx`)
+   - Shows the top 10 globally ranked students with a Monthly / All-Time tab switcher.
+   - Calls the existing `GET /api/leaderboards/students?range=<monthly|all>&limit=10` endpoint.
+   - Each row: rank badge (gold/silver/bronze/default), student name, institution, XP.
+   - Highlights the current user's own row with a blue `You` badge.
+   - Includes loading skeleton, empty state, and error/retry state.
+
+### Integration
+
+Both components were integrated into the right sidebar column (`xl:col-span-1`) of the existing `StudentDashboardPage` (`frontend/src/features/learning/pages/StudentDashboardPage.tsx`):
+
+```
+Right sidebar (xl:col-span-1):
+  ↳ StudentRankingCard    ← NEW — above activity feed
+  ↳ Activity Feed         ← unchanged
+  ↳ TopPerformerList      ← NEW — below activity feed
+```
+
+### Data Sources (No New Endpoints)
+
+| Component | Data Source | Endpoint |
+|---|---|---|
+| `StudentRankingCard` | `useEnrollmentStore()` (already loaded) | `GET /api/learning/stats` (existing) |
+| `TopPerformerList` | Direct `apiClient.get()` call | `GET /api/leaderboards/students` (existing, Sprint 4) |
+
+### Files Added / Modified
+
+| Action | File |
+|---|---|
+| CREATED | [frontend/src/features/leaderboards/components/student-ranking-card.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/leaderboards/components/student-ranking-card.tsx) |
+| CREATED | [frontend/src/features/leaderboards/components/top-performer-list.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/leaderboards/components/top-performer-list.tsx) |
+| MODIFIED | [frontend/src/features/learning/pages/StudentDashboardPage.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/learning/pages/StudentDashboardPage.tsx) |
+| MODIFIED | [docs/IMPLEMENTED.md](file:///d:/Dezai-Prototype-main/docs/IMPLEMENTED.md) |
+| MODIFIED | [docs/CHANGELOG.md](file:///d:/Dezai-Prototype-main/docs/CHANGELOG.md) |
+
+### Sprint 5 Completion Status
+
+| Sprint 5 Task | Status |
+|---|---|
+| Global Leaderboards | ✅ Complete (Sprint 4 backend) |
+| Institution Leaderboards | ✅ Complete (Sprint 4 backend) |
+| Monthly Leaderboards | ✅ Complete (Sprint 4 backend — `?range=monthly`) |
+| XP Ranking Logic & APIs | ✅ Complete (Sprint 4 backend) |
+| Leaderboard Dashboard Widgets | ✅ Complete (Sprint 4 backend + Faculty UI) |
+| Student Ranking Cards | ✅ Complete (Sprint 5 — `StudentRankingCard`) |
+| Top Performer Components | ✅ Complete (Sprint 5 — `TopPerformerList`) |
+| Faculty Monitoring Module | ✅ Complete (Sprint 5) |
+| Faculty Insights & Intervention System | ✅ Complete (Sprint 5) |
+
+---
+
+## 13. Sprint 5: Faculty Monitoring, Insights & Interventions (Faculty Experience & Dashboard Lead)
+
+**Sprint:** 5 | **Date:** 2026-06-23
+
+### Overview
+
+Sprint 5 added the **Faculty Monitoring Module** and the **Faculty Insights & Intervention System**, equipping faculty members with real-time tools to audit student learning paths, analyze cohort bottlenecks, automatically flag at-risk behaviors, and log outreach intervention notifications.
+
+No database migrations or schema alterations were required. Sent student outreach communications are logged under the existing `Notification` model of type `REMINDER` using a distinct `[Intervention]` title prefix, and audit actions are registered under the `AuditLog` table.
+
+### Features Delivered
+
+1. **Faculty Program Listing & Stats Dashboard:**
+   - Populates a simplified dropdown of all programs owned or taught by the faculty.
+   - Computes progress bars reflecting average cohort completion per module within the selected program.
+   - Shows active widgets for overall program statistics (enrolled students, progress metrics, at-risk/warning breakdowns).
+
+2. **Cohort Student Monitoring List:**
+   - Displays a clean data table containing student names, emails, enrollment dates, XP, last active timestamps, and progress indicators.
+   - Provides status filtering triggers (e.g. at-risk, completed, active).
+
+3. **Detailed Student Audit Panel (Slide-over):**
+   - Renders a deep-dive drawer for auditing individual students.
+   - Renders a hierarchical curriculum track checklist showing lesson-by-lesson completions.
+   - Displays a comprehensive exam and quiz assessment attempt history showing scores, date submitted, and proctoring violations.
+   - Features a chronological timeline log detailing specific proctoring violations (tab switching, copy-pasting, focus loss).
+
+4. **Cohort Health Insights & At-Risk Flags:**
+   - Automatically evaluates and flags at-risk students using three criteria:
+     - **Inactive**: No login activity in the last 7 days.
+     - **Low Progress**: Overall syllabus progress is below 25%.
+     - **Repeated Failures**: Failed the same assessment 2 or more times.
+   - Automatically updates cohort health counters (Healthy vs. Warning vs. Critical).
+
+5. **Direct Student Intervention Outreach:**
+   - Faculty members can click "Outreach" to open a modal drafting a custom message.
+   - Sends a reminder notification to the student and appends it to the "Interventions Sent History" timeline logs on the dashboard.
+
+### Endpoint Summary (6 New Endpoints)
+
+| # | Method | Route | Auth | Roles | Description |
+|---|---|---|---|---|---|
+| 1 | GET | `/api/analytics/faculty/programs` | JWT | FACULTY, UNIV_ADMIN, DEZAI_ADMIN | List of programs taught by faculty |
+| 2 | GET | `/api/analytics/programs/:id/modules/stats` | JWT | FACULTY, UNIV_ADMIN, DEZAI_ADMIN | Module completion rate metrics |
+| 3 | GET | `/api/analytics/programs/:programId/students/:userId` | JWT | FACULTY, UNIV_ADMIN, DEZAI_ADMIN | Deep student syllabus/quiz audit data |
+| 4 | GET | `/api/analytics/programs/:id/insights` | JWT | FACULTY, UNIV_ADMIN, DEZAI_ADMIN | Flagged at-risk students list and metrics |
+| 5 | POST | `/api/analytics/programs/:id/interventions` | JWT | FACULTY, UNIV_ADMIN, DEZAI_ADMIN | Create outreach reminder notification & audit log |
+| 6 | GET | `/api/analytics/programs/:id/interventions` | JWT | FACULTY, UNIV_ADMIN, DEZAI_ADMIN | Get sent intervention history log |
+
+### Files Added / Modified
+
+| Action | File |
+|---|---|
+| MODIFIED | [backend/src/modules/analytics/services/analytics.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/services/analytics.service.ts) |
+| MODIFIED | [backend/src/modules/analytics/controllers/analytics.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/controllers/analytics.controller.ts) |
+| MODIFIED | [frontend/src/features/dashboard/components/FacultyDashboard.tsx](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/components/FacultyDashboard.tsx) |
+| MODIFIED | [docs/API/analytics.md](file:///d:/Project/Dezai-ai/Dezai-Prototype/docs/API/analytics.md) |
+
+---
+
+## 15. Sprint 7.1 — Faculty Real-Time Insights & Audit System
+
+### Features Implemented
+
+1. **Real-time SSE Insights Streaming**:
+   - Implemented a Server-Sent Events (SSE) route `GET /api/assessments/faculty-insights/stream` pushing real-time summaries and at-risk alerts.
+   - Designed corresponding React client integration in the Faculty Dashboard with smooth state management (`connected`, `reconnecting`, `offline`).
+
+2. **Access Isolation & Program Ownership Verification**:
+   - Hardened all program-related endpoints in the `AnalyticsController` to restrict visibility strictly to the assigned instructor or university admin, throwing `403 Forbidden` on breach attempts.
+
+3. **Data Access Audit Logging**:
+   - Activated a global-class auditing interceptor `FacultyDataAccessInterceptor` across all primary faculty controllers. Logs detailed audit contexts of every allowed/denied operation.
+
+4. **UX Loader Polish**:
+   - Refactored the dashboard layouts so the sidebar remains fixed on page-load, while local content blocks animate smoothly using the modular `PageSkeleton` component.
+
+### Endpoint Summary
+
+| Method | Route | Auth | Roles | Description |
+|---|---|---|---|---|
+| GET | `/api/assessments/faculty-insights/stream` | JWT | FACULTY, UNIV_ADMIN, DEZAI_ADMIN | SSE real-time cohort at-risk alerts stream |
+
+### Files Added / Modified
+
+| Action | File |
+|---|---|
+| MODIFIED | [backend/src/modules/analytics/analytics.module.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/analytics.module.ts) |
+| MODIFIED | [backend/src/modules/analytics/controllers/analytics.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/analytics/controllers/analytics.controller.ts) |
+| MODIFIED | [backend/src/modules/assessments/controllers/assessment.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/assessments/controllers/assessment.controller.ts) |
+| MODIFIED | [backend/src/modules/assessments/services/assessment.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/assessments/services/assessment.service.ts) |
+| MODIFIED | [backend/src/modules/programs/controllers/programs.controller.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/programs/controllers/programs.controller.ts) |
+| MODIFIED | [backend/src/modules/users/services/xp.service.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/modules/users/services/xp.service.ts) |
+| MODIFIED | [frontend/src/features/dashboard/components/FacultyDashboard.tsx](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/components/FacultyDashboard.tsx) |
+| NEW | [frontend/src/features/dashboard/hooks/useFacultyInsightsStream.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/frontend/src/features/dashboard/hooks/useFacultyInsightsStream.ts) |
+| NEW | [backend/src/common/interceptors/faculty-data-access.interceptor.ts](file:///d:/Project/Dezai-ai/Dezai-Prototype/backend/src/common/interceptors/faculty-data-access.interceptor.ts) |
+
+## 14. Sprint 6: Assessment Intelligence & Faculty Insights Systems (Manan Panchal)
+
+**Sprint:** 6 | **Date:** 2026-06-23
+
+### Overview
+
+Sprint 6 implemented the **Assessment Intelligence Engine** and the **Faculty Insights & Intervention System**. It provides students with deep reviews of their performance (weak topics, incorrect questions, topic accuracy timelines) and equips faculty members and administrators with aggregated cohort weak topics, difficulty analysis, performance trends, repeated failure tracking, and student composite academic health scores.
+
+No database migrations or schema alterations were required. All calculations are performed at the service layer dynamically utilizing existing Prisma relations. All endpoints are fully protected via JWT auth and role guards, and faculty endpoints validate program scope ownership.
+
+### Features Delivered
+
+1. **Weak Topic Detection Engine (Tasks A1 + A2):**
+   - **Per-Student Weak Topics**: Group student's completed attempt answers by category, flagging categories with WRONG rate >= 40% as weak.
+   - **Faculty Cohort Aggregated Weak Topics**: Faculty dashboard lists categories where cohort students struggle, sorting by affected rate.
+   - **Incorrect Question Analysis**: Displays most missed questions with distractor analysis showing which wrong option is most frequently selected.
+   - **Topic Accuracy Timeline**: Generates per-category accuracy over time, ordered chronologically per attempt.
+   - **Topic Improvement Tracking**: Compares category accuracy from first to latest attempt showing delta and improvement status.
+
+2. **Difficulty-Based & Trend Analytics (Tasks A3 + A4):**
+   - **Difficulty Breakdown**: Group performance metrics (accuracy, total questions, correct answers) by EASY, MEDIUM, and HARD.
+   - **Daily Assessment Trend**: Visualizes attempts, average scores, and pass rates aggregated daily.
+   - **Faculty Insight Summary**: Aggregates total attempts, students, and overall pass rates across all assessments taught by the instructor, including 7-day trend indicators (`UP` / `DOWN` / `STABLE`).
+   - **Institution Assessment Summary**: Multi-tenant metrics for admin roles showing total attempts, pass rates, and highest/lowest performing assessments.
+
+3. **Faculty Insights & Interventions (Tasks B1 + B2 + B3):**
+   - **At-Risk Detection**: Identifies students with 2+ failed attempts on the same assessment.
+   - **Low Progress Detection**: Automatically alerts when a student's enrollment progress is <= 30%.
+   - **Inactive Detection**: Flags students inactive for 7+ days.
+   - **Academic Health Scoring**: Calculates a composite 0-100 score based on pass rate, progress, activity levels, and daily streak, mapping to LOW, MEDIUM, or HIGH risk.
+   - **Repeated Failure Analysis**: Detects failure patterns and streaks (consecutive failure count) scoped to an assessment or globally.
+   - **Student Detail Insight**: Compiles a comprehensive student profile containing enrollment timelines, assessment statistics, weak topics, and active health metrics for faculty auditing.
+
+### Endpoint Summary (19 New Endpoints)
+
+| # | Method | Route | Auth | Roles | Description |
+|---|---|---|---|---|---|
+| 1 | GET | `/api/assessments/intelligence/my-weak-topics` | JWT | STUDENT | Student weak topics for an assessment |
+| 2 | GET | `/api/assessments/intelligence/my-weak-topics/global` | JWT | STUDENT | Student global weak topics |
+| 3 | GET | `/api/assessments/:assessmentId/intelligence/weak-topics` | JWT | FACULTY | Cohort weak topics |
+| 4 | GET | `/api/assessments/intelligence/my-incorrect-analysis` | JWT | STUDENT | Student's most missed questions |
+| 5 | GET | `/api/assessments/intelligence/my-topic-accuracy-timeline` | JWT | STUDENT | Topic accuracy over time |
+| 6 | GET | `/api/assessments/intelligence/my-topic-improvement` | JWT | STUDENT | First vs latest attempt accuracy delta |
+| 7 | GET | `/api/assessments/:assessmentId/analytics/difficulty-breakdown` | JWT | FACULTY | Performance breakdown by difficulty |
+| 8 | GET | `/api/assessments/:assessmentId/analytics/trend` | JWT | FACULTY | Daily pass rate & score trends |
+| 9 | GET | `/api/assessments/:assessmentId/analytics/performance-report` | JWT | FACULTY | Consolidated assessment performance report |
+| 10 | GET | `/api/assessments/analytics/faculty-insight-summary` | JWT | FACULTY | Dashboard stats summary for faculty |
+| 11 | GET | `/api/assessments/analytics/institution-summary` | JWT | UNIV_ADMIN, DEZAI_ADMIN | Institution-wide assessment stats |
+| 12 | GET | `/api/assessments/faculty-insights/at-risk` | JWT | FACULTY | At-risk student list (failures >= 2) |
+| 13 | GET | `/api/assessments/faculty-insights/low-progress` | JWT | FACULTY | Students with program progress <= 30% |
+| 14 | GET | `/api/assessments/faculty-insights/inactive` | JWT | FACULTY | Enrolled students inactive for 7+ days |
+| 15 | GET | `/api/assessments/faculty-insights/dashboard` | JWT | FACULTY | Combined B1 insights dashboard |
+| 16 | GET | `/api/assessments/faculty-insights/student/:userId/academic-health` | JWT | FACULTY | Academic health score & risk status |
+| 17 | GET | `/api/assessments/faculty-insights/repeated-failures` | JWT | FACULTY | Failure streaks and rates per student |
+| 18 | GET | `/api/assessments/:assessmentId/faculty-insights/failure-pattern` | JWT | FACULTY | Cohort failures by category & difficulty |
+| 19 | GET | `/api/assessments/faculty-insights/student/:userId/detail` | JWT | FACULTY | Comprehensive student overview |
+
+### Files Added / Modified
+
+| Action | File |
+|---|---|
+| CREATED | [backend/src/modules/assessments/services/weak-topic-detection.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/weak-topic-detection.service.ts) |
+| CREATED | [backend/src/modules/assessments/services/assessment-analytics.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/assessment-analytics.service.ts) |
+| CREATED | [backend/src/modules/assessments/services/faculty-insight.service.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/services/faculty-insight.service.ts) |
+| CREATED | [backend/src/modules/assessments/controllers/intelligence.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/intelligence.controller.ts) |
+| CREATED | [backend/src/modules/assessments/controllers/faculty-insights.controller.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/controllers/faculty-insights.controller.ts) |
+| CREATED | [backend/src/modules/assessments/dto/intelligence.dto.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/dto/intelligence.dto.ts) |
+| CREATED | [backend/src/modules/assessments/dto/faculty-insight.dto.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/dto/faculty-insight.dto.ts) |
+| MODIFIED | [backend/src/modules/assessments/assessments.module.ts](file:///d:/git/dezai/Dezai-Prototype/backend/src/modules/assessments/assessments.module.ts) |
+| CREATED | [docs/API/assessment-intelligence.md](file:///d:/git/dezai/Dezai-Prototype/docs/API/assessment-intelligence.md) |
+| CREATED | [docs/API/faculty-insights.md](file:///d:/git/dezai/Dezai-Prototype/docs/API/faculty-insights.md) |
+| MODIFIED | [docs/IMPLEMENTED.md](file:///d:/git/dezai/Dezai-Prototype/docs/IMPLEMENTED.md) |
+| MODIFIED | [docs/CHANGELOG.md](file:///d:/git/dezai/Dezai-Prototype/docs/CHANGELOG.md) |
+
+
+---
+
+## Sprint 6: Analytics Completion, Institution Dashboard & Leaderboards(Krish Parmar)
+### Status: IMPLEMENTED ✅
+**Date Completed**: 2026-06-23
+
+### Overview
+
+Sprint 6 focused on finalizing the **Analytics Completion Track**, wiring up advanced frontend visualizations for student progress, faculty diagnostics, and institution-level administrative oversight. All of these deliverables were purely frontend UI implementations utilizing pre-existing backend analytics endpoints.
+
+### Features Delivered
+
+1. **Student & Faculty Analytics Dashboard Diagnostics:**
+   - Introduced a new "Cohort Metrics & Diagnostics" section to the Faculty Dashboard.
+   - Wired up the Recharts-based `ModuleCompletionChart` to visualize syllabus completion rates per module, color-coded by performance thresholds (Green: ≥70%, Amber: ≥40%, Red: <40%).
+   - Re-introduced the `ProgramPerformanceChart` to display a comparative breakdown of top performers versus low-progress students based on XP.
+
+2. **XP Growth & Achievement Analytics:**
+   - Implemented an `XpGrowthChart` visualization on the student's `AchievementsPage`.
+   - Visualizes the learner's "XP Level Journey," mapping current XP accumulation against progression milestones to gamify the learning curve.
+
+3. **Leaderboard Movement Analytics:**
+   - Added a `weeklyRank` delta indicator to the student dashboard's `StudentRankingCard`.
+   - Compares current global all-time rank against weekly performance to render upward (↑) or downward (↓) movement trends (e.g., "↑ +5 from last week").
+
+4. **Institution Analytics Dashboard:**
+   - Built the `InstitutionDashboardPage` for university-level administrators.
+   - Integrated the `GET /api/leaderboards/universities` endpoint to aggregate institution-wide metrics: total programs, enrolled students, overall completion rates, and the top performing programs within the institution.
+   - Deployed the dedicated route at `/app/(university)/university/dashboard`.
+
+### Files Added / Modified
+
+| Action | File |
+|---|---|
+| MODIFIED | [frontend/src/features/dashboard/components/FacultyDashboard.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/dashboard/components/FacultyDashboard.tsx) |
+| MODIFIED | [frontend/src/features/learning/pages/StudentDashboardPage.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/learning/pages/StudentDashboardPage.tsx) |
+| MODIFIED | [frontend/src/features/achievements/pages/AchievementsPage.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/achievements/pages/AchievementsPage.tsx) |
+| MODIFIED | [frontend/src/features/leaderboards/components/student-ranking-card.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/leaderboards/components/student-ranking-card.tsx) |
+| CREATED | [frontend/src/features/analytics/components/module-completion-chart.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/analytics/components/module-completion-chart.tsx) |
+| CREATED | [frontend/src/features/analytics/components/program-performance-chart.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/analytics/components/program-performance-chart.tsx) |
+| CREATED | [frontend/src/features/analytics/components/xp-growth-chart.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/analytics/components/xp-growth-chart.tsx) |
+| CREATED | [frontend/src/features/analytics/hooks/useProgramAnalytics.ts](file:///d:/Dezai-Prototype-main/frontend/src/features/analytics/hooks/useProgramAnalytics.ts) |
+| CREATED | [frontend/src/features/analytics/services/analytics.service.ts](file:///d:/Dezai-Prototype-main/frontend/src/features/analytics/services/analytics.service.ts) |
+| CREATED | [frontend/src/features/analytics/types/analytics.types.ts](file:///d:/Dezai-Prototype-main/frontend/src/features/analytics/types/analytics.types.ts) |
+| CREATED | [frontend/src/features/institution/pages/InstitutionDashboardPage.tsx](file:///d:/Dezai-Prototype-main/frontend/src/features/institution/pages/InstitutionDashboardPage.tsx) |
+| CREATED | [frontend/src/app/(university)/university/dashboard/page.tsx](file:///d:/Dezai-Prototype-main/frontend/src/app/(university)/university/dashboard/page.tsx) |
+
+--
+## Sprint 7: Production Readiness Improvements
+
+Implemented production hardening enhancements for the Analytics module.
+
+### Improvements
+
+- Added a global HTTP exception filter for consistent API error responses.
+- Registered the global exception filter in the NestJS application bootstrap.
+- Restored analytics feature barrel exports for reusable chart components.
+
+### Files Added / Modified
+
+| Action | File |
+|--------|------|
+| CREATED | backend/src/common/filters/http-exception.filter.ts |
+| MODIFIED | backend/src/main.ts |
+| MODIFIED | frontend/src/features/analytics/index.ts |
+
+### Notes
+
+- No new API endpoints added.
+- No Prisma schema changes.
+- No database migrations.
+- No frontend routes added.
+- Focused only on production readiness and error handling.
+
+---
+
+## 18. Sprint 8: Enterprise Assessments & Compliance (Manan Panchal)
+
+Implemented the full Enterprise Assessments & Compliance module to support corporate onboarding, compliance certification, and organization-level tracking.
+
+### Features Delivered
+
+1.  **Additive Prisma Schema Models & Enums**:
+    *   Enums: `ComplianceTrack`, `QuestionBankSourceType`, `OrgSize`, `OrgAdminRole`, `EmploymentStatus`.
+    *   Models: `EnterpriseQuestionBank`, `EnterpriseQuestion`, `EnterpriseQuestionOption`, `ComplianceAssessment`, `ComplianceAssessmentAttempt`, `ComplianceAttemptAnswer`.
+    *   Audit Actions: Extended `AuditAction` enum with enterprise actions.
+2.  **EnterpriseQuestionBankService**:
+    *   Full CRUD for question banks and questions.
+    *   Ownership validation scoped to `organizationId`/`departmentId`.
+    *   Cache invalidation for associated compliance assessments.
+3.  **ComplianceAssessmentService**:
+    *   Full CRUD for compliance assessments.
+    *   Shuffled question selection leveraging the Fisher-Yates + cache-aside algorithm (resets option orders, strips `isCorrect` indicators, and caches questions).
+    *   10-question bank minimum enforcement.
+    *   **AI-Generated Assessment Ingestion**: Transactional creation of `EnterpriseQuestionBank` + `ComplianceAssessment` from parsed questions.
+4.  **ComplianceAttemptService**:
+    *   Attempt lifecycle (start, resume, autosave, submit, result details, history).
+    *   Reuses `PassFailEvaluationService` for score/percentage computations.
+    *   Stores BOTH raw score and percentage at submit time.
+    *   **Time Limit Enforcement**: Checks `timeLimit` on submission; if exceeded and `timeLimitEnabled` is true, the attempt is auto-failed.
+5.  **EnterpriseDashboardService**:
+    *   Aggregation dashboards for organizations, departments, employees, and specific compliance tracks.
+6.  **Demo Compliance Seeds**:
+    *   Seeded 4 default tracks (Cyber Security, Password Security, Data Privacy, Secure Email), each with 25 realistic, fully-formed questions.
+
+### Endpoint Summary
+
+| Method | Endpoint | Roles | Description |
+|---|---|---|---|
+| POST | `/api/enterprise/assessments/generated` | DEZAI_ADMIN | Ingest AI-generated assessment (bank + assessment) |
+| GET | `/api/enterprise/assessments/question-banks` | All | List question banks |
+| GET | `/api/enterprise/assessments/question-banks/:id` | All | Get question bank with questions |
+| POST | `/api/enterprise/assessments/question-banks` | DEZAI_ADMIN | Create question bank |
+| PUT | `/api/enterprise/assessments/question-banks/:id` | DEZAI_ADMIN | Update question bank |
+| DELETE | `/api/enterprise/assessments/question-banks/:id` | DEZAI_ADMIN | Delete question bank |
+| POST | `/api/enterprise/assessments/question-banks/:bankId/questions` | DEZAI_ADMIN | Add question to bank |
+| PUT | `/api/enterprise/assessments/questions/:questionId` | DEZAI_ADMIN | Update question |
+| DELETE | `/api/enterprise/assessments/questions/:questionId` | DEZAI_ADMIN | Delete question |
+| GET | `/api/enterprise/assessments/compliance` | All | List assessments |
+| GET | `/api/enterprise/assessments/compliance/:id` | All | Get assessment |
+| POST | `/api/enterprise/assessments/compliance` | DEZAI_ADMIN | Create compliance assessment |
+| PUT | `/api/enterprise/assessments/compliance/:id` | DEZAI_ADMIN | Update compliance assessment |
+| DELETE | `/api/enterprise/assessments/compliance/:id` | DEZAI_ADMIN | Delete compliance assessment |
+| GET | `/api/enterprise/assessments/compliance/:id/questions/select` | All | Shuffled questions pool for testing |
+| POST | `/api/enterprise/assessments/attempts/start` | All (Employee) | Start attempt |
+| POST | `/api/enterprise/assessments/attempts/:attemptId/submit` | All (Employee) | Submit attempt answers |
+| GET | `/api/enterprise/assessments/attempts/:attemptId/result` | All | Get graded result |
+| GET | `/api/enterprise/assessments/attempts/history/:assessmentId` | All | Get assessment attempt history |
+| GET | `/api/enterprise/assessments/attempts/my-history` | All | Get employee compliance history |
+| GET | `/api/enterprise/assessments/dashboard/organization/:orgId` | All | Org admin compliance dashboard |
+| GET | `/api/enterprise/assessments/dashboard/department/:deptId` | All | Department compliance dashboard |
+| GET | `/api/enterprise/assessments/dashboard/employee` | All | Personal compliance dashboard |
+| GET | `/api/enterprise/assessments/dashboard/track/:orgId/:track` | All | Detailed compliance track summary |
+
+---
+
+## Enterprise Administration Module (Sprint 9)
+
+> **Branch**: `feature/faculty-institution-lead`
+> **Backend module**: `backend/src/modules/enterprise-admin/`
+> **Frontend feature**: `frontend/src/features/enterprise-admin/`
+> **API docs**: `docs/API/enterprise-admin.md`
+
+### Features Implemented
+
+#### Department Management
+- Full CRUD: create, list, get, update, delete
+- Manager assignment at creation or via update
+- Delete gracefully orphans employees (`SetNull`)
+- Delete confirmation shows headcount warning
+
+#### Employee Management
+- Full CRUD: create, list, get, update, delete
+- Conflict detection (user already an employee)
+- Department membership validated on create
+- Employment status lifecycle: `INVITED → ACTIVE → SUSPENDED/OFFBOARDED`
+
+#### Employee Assignment
+- Assign / reassign employee to a department
+- Idempotent (no-op if already assigned)
+- Validates department belongs to same org
+
+#### Manager Assignment (NEW schema field: `Employee.managerId`)
+- Assign / remove manager per employee
+- **Self-assignment prevention**: `400 Bad Request`
+- **Circular chain prevention**: walks chain upward before saving (`A→B→A` blocked)
+- Cross-org manager blocked
+
+#### Employee Search & Filtering
+- Paginated (`{ data, total, page, limit, totalPages }`)
+- Filters: name/email/title, department, manager, employment status
+
+#### Org Directory
+- All employees browsable, ordered dept → name
+- Dept + manager shown inline
+
+#### Employee Profile
+- Personal info, department, manager reference
+- Direct reports list
+
+#### Department Stats
+- Headcount per department
+- Manager assigned / unassigned summary
+
+#### Org Settings
+- Read and update: name, logoUrl, industry, size, billingEmail
+
+### Prisma Schema Changes
+- Added `Employee.managerId String?` (self-referential FK)
+- Added `Employee.manager` and `Employee.directReports` relations
+- Migration: `20260714173230_add_employee_manager_relation`
+
+### Bug Fixed
+- `compliance-knowledge.service.ts` — fixed wrong Prisma relation names (`orgAdminInfo → organizationAdmin`, `employeeInfo → employee`)
+
+### API Endpoints
+
+| Method | Endpoint | Role | Description |
+|--------|----------|------|-------------|
+| GET | `/api/enterprise-admin/org/:orgId` | Admin/Manager | Get organization |
+| PATCH | `/api/enterprise-admin/org/:orgId/settings` | Admin | Update org settings |
+| GET | `/api/enterprise-admin/organizations/:orgId/departments` | Admin/Manager | List departments |
+| GET | `/api/enterprise-admin/departments/:id` | Admin/Manager | Get department |
+| POST | `/api/enterprise-admin/departments` | Admin | Create department |
+| PATCH | `/api/enterprise-admin/departments/:id` | Admin | Update department |
+| DELETE | `/api/enterprise-admin/departments/:id` | Admin | Delete department |
+| GET | `/api/enterprise-admin/organizations/:orgId/department-stats` | Admin/Manager | Dept stats |
+| GET | `/api/enterprise-admin/organizations/:orgId/employees` | Admin/Manager | List employees |
+| GET | `/api/enterprise-admin/organizations/:orgId/employees/search` | Admin/Manager | Search employees (paginated) |
+| GET | `/api/enterprise-admin/employees/:id` | Admin/Manager | Get employee |
+| GET | `/api/enterprise-admin/employees/:id/profile` | Admin/Manager | Employee profile + direct reports |
+| POST | `/api/enterprise-admin/employees` | Admin | Create employee |
+| PATCH | `/api/enterprise-admin/employees/:id` | Admin | Update employee |
+| DELETE | `/api/enterprise-admin/employees/:id` | Admin | Remove employee |
+| PATCH | `/api/enterprise-admin/employees/:id/department` | Admin | Assign department |
+| PATCH | `/api/enterprise-admin/employees/:id/manager` | Admin | Assign manager |
+| GET | `/api/enterprise-admin/organizations/:orgId/directory` | Admin/Manager | Org directory |
+
+### Frontend Pages
+
+| Route | Component | Description |
+|-------|-----------|-------------|
+| `/enterprise/admin/departments` | `DepartmentManagementPage` | CRUD with create/edit/delete dialogs |
+| `/enterprise/admin/directory` | `OrgDirectoryPage` | Browsable directory grouped by dept |
+| `/enterprise/admin/employees/:id` | `EmployeeProfilePage` | Profile with direct reports |
+
+---
+
+## 19. Sprint 8: Enterprise Analytics Dashboard (Krish Parmar)
+
+**Branch:** `feature/sprint-8-enterprise-analytics`
+
+This sprint delivers the Enterprise Analytics Dashboard — a comprehensive compliance performance monitoring suite available exclusively to `ORGANIZATION_ADMIN`, `ORGANIZATION_MANAGER`, and `DEZAI_ADMIN` roles.
+
+---
+
+### Backend
+
+#### `EnterpriseAnalyticsService`
+
+Five fully isolated, read-only query methods wired to Prisma:
+
+| Method | Description |
+|--------|-------------|
+| `getOverview(userId, orgId?)` | Returns 6 KPIs: total/active employees, compliance rate, credential count, assessments taken, avg score |
+| `getTrackBreakdown(userId, orgId?)` | Per `ComplianceTrack` pass rate, attempt counts, and credential issuances via `groupBy` |
+| `getDepartmentBreakdown(userId, orgId?)` | Per department: employee count, compliant count, compliance rate %, credential count |
+| `getEmployeeCompliance(userId, page, limit, orgId?)` | Paginated employee table with last attempt score, credential count, and employment status |
+| `getActivityFeed(userId, orgId?)` | Merged + sorted feed of recent `ComplianceAssessmentAttempt` events and `EnterpriseCredential` issuances |
+
+All methods share a private `resolveOrgId()` helper enforcing organizational boundary isolation. `DEZAI_ADMIN` may pass any `organizationId`. `ORGANIZATION_ADMIN` / `ORGANIZATION_MANAGER` are restricted to their own organization.
+
+#### `EnterpriseAnalyticsController`
+
+Separate dedicated controller (`@Controller('analytics/enterprise')`) with its own guard stack:
+
+- `JwtAuthGuard` + `RolesGuard` + `@Roles(ORGANIZATION_ADMIN, ORGANIZATION_MANAGER, DEZAI_ADMIN)`
+- **Intentionally separated** from `AnalyticsController` to avoid the `FacultyDataAccessInterceptor` applied to faculty routes.
+
+Registered in `AnalyticsModule` as an additive entry alongside existing Sprint 1 registrations.
+
+#### API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/analytics/enterprise/overview` | KPI overview |
+| GET | `/api/analytics/enterprise/tracks` | Track pass rates |
+| GET | `/api/analytics/enterprise/departments` | Department breakdown |
+| GET | `/api/analytics/enterprise/employees` | Paginated employee list (`?page=&limit=`) |
+| GET | `/api/analytics/enterprise/activity` | Activity feed |
+
+---
+
+### Frontend
+
+#### Types — `features/analytics/types/enterprise-analytics.types.ts`
+Eight TypeScript interfaces: `EnterpriseOverview`, `EnterpriseTrackStat`, `EnterpriseDepartmentStat`, `EnterpriseEmployeeRow`, `EnterpriseEmployeeList`, `EnterpriseActivityEntry`, `EnterpriseActivityType`, `EnterpriseAnalyticsState`.
+
+#### Service — `features/analytics/services/enterprise-analytics.service.ts`
+Thin API client wrapping all 5 endpoints with error-safe try/catch returning safe fallback values.
+
+#### Hook — `features/analytics/hooks/useEnterpriseAnalytics.ts`
+Single data-fetching hook calling all 5 endpoints in parallel via `Promise.all`. Cleanup via cancelled-flag pattern. Exposes `fetchEmployeePage()` for client-side pagination.
+
+#### Components
+- **`compliance-track-chart.tsx`** — Recharts horizontal `BarChart` with color-coded bars (green/amber/red by pass rate) and custom Tooltip.
+- **`department-compliance-table.tsx`** — Table with `Progress` bar, status `Badge` (Compliant/In Progress/At Risk), and empty state.
+
+#### Page — `features/analytics/pages/EnterpriseAnalyticsDashboard.tsx`
+3-tab dashboard (`Overview`, `Departments`, `Employees`) with KPI cards, compliance health progress banner, track chart, activity feed, and paginated employee table.
+
+#### App Router — `app/enterprise/analytics/page.tsx`
+Thin Next.js App Router page that automatically inherits Nil's `app/enterprise/layout.tsx` (sidebar + TopAppBar).
+
+---
+
+### Shared Integration Files (Additive Only)
+
+| File | Change | Preserved |
+|------|--------|-----------|
+| `backend/src/modules/analytics/analytics.module.ts` | Added `EnterpriseAnalyticsController` + `EnterpriseAnalyticsService` | Sprint 1 registrations untouched |
+| `frontend/src/core/auth/route-permissions.ts` | Added `/enterprise/analytics` RBAC rule | All 12 existing rules untouched |
+| `frontend/src/features/enterprise/components/layout/enterprise-sidebar.tsx` | Added `Analytics` nav item | All of Nil's existing nav items untouched |
+| `frontend/src/features/analytics/index.ts` | Appended Sprint 8 barrel exports | All Sprint 6 exports untouched |
+
+---
+
+### Prisma — No Schema Changes
+Sprint 8 consumed existing models (`ComplianceAssessmentAttempt`, `EnterpriseCredential`, `Department`, `Employee`, `Organization`). Zero new migrations required.
+
+### Build Verification
+- **Backend:** `nest build` → ✅ 0 errors
+- **Frontend:** `tsc --noEmit` → ✅ 0 errors

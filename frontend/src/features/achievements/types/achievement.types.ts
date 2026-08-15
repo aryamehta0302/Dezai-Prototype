@@ -1,27 +1,32 @@
-export type AchievementType = "STREAK" | "COMPLETION" | "PERFORMANCE" | "XP" | "SOCIAL";
+export type AchievementCategory = 'STREAK' | 'XP' | 'COMPLETION' | 'ASSESSMENT' | 'ENGAGEMENT';
+export type AchievementRarity = 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY';
 
 export interface Achievement {
-    id: string;
-    type: AchievementType;
-    title: string;
-    description: string;
-    icon: string;
-    xpValue: number;
-    unlockedAt?: string;
-    progress?: number; // 0-100
-    target?: number;
-    current?: number;
-    isUnlocked: boolean;
-    rarity: "COMMON" | "RARE" | "EPIC" | "LEGENDARY";
+  id: string;
+  key: string;
+  title: string;
+  description: string;
+  category: AchievementCategory;
+  rarity: AchievementRarity;
+  icon: string;
+  xpReward: number;
+  unlockedAt: string | null;
+  progress: number;
+  current: number;
+  target: number;
+  isUnlocked: boolean;
 }
 
-export interface StudentStats {
-    xp: number;
-    level: number;
-    nextLevelXp: number;
-    progressToNextLevel: number; // 0-100
-    streakCount: number;
-    enrolledCourses: number;
-    completedCourses: number;
-    totalHours: number;
+export interface AchievementStats {
+  totalAchievements: number;
+  unlockedCount: number;
+  lockedCount: number;
+  totalXpEarned: number;
+}
+
+export interface LevelInfo {
+  level: number;
+  nextLevelXp: number;
+  currentLevelXp: number;
+  progress: number;
 }

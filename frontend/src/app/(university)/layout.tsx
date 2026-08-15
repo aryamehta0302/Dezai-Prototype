@@ -31,7 +31,7 @@ export default function UniversityLayout({
                     }
                     onLogout={logout}
                 />
-                <main className="flex-1 bg-surface-lowest">{children}</main>
+                <main className="flex-1 bg-background">{children}</main>
             </div>
         </AuthGuard>
     );

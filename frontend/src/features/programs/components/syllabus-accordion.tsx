@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import { cn } from "@/shared/utils/cn";
-import { ChevronDown, PlayCircle, FileText, Clock } from "lucide-react";
+import { ChevronDown, PlayCircle, FileText, Clock, ClipboardCheck } from "lucide-react";
+import Link from "next/link";
 import type { ApiTrack } from "../types/program.types";
 
 interface SyllabusAccordionProps {
   tracks: ApiTrack[];
+  programSlug?: string;
   className?: string;
 }
 
-export function SyllabusAccordion({ tracks, className }: SyllabusAccordionProps) {
+export function SyllabusAccordion({ tracks, programSlug, className }: SyllabusAccordionProps) {
   const flatModules = tracks.flatMap(t => t.modules);
   const [openModules, setOpenModules] = useState<Set<string>>(
     new Set([flatModules[0]?.id].filter(Boolean))
@@ -45,7 +47,7 @@ export function SyllabusAccordion({ tracks, className }: SyllabusAccordionProps)
                 <div>
                   <h4 className="font-medium text-sm text-on-surface">{mod.title}</h4>
                   <p className="text-xs text-muted mt-0.5">
-                    {mod.lessons.length} lessons
+                    {mod.lessons.length} lessons {mod.assessments && mod.assessments.length > 0 ? `\u00B7 ${mod.assessments.length} quiz(zes)` : ""}
                   </p>
                 </div>
               </div>
@@ -76,6 +78,25 @@ export function SyllabusAccordion({ tracks, className }: SyllabusAccordionProps)
                     )}
                   </div>
                 ))}
+                {mod.assessments && mod.assessments.length > 0 && programSlug && (
+                  <div className="border-t border-border-light px-4 py-3 space-y-2">
+                    {mod.assessments.map((asm) => (
+                      <Link
+                        key={asm.id}
+                        href={`/programs/${programSlug}/assessment/${asm.id}`}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/5 border border-primary/10 hover:bg-primary/10 transition-colors"
+                      >
+                        <ClipboardCheck className="h-4 w-4 text-primary flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium text-primary">{asm.title}</span>
+                          <p className="text-xs text-muted mt-0.5">
+                            {asm.sampleSize} questions · {Math.floor(asm.timeLimit / 60)} min · {asm.passingScore}% to pass
+                          </p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

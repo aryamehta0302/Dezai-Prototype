@@ -31,6 +31,10 @@ export class CreateProgramDto {
 
   @IsString()
   @IsOptional()
+  thumbnail?: string;
+
+  @IsString()
+  @IsOptional()
   institutionId?: string;
 }
 
@@ -51,6 +55,9 @@ export class UpdateProgramDto {
   @IsEnum(ProgramTier)
   @IsOptional()
   tier?: ProgramTier;
+  @IsString()
+  @IsOptional()
+  thumbnail?: string;
 
   @IsOptional()
   isPublished?: boolean;

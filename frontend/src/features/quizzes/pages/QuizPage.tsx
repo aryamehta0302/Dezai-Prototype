@@ -25,7 +25,7 @@ interface QuizPageProps {
 export function QuizPage({ slug, quizId }: QuizPageProps) {
   const router = useRouter();
   const { session } = useAuth();
-  const quiz = quizService.getQuiz(quizId);
+  const quiz = quizService.getQuiz(quizId, slug);
 
   // Core Quiz States
   const [started, setStarted] = useState(false);
@@ -86,6 +86,7 @@ export function QuizPage({ slug, quizId }: QuizPageProps) {
       quiz.questions.forEach((q) => {
         initial[q.id] = null;
       });
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAnswers(initial);
     }
   }, [quiz]);
@@ -164,6 +165,7 @@ export function QuizPage({ slug, quizId }: QuizPageProps) {
       }, 1000);
       return () => clearTimeout(timer);
     } else if (lockoutCountdown === 0 && isScreenLocked) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsScreenLocked(false);
       start(); // Resume the timer
     }
@@ -303,6 +305,7 @@ export function QuizPage({ slug, quizId }: QuizPageProps) {
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     // Initial check
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsFullscreenActive(!!document.fullscreenElement);
 
     return () => {

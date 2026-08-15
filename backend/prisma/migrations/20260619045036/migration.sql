@@ -4,8 +4,7 @@ CREATE TYPE "CredentialType" AS ENUM ('PROGRAM', 'ASSESSMENT', 'MERIT');
 -- AlterTable
 ALTER TABLE "credentials" ADD COLUMN     "credentialTemplateId" TEXT;
 
--- AlterTable
-ALTER TABLE "notifications" ADD COLUMN     "archived" BOOLEAN NOT NULL DEFAULT false;
+
 
 -- CreateTable
 CREATE TABLE "credential_templates" (

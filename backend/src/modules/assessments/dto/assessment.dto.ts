@@ -140,6 +140,19 @@ export class CreateAssessmentDto {
   @IsOptional()
   @Min(60)
   timeLimit?: number;
+
+  @IsInt()
+  @IsOptional()
+  @Min(1)
+  maxAttempts?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  timeLimitEnabled?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  allowResume?: boolean;
 }
 
 export class UpdateAssessmentDto {
@@ -163,4 +176,17 @@ export class UpdateAssessmentDto {
   @IsOptional()
   @Min(60)
   timeLimit?: number;
+
+  @IsInt()
+  @IsOptional()
+  @Min(1)
+  maxAttempts?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  timeLimitEnabled?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  allowResume?: boolean;
 }

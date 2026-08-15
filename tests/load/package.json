@@ -1,0 +1,13 @@
+{
+  "name": "load-tests",
+  "version": "1.0.0",
+  "description": "Dezai Platform load tests with k6",
+  "private": true,
+  "scripts": {
+    "test:assessment": "k6 run assessment-attempts.js",
+    "test:leaderboard": "k6 run leaderboard-queries.js"
+  },
+  "devDependencies": {
+    "k6": "^0.0.0"
+  }
+}

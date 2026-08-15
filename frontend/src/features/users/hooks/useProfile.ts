@@ -13,9 +13,8 @@ export function useProfile() {
   const { achievements } = useAchievements();
   const { programs } = useProgramsStore();
 
-  const programsMap = useMemo(() => {
-    return programs.reduce((acc, p) => ({ ...acc, [p.id]: p }), {} as Record<string, any>);
-  }, [programs]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const programsMap = useMemo(() => programs.reduce((acc: any, p) => ({ ...acc, [p.id]: p }), {}), [programs]);
 
   const activity = useMemo(
     () => (user ? activityService.getEvents(enrollments, achievements, programsMap) : []),

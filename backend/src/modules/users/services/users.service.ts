@@ -1,9 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
+import { AuditService } from '../../audit/services/audit.service';
+import { AuditAction } from '@prisma/client';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private auditService: AuditService,
+  ) {}
 
   // ─────────────────── FACULTY PROFILE ───────────────────
 
@@ -130,8 +135,12 @@ export class UsersService {
       throw new NotFoundException('Faculty profile not found for this user');
     }
 
-    // Run database transactions to update User and FacultyMember
-    return this.prisma.$transaction(async (tx) => {
+    const changedFields: string[] = [];
+    if (data.name) changedFields.push('name');
+    if (data.department !== undefined) changedFields.push('department');
+    if (data.designation !== undefined) changedFields.push('designation');
+
+    const profile = await this.prisma.$transaction(async (tx) => {
       if (data.name) {
         await tx.user.update({
           where: { id: userId },
@@ -176,5 +185,13 @@ export class UsersService {
         },
       });
     });
+
+    await this.auditService.logAction(
+      userId,
+      AuditAction.PROFILE_UPDATED,
+      `Faculty profile updated: ${changedFields.length > 0 ? changedFields.join(', ') : 'no fields changed'}`,
+    );
+
+    return profile;
   }
 }

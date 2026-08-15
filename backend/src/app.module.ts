@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { CacheModule } from '@nestjs/cache-manager';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -15,10 +17,68 @@ import { UploadsModule } from './modules/uploads/uploads.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { LeaderboardsModule } from './modules/leaderboards/leaderboards.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { AchievementsModule } from './modules/achievements/achievements.module';
+import { EnterpriseAssessmentsModule } from './modules/enterprise-assessments/enterprise-assessments.module';
+import { EnterpriseCredentialsModule } from './modules/enterprise-credentials/enterprise-credentials.module';
+import { EnterpriseAdminModule } from './modules/enterprise-admin/enterprise-admin.module';
+
+
+import { DepartmentsModule } from './modules/departments/departments.module';
+import { UniversityAdminModule } from './modules/university-admin/university-admin.module';
+import { PlatformAdminModule } from './modules/platform-admin/platform-admin.module';
+import { RbacScopeModule } from './shared/rbac-scope.module';
+import { InfrastructureModule } from './shared/infrastructure/infrastructure.module';
+
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      inject: [ConfigService],
+      useFactory: async (config: ConfigService) => {
+        const store = config.get<string>('CACHE_STORE', 'redis');
+
+        if (store === 'redis') {
+          try {
+            const { default: KeyvRedis } = await import('@keyv/redis');
+            const host = config.get<string>('REDIS_HOST', 'localhost');
+            const port = config.get<number>('REDIS_PORT', 6379);
+            const password = config.get<string>('REDIS_PASSWORD', '');
+            const uri = password
+              ? `redis://:${password}@${host}:${port}`
+              : `redis://${host}:${port}`;
+
+            // Fail-fast Redis client: do not let cache operations hang forever
+            // when Redis is unreachable. The node-redis defaults (reconnect forever
+            // + queue commands when disconnected) cause every cacheManager.get()
+            // to block the HTTP request indefinitely, so the circuit breaker never
+            // gets a chance to run. With these options a downed Redis rejects
+            // quickly, the breaker opens, and we fall back to the database.
+            const client = new KeyvRedis({
+              url: uri,
+              socket: {
+                reconnectStrategy: false,
+                connectTimeout: 2_000,
+              },
+              disableOfflineQueue: true,
+            });
+
+            return {
+              stores: [client],
+              ttl: 300_000,
+            };
+          } catch (err) {
+            console.warn(`Redis connection failed at startup — falling back to in-memory cache: ${(err as Error).message}`);
+          }
+        }
+
+        return { ttl: 300_000 }; // in-memory fallback
+      },
+    }),
     DatabaseModule,
+    InfrastructureModule,
+    RbacScopeModule,
     AuthModule,
     UsersModule,
     InstitutionsModule,
@@ -34,8 +94,16 @@ import { AuditModule } from './modules/audit/audit.module';
     NotificationsModule,
     LeaderboardsModule,
     AuditModule,
+    AchievementsModule,
+    EnterpriseAssessmentsModule,
+    EnterpriseCredentialsModule,
+    EnterpriseAdminModule,
+    DepartmentsModule,
+    UniversityAdminModule,
+    PlatformAdminModule,
   ],
   controllers: [],
   providers: [],
 })
 export class AppModule {}
+

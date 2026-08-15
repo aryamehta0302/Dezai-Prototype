@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { cn } from "@/shared/utils/cn";
 import { Progress } from "@/shared/ui/progress";
@@ -12,24 +13,35 @@ interface EnrolledCourseCardProps {
 }
 
 export function EnrolledCourseCard({ course, className }: EnrolledCourseCardProps) {
+  const [imgError, setImgError] = useState(false);
+  const [imgLoading, setImgLoading] = useState(true);
   const isCompleted = course.progress >= 100;
+  const showImage = course.thumbnailUrl && !imgError;
 
   return (
     <Link
       href={`/programs/${course.courseSlug}`}
       className={cn(
-        "group card-elevation flex flex-col overflow-hidden",
+        "group card-elevation flex flex-col overflow-hidden ",
         className
       )}
     >
       {/* Thumbnail */}
-      <div className="relative h-36 bg-surface-low flex items-center justify-center overflow-hidden">
-        {course.thumbnailUrl ? (
-          <img
-            src={course.thumbnailUrl}
-            alt={course.courseTitle}
-            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
-          />
+      <div className="relative h-36 flex items-center justify-center overflow-hidden">
+        {showImage ? (
+          <>
+            {imgLoading && (
+              <div className="absolute inset-0 skeleton-shimmer" />
+            )}
+            <img
+              src={course.thumbnailUrl}
+              alt={course.courseTitle}
+              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+              onError={() => setImgError(true)}
+              onLoad={() => setImgLoading(false)}
+              style={{ opacity: imgLoading ? 0 : 1 }}
+            />
+          </>
         ) : (
           <div className="h-full w-full bg-gradient-to-br from-primary/10 via-secondary-container/50 to-primary/5 flex items-center justify-center">
             <BookOpen className="h-8 w-8 text-primary/40" />
@@ -48,12 +60,12 @@ export function EnrolledCourseCard({ course, className }: EnrolledCourseCardProp
           <h3 className="font-semibold text-on-surface text-sm line-clamp-2 group-hover:text-primary transition-colors">
             {course.courseTitle}
           </h3>
-          <p className="text-xs text-muted mt-1">{course.universityName}</p>
+          <p className="text-xs text-gray-500 mt-1">{course.universityName}</p>
         </div>
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-muted">
+            <span className="text-gray-800">
               {course.completedLessons}/{course.totalLessons} lessons
             </span>
             <span className={cn("font-medium", isCompleted ? "text-success" : "text-primary")}>

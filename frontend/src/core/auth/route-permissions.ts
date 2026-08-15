@@ -50,6 +50,24 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
     deniedRedirect: "/unauthorized",
   },
 
+  // ─── Enterprise Routes ───
+  // Sprint 8: /enterprise/analytics added (additive — existing entries unchanged)
+  {
+    pathPrefix: "/enterprise/analytics",
+    allowedRoles: [UserRole.ORGANIZATION_ADMIN, UserRole.ORGANIZATION_MANAGER, UserRole.DEZAI_ADMIN],
+    deniedRedirect: "/unauthorized",
+  },
+  {
+    pathPrefix: "/enterprise/dashboard",
+    allowedRoles: [UserRole.ORGANIZATION_ADMIN, UserRole.ORGANIZATION_MANAGER, UserRole.DEZAI_ADMIN],
+    deniedRedirect: "/unauthorized",
+  },
+  {
+    pathPrefix: "/enterprise/credentials",
+    allowedRoles: [UserRole.EMPLOYEE, UserRole.ORGANIZATION_ADMIN, UserRole.ORGANIZATION_MANAGER, UserRole.DEZAI_ADMIN],
+    deniedRedirect: "/unauthorized",
+  },
+
   // ─── Student Routes (includes shared learner pages) ───
   {
     pathPrefix: "/dashboard",

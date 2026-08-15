@@ -84,6 +84,9 @@ export class ProgramsService {
                   orderBy: { order: 'asc' },
                   select: { id: true, title: true, order: true, videoUrl: true },
                 },
+                assessments: {
+                  select: { id: true, title: true, passingScore: true, timeLimit: true, sampleSize: true },
+                },
               },
             },
           },
@@ -113,6 +116,9 @@ export class ProgramsService {
                     order: true,
                     videoUrl: true,
                   },
+                },
+                assessments: {
+                  select: { id: true, title: true, passingScore: true, timeLimit: true, sampleSize: true },
                 },
               },
             },
@@ -163,6 +169,7 @@ export class ProgramsService {
         description: data.description,
         category: data.category ?? ProgramCategory.AI,
         tier: data.tier ?? ProgramTier.TIER_1,
+        thumbnail: data.thumbnail,
         institutionId,
         facultyId,
       },
@@ -228,7 +235,10 @@ export class ProgramsService {
       include: {
         modules: {
           orderBy: { order: "asc" },
-          include: { lessons: { orderBy: { order: "asc" } } },
+          include: {
+            lessons: { orderBy: { order: "asc" } },
+            assessments: { select: { id: true, title: true, passingScore: true } },
+          },
         },
       },
     });

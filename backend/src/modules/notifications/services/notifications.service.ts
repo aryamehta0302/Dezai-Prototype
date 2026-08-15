@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
-import { NotificationType } from '@prisma/client';
+import { NotificationType, AuditAction } from '@prisma/client';
+import { AuditService } from '../../audit/services/audit.service';
 import {
   NotificationDto,
   NotificationListResponseDto,
@@ -32,7 +33,10 @@ import {
  */
 @Injectable()
 export class NotificationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private auditService: AuditService,
+  ) {}
 
   // ─────────────────────────────────────────────────────────────────────────
   // 1. GET NOTIFICATIONS
@@ -232,7 +236,7 @@ export class NotificationsService {
     message: string,
     type: NotificationType,
   ) {
-    return this.prisma.notification.create({
+    const notification = await this.prisma.notification.create({
       data: {
         userId,
         title,
@@ -242,5 +246,13 @@ export class NotificationsService {
         archived: false,
       },
     });
+
+    await this.auditService.logAction(
+      userId,
+      AuditAction.NOTIFICATION_SENT,
+      `Notification "${title}" (ID: ${notification.id}) sent to user ${userId}`,
+    );
+
+    return notification;
   }
 }

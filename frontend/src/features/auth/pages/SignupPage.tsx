@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import { GoogleSignInButton } from "../components/provider-sign-in-button";
+import { PremiumButton } from "@/shared/ui/premium-button";
 import { GraduationCap } from "lucide-react";
 
 export function SignupPage() {
@@ -48,8 +49,9 @@ export function SignupPage() {
         router.refresh();
         router.push("/onboarding");
       }
-    } catch (err: any) {
-      toast.error(err.message || "Registration failed. Please try again.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Registration failed. Please try again.";
+      toast.error(message);
       setIsSubmitting(false);
     }
   };
@@ -57,7 +59,7 @@ export function SignupPage() {
   return (
     <div className="flex w-full min-h-screen flex-col xl:flex-row">
       {/* Left Panel — Branding */}
-      <div className="hidden xl:flex xl:w-[48%] 2xl:w-[50%] relative bg-linear-to-br from-secondary via-primary to-primary-container overflow-hidden">
+      <div className="hidden xl:flex xl:w-[48%] 2xl:w-[50%] relative bg-primary overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-32 right-20 h-64 w-64 rounded-full bg-white/20 blur-3xl animate-float" />
           <div className="absolute bottom-20 left-16 h-48 w-48 rounded-full bg-white/15 blur-2xl animate-float" style={{ animationDelay: "3s" }} />
@@ -153,17 +155,16 @@ export function SignupPage() {
                 />
               </div>
 
-              <button
+              <PremiumButton
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white shadow-md hover:bg-primary-hover focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.99] flex items-center justify-center gap-2"
+                className="w-full rounded-xl px-4 py-2.5 text-sm"
               >
-                {isSubmitting ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                ) : (
-                  "Create Account"
+                {isSubmitting && (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white shrink-0" />
                 )}
-              </button>
+                {isSubmitting ? "Creating account\u2026" : "Create Account"}
+              </PremiumButton>
             </form>
 
             <div className="relative flex items-center justify-center my-4">

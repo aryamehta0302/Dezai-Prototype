@@ -2,60 +2,110 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
-} from "@nestjs/common";
-import { PrismaService } from "../../../database/prisma.service";
+  ConflictException,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
+import { PrismaService } from '../../../database/prisma.service';
 import {
+  AchievementCategory,
   AuditAction,
   ExamStatus,
+  NotificationType,
+  UserRole,
   XpType,
-} from "@prisma/client";
-import { AuditService } from "../../audit/services/audit.service";
-import { XpService } from "../../users/services/xp.service";
-import { AssessmentService } from "./assessment.service";
-import { QuestionSelectionService } from "./question-selection.service";
+} from '@prisma/client';
+import { AuditService } from '../../audit/services/audit.service';
+import { XpService } from '../../users/services/xp.service';
+import { AwardService } from '../../achievements/services/award.service';
+import { AssessmentService } from './assessment.service';
+import { QuestionSelectionService } from './question-selection.service';
+import {
+  PassFailEvaluationService,
+  AttemptAnswerWithRelations,
+} from './pass-fail-evaluation.service';
+import type {
+  GetAttemptResultResponseDto,
+  AttemptHistoryResponseDto,
+  MyHistoryResponseDto,
+  AttemptStatusResponseDto,
+} from '../dto/result.dto';
+import type { SyncAnswersDto, SyncResponseDto } from '../dto/sync.dto';
+
+interface QuestionSetItem {
+  questionId: string;
+  text: string;
+  options: { optionId: string; text: string }[];
+}
 
 @Injectable()
 export class AttemptService {
+  private readonly logger = new Logger(AttemptService.name);
+
   constructor(
     private prisma: PrismaService,
     private auditService: AuditService,
     private xpService: XpService,
+    private awardService: AwardService,
     private assessmentService: AssessmentService,
-    private questionSelectionService: QuestionSelectionService
-  ) {}
+    private questionSelectionService: QuestionSelectionService,
+    private passFailEvaluationService: PassFailEvaluationService,
+  ) { }
 
-  /**
-   * Start a new attempt or return an active one if it already exists.
-   */
   async startAttempt(userId: string, assessmentId: string) {
-    // 1. Create or get the active proctoring session using AssessmentService
-    const session = await this.assessmentService.createSession(userId, assessmentId);
+    const assessment = await this.prisma.assessment.findUnique({
+      where: { id: assessmentId },
+    });
+    if (!assessment) {
+      throw new NotFoundException('Assessment not found');
+    }
 
-    // 2. Find or create the active in-progress attempt (completedAt is null)
-    let attempt = await this.prisma.assessmentAttempt.findFirst({
-      where: {
+    const existingAttempts = await this.prisma.assessmentAttempt.findMany({
+      where: { userId, assessmentId },
+    });
+
+    const active = existingAttempts.find((a) => !a.completedAt);
+    if (active) {
+      if (assessment.allowResume) {
+        throw new ConflictException('An active attempt already exists. Resume it.');
+      }
+      // Stale attempt with allowResume=false — delete it entirely so it doesn't count against maxAttempts
+      await this.prisma.attemptAnswer.deleteMany({ where: { attemptId: active.id } });
+      await this.prisma.violationLog.deleteMany({ where: { attemptId: active.id } });
+      await this.prisma.assessmentAttempt.delete({ where: { id: active.id } });
+    }
+
+    const completedCount = await this.prisma.assessmentAttempt.count({
+      where: { userId, assessmentId, completedAt: { not: null } },
+    });
+    if (completedCount >= assessment.maxAttempts) {
+      throw new ForbiddenException('Maximum attempts reached for this assessment.');
+    }
+
+    // Use Redis cache-aside via QuestionSelectionService
+    const selection = await this.questionSelectionService.selectQuestions(assessmentId);
+
+    // Store the selected questions in a session for resume consistency
+    const questionSet = selection.questions.map(q => ({
+      questionId: q.id,
+      text: q.text,
+      options: q.options.map(o => ({ optionId: o.id, text: o.text })),
+    })) as any;
+
+    const session = await this.prisma.examSession.create({
+      data: {
         userId,
         assessmentId,
-        completedAt: null,
+        status: ExamStatus.ACTIVE,
+        warningsCount: 0,
+        scoreDeduction: 0,
+        questionSet,
       },
     });
 
-    if (!attempt) {
-      attempt = await this.prisma.assessmentAttempt.create({
-        data: {
-          userId,
-          assessmentId,
-          score: 0,
-          passed: false,
-        },
-      });
-    }
-
-    // 3. Select randomized questions using attempt.id as a persistent seed
-    const selection = await this.questionSelectionService.selectQuestions(
-      assessmentId,
-      attempt.id
-    );
+    const attempt = await this.prisma.assessmentAttempt.create({
+      data: { userId, assessmentId, score: 0, passed: false },
+    });
 
     return {
       success: true,
@@ -66,13 +116,19 @@ export class AttemptService {
       scoreDeduction: session.scoreDeduction,
       lockoutUntil: session.lockoutUntil,
       status: session.status,
-      ...selection,
+      assessmentId: attempt.assessmentId,
+      assessmentTitle: assessment.title,
+      passingScore: assessment.passingScore,
+      timeLimit: assessment.timeLimit,
+      sampleSize: assessment.sampleSize,
+      totalAvailable: questionSet.length,
+      questions: selection.questions,
+      maxAttempts: assessment.maxAttempts,
+      timeLimitEnabled: assessment.timeLimitEnabled,
+      allowResume: assessment.allowResume,
     };
   }
 
-  /**
-   * Resume an in-progress attempt.
-   */
   async resumeAttempt(userId: string, attemptId: string) {
     const attempt = await this.prisma.assessmentAttempt.findUnique({
       where: { id: attemptId },
@@ -80,48 +136,68 @@ export class AttemptService {
     });
 
     if (!attempt || attempt.userId !== userId) {
-      throw new NotFoundException("Attempt not found");
+      throw new NotFoundException('Attempt not found');
     }
 
     if (attempt.completedAt) {
-      throw new BadRequestException("Attempt is already completed");
+      throw new BadRequestException('Attempt is already completed');
     }
 
-    // Find the corresponding active proctoring session
-    const session = await this.prisma.examSession.findFirst({
-      where: {
-        userId,
-        assessmentId: attempt.assessmentId,
-        status: ExamStatus.ACTIVE,
-      },
+    let session = await this.prisma.examSession.findFirst({
+      where: { userId, assessmentId: attempt.assessmentId, status: ExamStatus.ACTIVE },
     });
 
     if (!session) {
-      throw new NotFoundException("No active proctoring session found for this attempt");
+      const selection = await this.questionSelectionService.selectQuestions(attempt.assessmentId);
+      const questionSet = selection.questions.map(q => ({
+        questionId: q.id,
+        text: q.text,
+        options: q.options.map(o => ({ optionId: o.id, text: o.text })),
+      })) as any;
+      session = await this.prisma.examSession.create({
+        data: {
+          userId,
+          assessmentId: attempt.assessmentId,
+          status: ExamStatus.ACTIVE,
+          warningsCount: 0,
+          scoreDeduction: 0,
+          questionSet,
+        },
+      });
     }
 
-    // Regenerate identical questions using the same seed (attempt.id)
-    const selection = await this.questionSelectionService.selectQuestions(
-      attempt.assessmentId,
-      attempt.id
-    );
+    if (!attempt.assessment.allowResume) {
+      throw new ForbiddenException('Resuming is not allowed for this assessment.');
+    }
 
-    // Get currently saved answers
+    const questionSet = (session.questionSet ?? []) as unknown as QuestionSetItem[];
+    const selection = {
+      assessmentId: attempt.assessmentId,
+      assessmentTitle: attempt.assessment.title,
+      passingScore: attempt.assessment.passingScore,
+      timeLimit: attempt.assessment.timeLimit,
+      sampleSize: questionSet.length,
+      totalAvailable: questionSet.length,
+      questions: questionSet.map((q) => ({
+        id: q.questionId,
+        text: q.text,
+        options: q.options.map((o) => ({ id: o.optionId, text: o.text })),
+      })),
+    };
+
     const savedAnswers = await this.prisma.attemptAnswer.findMany({
       where: { attemptId },
       select: { questionId: true, selectedOptionId: true },
     });
 
-    const answersRecord: Record<string, string> = {};
-    for (const ans of savedAnswers) {
-      answersRecord[ans.questionId] = ans.selectedOptionId;
-    }
-
-    // Recalculate remaining time (30 minutes default duration)
-    const elapsedSeconds = Math.floor(
-      (Date.now() - new Date(session.startedAt).getTime()) / 1000
+    const answersRecord: Record<string, string> = Object.fromEntries(
+      savedAnswers.map((a) => [a.questionId, a.selectedOptionId]),
     );
-    const durationSeconds = 1800; // 30 minutes
+
+    const elapsedSeconds = Math.floor(
+      (Date.now() - new Date(session.startedAt).getTime()) / 1000,
+    );
+    const durationSeconds = attempt.assessment.timeLimit;
     const remainingTime = Math.max(0, durationSeconds - elapsedSeconds);
 
     return {
@@ -136,17 +212,16 @@ export class AttemptService {
       remainingTime,
       answers: answersRecord,
       ...selection,
+      maxAttempts: attempt.assessment.maxAttempts,
+      timeLimitEnabled: attempt.assessment.timeLimitEnabled,
+      allowResume: attempt.assessment.allowResume,
     };
   }
 
-  /**
-   * Save student's current answers. Programmatically upsert answers
-   * to avoid creating duplicate rows since AttemptAnswer lacks a unique constraint.
-   */
   async autoSaveAnswers(
     userId: string,
     attemptId: string,
-    answers: Record<string, string>
+    answers: Record<string, string>,
   ) {
     const attempt = await this.prisma.assessmentAttempt.findUnique({
       where: { id: attemptId },
@@ -166,16 +241,15 @@ export class AttemptService {
     });
 
     if (!attempt || attempt.userId !== userId) {
-      throw new NotFoundException("Attempt not found");
+      throw new NotFoundException('Attempt not found');
     }
 
     if (attempt.completedAt) {
-      throw new BadRequestException("Attempt is already completed");
+      throw new BadRequestException('Attempt is already completed');
     }
 
     const questions = attempt.assessment.questionBank.questions;
 
-    // Process answers sequentially to update or create
     for (const [questionId, selectedOptionId] of Object.entries(answers)) {
       const dbQuestion = questions.find((q) => q.id === questionId);
       if (!dbQuestion) continue;
@@ -184,30 +258,17 @@ export class AttemptService {
       const isCorrect = selectedOptionId === correctOption?.id;
 
       const existingAnswer = await this.prisma.attemptAnswer.findFirst({
-        where: {
-          attemptId,
-          questionId,
-        },
+        where: { attemptId, questionId },
       });
 
       if (existingAnswer) {
         await this.prisma.attemptAnswer.update({
           where: { id: existingAnswer.id },
-          data: {
-            selectedOptionId,
-            isCorrect,
-            answeredAt: new Date(),
-          },
+          data: { selectedOptionId, isCorrect, answeredAt: new Date() },
         });
       } else {
         await this.prisma.attemptAnswer.create({
-          data: {
-            attemptId,
-            questionId,
-            selectedOptionId,
-            isCorrect,
-            answeredAt: new Date(),
-          },
+          data: { attemptId, questionId, selectedOptionId, isCorrect, answeredAt: new Date() },
         });
       }
     }
@@ -215,10 +276,44 @@ export class AttemptService {
     return { success: true };
   }
 
+  // ─────────────────── SPRINT 7: SYNC ANSWERS ───────────────────
+
   /**
-   * Submit and grade the attempt. Applies proctoring deductions and awards XP on first pass.
+   * PATCH /api/assessments/attempts/sync
+   *
+   * Validates the attempt, rejects completed ones, and delegates
+   * persistence to autoSaveAnswers. Returns synced count + server timestamp.
    */
-  async submitAttempt(userId: string, attemptId: string) {
+  async syncAnswers(userId: string, dto: SyncAnswersDto): Promise<SyncResponseDto> {
+    const attempt = await this.prisma.assessmentAttempt.findUnique({
+      where: { id: dto.attemptId },
+    });
+
+    if (!attempt || attempt.userId !== userId) {
+      throw new NotFoundException('Attempt not found');
+    }
+
+    if (attempt.completedAt) {
+      throw new BadRequestException('Cannot sync answers for a completed attempt');
+    }
+
+    await this.autoSaveAnswers(userId, dto.attemptId, dto.answers);
+
+    this.logger.debug(
+      `Synced ${Object.keys(dto.answers).length} answers for attempt ${dto.attemptId}`,
+    );
+
+    return {
+      syncedCount: Object.keys(dto.answers).length,
+      serverTimestamp: Date.now(),
+    };
+  }
+
+  async submitAttempt(
+    userId: string,
+    attemptId: string,
+    answers?: Record<string, string>,
+  ) {
     const attempt = await this.prisma.assessmentAttempt.findUnique({
       where: { id: attemptId },
       include: {
@@ -238,34 +333,58 @@ export class AttemptService {
     });
 
     if (!attempt || attempt.userId !== userId) {
-      throw new NotFoundException("Attempt not found");
+      throw new NotFoundException('Attempt not found');
     }
 
     if (attempt.completedAt) {
-      throw new BadRequestException("Attempt is already completed");
+      throw new BadRequestException('Attempt is already completed');
     }
 
-    // Retrieve corresponding active proctoring session
+    // If answers provided, upsert them before grading
+    if (answers) {
+      for (const [questionId, selectedOptionId] of Object.entries(answers)) {
+        const question = attempt.assessment.questionBank.questions.find(
+          (q) => q.id === questionId,
+        );
+        if (!question) continue;
+        const correctOption = question.options.find((o) => o.isCorrect);
+        const isCorrect = selectedOptionId === correctOption?.id;
+        const existing = attempt.attemptAnswers.find(
+          (a) => a.questionId === questionId,
+        );
+        if (existing) {
+          await this.prisma.attemptAnswer.update({
+            where: { id: existing.id },
+            data: { selectedOptionId, isCorrect, answeredAt: new Date() },
+          });
+        } else {
+          await this.prisma.attemptAnswer.create({
+            data: {
+              attemptId,
+              questionId,
+              selectedOptionId,
+              isCorrect,
+              answeredAt: new Date(),
+            },
+          });
+        }
+      }
+    }
+
     const session = await this.prisma.examSession.findFirst({
-      where: {
-        userId,
-        assessmentId: attempt.assessmentId,
-        status: ExamStatus.ACTIVE,
-      },
+      where: { userId, assessmentId: attempt.assessmentId, status: ExamStatus.ACTIVE },
     });
 
-    // Re-verify the selected question set to calculate correct percentage
-    const selection = await this.questionSelectionService.selectQuestions(
-      attempt.assessmentId,
-      attempt.id
-    );
+    const questionSet = (session?.questionSet ?? []) as unknown as QuestionSetItem[];
+    const hasQuestionSet = questionSet.length > 0;
 
-    const selectedQuestionIds = selection.questions.map((q) => q.id);
-
-    // Fetch the updated attempt answers
     const finalAnswers = await this.prisma.attemptAnswer.findMany({
       where: { attemptId },
     });
+
+    const selectedQuestionIds = hasQuestionSet
+      ? questionSet.map((q) => q.questionId)
+      : finalAnswers.map((a) => a.questionId);
 
     let correctCount = 0;
     for (const questionId of selectedQuestionIds) {
@@ -275,44 +394,42 @@ export class AttemptService {
       }
     }
 
-    const totalQuestions = selectedQuestionIds.length;
-    let percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+    const totalQuestions = hasQuestionSet
+      ? questionSet.length
+      : Math.max(finalAnswers.length, attempt.assessment.sampleSize);
+    let percentage = this.passFailEvaluationService.calculatePercentage(
+      correctCount,
+      totalQuestions,
+    );
 
-    // Apply proctoring violation deduction if applicable
     if (session && session.scoreDeduction > 0) {
       percentage = Math.max(0, percentage - session.scoreDeduction);
     }
 
     const passed = percentage >= attempt.assessment.passingScore;
 
-    // Update session status to SUBMITTED
+    const finalScore =
+      session && session.scoreDeduction > 0
+        ? Math.max(0, Math.round((percentage / 100) * totalQuestions))
+        : correctCount;
+
     if (session) {
       await this.prisma.examSession.update({
         where: { id: session.id },
-        data: {
-          status: ExamStatus.SUBMITTED,
-          endedAt: new Date(),
-        },
+        data: { status: ExamStatus.SUBMITTED, endedAt: new Date() },
       });
 
-      // Link violation logs to the attempt for historical record
       await this.prisma.violationLog.updateMany({
         where: { sessionId: session.id },
         data: { attemptId: attempt.id },
       });
     }
 
-    // Update final assessment attempt grade
     const updatedAttempt = await this.prisma.assessmentAttempt.update({
       where: { id: attemptId },
-      data: {
-        score: percentage,
-        passed,
-        completedAt: new Date(),
-      },
+      data: { score: finalScore, passed, completedAt: new Date() },
     });
 
-    // Award XP on first pass only
     if (passed) {
       const priorPass = await this.prisma.assessmentAttempt.findFirst({
         where: {
@@ -332,21 +449,196 @@ export class AttemptService {
     await this.auditService.logAction(
       userId,
       AuditAction.ASSESSMENT_PUBLISHED,
-      `Assessment attempt "${attempt.assessment.title}" submitted. Score: ${percentage}%, Passed: ${passed}`
+      `AttemptCompleted: attemptId=${attemptId}, score=${finalScore}, passed=${passed}`,
     );
+
+    if (passed) {
+      // 1. Generate an Assessment-level credential
+      const moduleInfo = await this.prisma.module.findUnique({
+        where: { id: attempt.assessment.moduleId },
+        include: { track: { include: { program: true } } }
+      });
+      if (moduleInfo) {
+        const crypto = require('crypto');
+        const credentialId = crypto.randomUUID();
+        const uniqueCode = crypto.randomBytes(9).toString('hex').toUpperCase();
+
+        // Generate metadata structure for integrity check
+        const metadataObj: any = {
+          createdStatus: 'ACTIVE',
+          createdAt: new Date().toISOString(),
+          statusHistory: [{
+            status: 'ACTIVE',
+            changedBy: userId,
+            reason: 'Automated assessment credential issuance',
+            date: new Date().toISOString(),
+          }],
+          statusReason: '',
+          statusLastChangedAt: new Date().toISOString(),
+        };
+
+        // Generate HMAC signature for tamper-proofing
+        const secret = process.env.CREDENTIAL_SIGNING_SECRET || 'dezai-default-signing-secret-key-32-chars-long';
+        const signPayload = JSON.stringify({
+          credentialId,
+          code: uniqueCode,
+          status: 'ACTIVE',
+          userId,
+          programId: moduleInfo.track.programId,
+          institutionId: moduleInfo.track.program.institutionId || '',
+          metadata: metadataObj
+        });
+        this.logger.warn(`CRITICAL DEBUG attempt.service.ts FORGE signPayload: ${signPayload}`);
+        metadataObj.signature = crypto.createHmac('sha256', secret).update(signPayload).digest('hex');
+
+        await this.prisma.credential.create({
+          data: {
+            id: credentialId,
+            userId,
+            programId: moduleInfo.track.programId,
+            institutionId: moduleInfo.track.program.institutionId,
+            issuedById: userId, // System issued
+            tier: 'FORGE',
+            verificationCode: uniqueCode,
+            verificationUrl: `/verify/${uniqueCode}`,
+            verificationStatus: 'ACTIVE',
+            metadata: JSON.stringify(metadataObj)
+          }
+        });
+      }
+
+      // 2. Check for Program-level credential eligibility
+      await this.checkCredentialEligibility(userId, attempt.assessment.moduleId);
+    }
+
+    await this.awardService.checkAndAward(userId, AchievementCategory.ASSESSMENT);
 
     return {
       success: true,
       attemptId: updatedAttempt.id,
-      score: percentage,
+      score: finalScore,
       passed,
     };
   }
 
-  /**
-   * Get completed attempt result with question breakdown and explanations.
-   */
-  async getAttemptResult(userId: string, attemptId: string) {
+  private async checkCredentialEligibility(
+    userId: string,
+    moduleId: string,
+  ): Promise<void> {
+    const currentModule = await this.prisma.module.findUnique({
+      where: { id: moduleId },
+      include: {
+        track: {
+          include: {
+            program: true,
+            modules: {
+              orderBy: { order: 'asc' },
+              include: {
+                assessments: { select: { id: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!currentModule || !currentModule.track) return;
+
+    const track = currentModule.track;
+    const allModules = track.modules;
+
+    const maxOrder = Math.max(...allModules.map((m) => m.order));
+    if (currentModule.order !== maxOrder) return;
+
+    for (const mod of allModules) {
+      if (mod.assessments.length === 0) continue;
+
+      const passedAssessment = await this.prisma.assessmentAttempt.findFirst({
+        where: {
+          userId,
+          assessmentId: { in: mod.assessments.map((a) => a.id) },
+          passed: true,
+          completedAt: { not: null },
+        },
+      });
+
+      if (!passedAssessment) return;
+    }
+
+    const programId = track.program.id;
+    const trackId = track.id;
+
+    // Generate unique code and ID
+    const crypto = require('crypto');
+    const credentialId = crypto.randomUUID();
+    const uniqueCode = crypto.randomBytes(9).toString('hex').toUpperCase();
+
+    // Generate metadata structure for integrity check
+    const metadataObj: any = {
+      createdStatus: 'ACTIVE',
+      createdAt: new Date().toISOString(),
+      statusHistory: [{
+        status: 'ACTIVE',
+        changedBy: userId,
+        reason: 'Initial credential issuance',
+        date: new Date().toISOString(),
+      }],
+      statusReason: '',
+      statusLastChangedAt: new Date().toISOString(),
+    };
+
+    // Generate HMAC signature for tamper-proofing
+    const secret = process.env.CREDENTIAL_SIGNING_SECRET || 'dezai-default-signing-secret-key-32-chars-long';
+    const signPayload = JSON.stringify({
+      credentialId,
+      code: uniqueCode,
+      status: 'ACTIVE',
+      userId,
+      programId,
+      institutionId: track.program.institutionId || '',
+      metadata: metadataObj
+    });
+    this.logger.warn(`CRITICAL DEBUG attempt.service.ts signPayload: ${signPayload}`);
+    metadataObj.signature = crypto.createHmac('sha256', secret).update(signPayload).digest('hex');
+
+    // Create credential directly in DB
+    const credential = await this.prisma.credential.create({
+      data: {
+        id: credentialId,
+        userId,
+        programId,
+        institutionId: track.program.institutionId,
+        issuedById: userId, // Self-issued for prototype or system ID
+        tier: 'CITADEL',
+        verificationCode: uniqueCode,
+        verificationUrl: `/verify/${uniqueCode}`,
+        verificationStatus: 'ACTIVE',
+        metadata: JSON.stringify(metadataObj)
+      }
+    });
+
+    await this.prisma.notification.create({
+      data: {
+        userId,
+        title: 'You earned a credential!',
+        message: 'You have passed all assessments in the track. Your credential has been issued.',
+        type: 'CREDENTIAL',
+        read: false,
+      },
+    });
+
+    await this.auditService.logAction(
+      userId,
+      'CREDENTIAL_ISSUED',
+      `Credential "${credential.verificationCode}" (ID: ${credential.id}) issued to user ${userId} for program ${programId}`,
+    );
+  }
+
+  async getAttemptResult(
+    userId: string,
+    attemptId: string,
+    userRole?: UserRole,
+  ): Promise<GetAttemptResultResponseDto> {
     const attempt = await this.prisma.assessmentAttempt.findUnique({
       where: { id: attemptId },
       include: {
@@ -362,78 +654,238 @@ export class AttemptService {
           },
         },
         attemptAnswers: {
-          include: {
-            selectedOption: true,
-          },
+          include: { selectedOption: true },
         },
       },
     });
 
-    if (!attempt || attempt.userId !== userId) {
-      throw new NotFoundException("Attempt not found");
+    if (!attempt) {
+      throw new NotFoundException('Attempt not found');
+    }
+
+    if (userRole === UserRole.FACULTY) {
+      await this.assessmentService.validateAssessmentFacultyOwnership(
+        attempt.assessmentId,
+        userId,
+      );
+    } else if (attempt.userId !== userId) {
+      throw new ForbiddenException('You can only view your own attempt results');
     }
 
     if (!attempt.completedAt) {
-      throw new BadRequestException("Attempt is not completed yet");
+      throw new BadRequestException('Attempt is not completed yet');
     }
 
-    // Reconstruct selected questions in identical order using the seed (attempt.id)
-    const selection = await this.questionSelectionService.selectQuestions(
-      attempt.assessmentId,
-      attempt.id
+    const session = await this.prisma.examSession.findFirst({
+      where: {
+        userId,
+        assessmentId: attempt.assessmentId,
+        status: { in: [ExamStatus.SUBMITTED, ExamStatus.TERMINATED] },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const questionSet = (session?.questionSet ?? []) as unknown as QuestionSetItem[];
+    const totalQuestions = questionSet.length > 0
+      ? questionSet.length
+      : Math.max(attempt.attemptAnswers.length, attempt.assessment.sampleSize);
+    const timeTaken = Math.floor(
+      (new Date(attempt.completedAt).getTime() -
+        new Date(attempt.startedAt).getTime()) /
+      1000,
     );
 
-    const breakdown = selection.questions.map((q) => {
-      const savedAns = attempt.attemptAnswers.find((a) => a.questionId === q.id);
-      const dbQuestion = attempt.assessment.questionBank.questions.find(
-        (dbQ) => dbQ.id === q.id
-      );
-      const correctOption = dbQuestion?.options.find((o) => o.isCorrect);
+    const questions = (questionSet.length > 0 ? questionSet.map((q) => ({
+        questionId: q.questionId,
+        questionText: q.text,
+      })) : attempt.attemptAnswers.map((a) => ({
+        questionId: a.questionId,
+        questionText: null as string | null,
+      }))).map((meta) => {
+        const savedAns = attempt.attemptAnswers.find((a) => a.questionId === meta.questionId);
+        const dbQuestion = attempt.assessment.questionBank.questions.find(
+          (dbQ) => dbQ.id === meta.questionId,
+        );
+        const correctOption = dbQuestion?.options.find((o) => o.isCorrect);
+        const isCorrect = savedAns ? savedAns.selectedOptionId === correctOption?.id : false;
 
+        return {
+          questionId: meta.questionId,
+          questionText: meta.questionText ?? dbQuestion?.text ?? 'Unknown question',
+          selectedOptionId: savedAns?.selectedOptionId ?? null,
+          selectedOptionText: savedAns?.selectedOption?.text ?? null,
+          isCorrect,
+          correctOptionId: correctOption?.id ?? '',
+          correctOptionText: correctOption?.text ?? '',
+          options: (dbQuestion?.options ?? []).map((o) => ({
+            id: o.id,
+            text: o.text,
+          })),
+        };
+      });
+
+    const score = questions.filter((q) => q.isCorrect).length;
+    const rawPercentage = Math.round((score / totalQuestions) * 100);
+    const deduction = session?.scoreDeduction ?? 0;
+    const effectivePercentage = Math.max(0, rawPercentage - deduction);
+    const effectiveScore = deduction > 0
+      ? Math.max(0, Math.round((effectivePercentage / 100) * totalQuestions))
+      : score;
+
+    return {
+      attemptId: attempt.id,
+      assessmentTitle: attempt.assessment.title,
+      score: effectiveScore,
+      percentage: effectivePercentage,
+      passed: effectivePercentage >= attempt.assessment.passingScore,
+      passingScore: attempt.assessment.passingScore,
+      totalQuestions,
+      timeTaken,
+      startedAt: attempt.startedAt,
+      completedAt: attempt.completedAt,
+      questions,
+    };
+  }
+
+  async getAttemptHistory(
+    assessmentId: string,
+    userId: string,
+    userRole?: UserRole,
+  ): Promise<AttemptHistoryResponseDto> {
+    const assessment = await this.prisma.assessment.findUnique({
+      where: { id: assessmentId },
+      select: { id: true, title: true, sampleSize: true },
+    });
+
+    if (!assessment) {
+      throw new NotFoundException('Assessment not found');
+    }
+
+    const where: Record<string, unknown> = {
+      assessmentId,
+      completedAt: { not: null },
+    };
+
+    if (!userRole || userRole === UserRole.STUDENT) {
+      where.userId = userId;
+    }
+
+    const attempts = await this.prisma.assessmentAttempt.findMany({
+      where,
+      orderBy: { startedAt: 'desc' },
+    });
+
+    const attemptDtos = attempts.map((a) => {
+      const percentage =
+        a.score > assessment.sampleSize
+          ? a.score
+          : this.passFailEvaluationService.calculatePercentage(
+              a.score,
+              assessment.sampleSize,
+            );
       return {
-        questionId: q.id,
-        text: q.text,
-        category: q.category,
-        options: q.options,
-        selectedOptionId: savedAns?.selectedOptionId || null,
-        selectedOptionText: savedAns?.selectedOption?.text || null,
-        correctOptionId: correctOption?.id || null,
-        correctOptionText: correctOption?.text || null,
-        isCorrect: savedAns ? savedAns.isCorrect : false,
-        explanation: dbQuestion?.category
-          ? `Concept category: ${dbQuestion.category}. Review this topic to master the question context.`
-          : "Standard assessment answer explanation.",
+        attemptId: a.id,
+        score: a.score,
+        percentage,
+        passed: a.passed,
+        startedAt: a.startedAt,
+        completedAt: a.completedAt,
       };
     });
 
     return {
-      success: true,
-      attemptId: attempt.id,
-      assessmentTitle: attempt.assessment.title,
-      score: attempt.score,
-      passed: attempt.passed,
-      startedAt: attempt.startedAt,
-      completedAt: attempt.completedAt,
-      breakdown,
+      assessmentId: assessment.id,
+      assessmentTitle: assessment.title,
+      totalAttempts: attemptDtos.length,
+      attempts: attemptDtos,
     };
   }
 
-  /**
-   * Return attempt history for an assessment.
-   */
-  async getAttemptHistory(userId: string, assessmentId: string) {
+  async getMyHistory(userId: string): Promise<MyHistoryResponseDto> {
     const attempts = await this.prisma.assessmentAttempt.findMany({
-      where: {
-        userId,
-        assessmentId,
-        completedAt: { not: null },
+      where: { userId },
+      include: {
+        assessment: {
+          include: {
+            module: { select: { title: true } },
+          },
+        },
       },
-      orderBy: { startedAt: "desc" },
+      orderBy: { startedAt: 'desc' },
     });
 
+    const attemptDtos = attempts.map((a) => {
+      const percentage =
+        a.score > a.assessment.sampleSize
+          ? a.score
+          : this.passFailEvaluationService.calculatePercentage(
+              a.score,
+              a.assessment.sampleSize,
+            );
+      return {
+        attemptId: a.id,
+        assessmentId: a.assessmentId,
+        assessmentTitle: a.assessment.title,
+        moduleTitle: a.assessment.module.title,
+        score: a.score,
+        percentage,
+        passed: a.passed,
+        startedAt: a.startedAt,
+        completedAt: a.completedAt,
+      };
+    });
+
+    return { userId, attempts: attemptDtos };
+  }
+
+  async getAttemptStatus(
+    assessmentId: string,
+    userId: string,
+  ): Promise<AttemptStatusResponseDto> {
+    const assessment = await this.prisma.assessment.findUnique({
+      where: { id: assessmentId },
+    });
+
+    if (!assessment) {
+      throw new NotFoundException('Assessment not found');
+    }
+
+    const attempts = await this.prisma.assessmentAttempt.findMany({
+      where: { userId, assessmentId },
+    });
+
+    const activeAttempt = attempts.find((a) => !a.completedAt);
+    const completedAttempts = attempts.filter((a) => a.completedAt !== null);
+    const attemptsUsed = completedAttempts.length;
+    const attemptsRemaining = Math.max(0, assessment.maxAttempts - attemptsUsed);
+
+    let bestScore: number | null = null;
+    let bestPercentage: number | null = null;
+    let everPassed = false;
+
+    if (completedAttempts.length > 0) {
+      bestScore = Math.max(...completedAttempts.map((a) => a.score));
+      bestPercentage =
+        bestScore > assessment.sampleSize
+          ? bestScore
+          : this.passFailEvaluationService.calculatePercentage(
+              bestScore,
+              assessment.sampleSize,
+            );
+      everPassed = completedAttempts.some((a) => a.passed);
+    }
+
     return {
-      success: true,
-      attempts,
+      assessmentId,
+      attemptsUsed,
+      attemptsRemaining,
+      maxAttempts: assessment.maxAttempts,
+      hasActiveAttempt: !!activeAttempt,
+      activeAttemptId: activeAttempt?.id ?? null,
+      canAttempt: !activeAttempt && attemptsRemaining > 0 && !everPassed,
+      bestScore,
+      bestPercentage,
+      everPassed,
     };
   }
 }
