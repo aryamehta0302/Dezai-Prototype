@@ -190,26 +190,30 @@ export class NotificationsService {
     }
 
     // Fetch filtered notifications (newest first)
-    const notifications = await this.prisma.notification.findMany({
-      where: whereClause,
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        title: true,
-        message: true,
-        type: true,
-        actionUrl: true,
-        read: true,
-        archived: true,
-        createdAt: true,
-      },
-    });
+    const notifications = await this.prisma.retryOnWakeup(() =>
+      this.prisma.notification.findMany({
+        where: whereClause,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          title: true,
+          message: true,
+          type: true,
+          actionUrl: true,
+          read: true,
+          archived: true,
+          createdAt: true,
+        },
+      }),
+    );
 
     // Always compute unread badge count (non-archived unread notifications)
     // This is independent of the current filter so the badge is always accurate
-    const unreadCount = await this.prisma.notification.count({
-      where: { userId, read: false, archived: false },
-    });
+    const unreadCount = await this.prisma.retryOnWakeup(() =>
+      this.prisma.notification.count({
+        where: { userId, read: false, archived: false },
+      }),
+    );
 
     const shaped: NotificationDto[] = notifications.map((n) => ({
       id: n.id,
@@ -242,9 +246,11 @@ export class NotificationsService {
     notificationId: string,
   ): Promise<NotificationActionResponseDto & { notification: any }> {
     // Step 1: Verify ownership — find notification by id AND userId together
-    const existing = await this.prisma.notification.findFirst({
-      where: { id: notificationId, userId },
-    });
+    const existing = await this.prisma.retryOnWakeup(() =>
+      this.prisma.notification.findFirst({
+        where: { id: notificationId, userId },
+      }),
+    );
 
     if (!existing) {
       throw new NotFoundException(
@@ -253,10 +259,12 @@ export class NotificationsService {
     }
 
     // Step 2: Update read status
-    const updated = await this.prisma.notification.update({
-      where: { id: notificationId },
-      data: { read: true },
-    });
+    const updated = await this.prisma.retryOnWakeup(() =>
+      this.prisma.notification.update({
+        where: { id: notificationId },
+        data: { read: true },
+      }),
+    );
 
     return {
       id: updated.id,
@@ -276,9 +284,11 @@ export class NotificationsService {
     notificationId: string,
   ): Promise<NotificationActionResponseDto> {
     // Ownership check
-    const existing = await this.prisma.notification.findFirst({
-      where: { id: notificationId, userId },
-    });
+    const existing = await this.prisma.retryOnWakeup(() =>
+      this.prisma.notification.findFirst({
+        where: { id: notificationId, userId },
+      }),
+    );
 
     if (!existing) {
       throw new NotFoundException(
@@ -286,11 +296,13 @@ export class NotificationsService {
       );
     }
 
-    const updated = await this.prisma.notification.update({
-      where: { id: notificationId },
-      data: { read: false },
-      select: { id: true, read: true, archived: true },
-    });
+    const updated = await this.prisma.retryOnWakeup(() =>
+      this.prisma.notification.update({
+        where: { id: notificationId },
+        data: { read: false },
+        select: { id: true, read: true, archived: true },
+      }),
+    );
 
     return {
       id: updated.id,
@@ -311,9 +323,11 @@ export class NotificationsService {
     notificationId: string,
   ): Promise<NotificationActionResponseDto> {
     // Ownership check
-    const existing = await this.prisma.notification.findFirst({
-      where: { id: notificationId, userId },
-    });
+    const existing = await this.prisma.retryOnWakeup(() =>
+      this.prisma.notification.findFirst({
+        where: { id: notificationId, userId },
+      }),
+    );
 
     if (!existing) {
       throw new NotFoundException(
@@ -321,11 +335,13 @@ export class NotificationsService {
       );
     }
 
-    const updated = await this.prisma.notification.update({
-      where: { id: notificationId },
-      data: { archived: true },
-      select: { id: true, read: true, archived: true },
-    });
+    const updated = await this.prisma.retryOnWakeup(() =>
+      this.prisma.notification.update({
+        where: { id: notificationId },
+        data: { archived: true },
+        select: { id: true, read: true, archived: true },
+      }),
+    );
 
     return {
       id: updated.id,
@@ -341,14 +357,16 @@ export class NotificationsService {
   //    Silent success if all are already read (updateMany returns count=0).
   // ─────────────────────────────────────────────────────────────────────────
   async markAllAsRead(userId: string): Promise<MarkAllReadResponseDto> {
-    const result = await this.prisma.notification.updateMany({
-      where: {
-        userId,
-        read: false,      // Only update unread ones
-        archived: false,  // Never touch archived notifications
-      },
-      data: { read: true },
-    });
+    const result = await this.prisma.retryOnWakeup(() =>
+      this.prisma.notification.updateMany({
+        where: {
+          userId,
+          read: false,      // Only update unread ones
+          archived: false,  // Never touch archived notifications
+        },
+        data: { read: true },
+      }),
+    );
 
     return {
       updatedCount: result.count,
@@ -361,22 +379,24 @@ export class NotificationsService {
   //    Notification Center can render accurate filter chips and badges.
   // ─────────────────────────────────────────────────────────────────────────
   async getSummary(userId: string): Promise<NotificationSummaryDto> {
-    const [total, unreadCount, archivedCount, grouped] = await Promise.all([
-      this.prisma.notification.count({
-        where: { userId, archived: false },
-      }),
-      this.prisma.notification.count({
-        where: { userId, read: false, archived: false },
-      }),
-      this.prisma.notification.count({
-        where: { userId, archived: true },
-      }),
-      this.prisma.notification.groupBy({
-        by: ['type'],
-        where: { userId, archived: false },
-        _count: { _all: true },
-      }),
-    ]);
+    const [total, unreadCount, archivedCount, grouped] = await this.prisma.retryOnWakeup(() =>
+      Promise.all([
+        this.prisma.notification.count({
+          where: { userId, archived: false },
+        }),
+        this.prisma.notification.count({
+          where: { userId, read: false, archived: false },
+        }),
+        this.prisma.notification.count({
+          where: { userId, archived: true },
+        }),
+        this.prisma.notification.groupBy({
+          by: ['type'],
+          where: { userId, archived: false },
+          _count: { _all: true },
+        }),
+      ]),
+    );
 
     const byType: Record<string, number> = {};
     for (const row of grouped) {
