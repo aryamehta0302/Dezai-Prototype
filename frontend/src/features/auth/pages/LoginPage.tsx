@@ -133,10 +133,10 @@ export function LoginPage() {
               </div>
 
               <PremiumButton
-                type="button"
+                type="submit"
                 disabled={isSubmitting}
                 className="w-full rounded-xl px-4 py-2.5 text-sm"
-                onClick={handleSubmit}
+                
               >
                 {isSubmitting && (
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white shrink-0" />

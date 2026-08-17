@@ -250,11 +250,3 @@ backend/src/
 1. **Code Review**: Every PR must be checked against the Feature Boundary Checklist.
 2. **ESLint**: Configure boundaries to enforce import rules.
 3. **CI**: Add lint rules checking for forbidden import directories.
-
----
-
-## UI Dynamic Styling (Vibe-Coded Architecture)
-The frontend utilizes a time-aware "vibe-coded" dynamic styling architecture for premium user greetings and dashboards. 
-- **Time-Aware Helpers**: UI components (like `EnterpriseDashboardPage` and `WelcomeModal`) compute the current time to derive thematic objects (e.g., `getTimeInfo`).
-- **SaaS Aesthetics**: The system strictly relies on premium SaaS visual languages (crisp white backgrounds `bg-white`, frosted glass `backdrop-blur-md`, subtle blurred accent orbs `bg-blue-50/80 blur-[80px]`, and dynamic Lucide icons instead of emojis).
-- **Graceful Token Parsing**: Backend services and controllers extracting user identities from tokens must defensively parse keys (`id || sub || userId`) due to payload variances in Auth workflows.

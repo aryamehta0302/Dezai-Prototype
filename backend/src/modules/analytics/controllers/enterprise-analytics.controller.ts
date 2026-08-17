@@ -19,20 +19,17 @@ export class EnterpriseAnalyticsController {
 
   @Get('overview')
   getOverview(@Request() req: any, @Query('organizationId') organizationId?: string) {
-    const userId = req.user.id || req.user.sub || req.user.userId;
-    return this.service.getOverview(userId, organizationId);
+    return this.service.getOverview(req.user.sub, organizationId);
   }
 
   @Get('tracks')
   getTrackBreakdown(@Request() req: any, @Query('organizationId') organizationId?: string) {
-    const userId = req.user.id || req.user.sub || req.user.userId;
-    return this.service.getTrackBreakdown(userId, organizationId);
+    return this.service.getTrackBreakdown(req.user.sub, organizationId);
   }
 
   @Get('departments')
   getDepartmentBreakdown(@Request() req: any, @Query('organizationId') organizationId?: string) {
-    const userId = req.user.id || req.user.sub || req.user.userId;
-    return this.service.getDepartmentBreakdown(userId, organizationId);
+    return this.service.getDepartmentBreakdown(req.user.sub, organizationId);
   }
 
   @Get('employees')
@@ -42,9 +39,8 @@ export class EnterpriseAnalyticsController {
     @Query('limit') limit?: string,
     @Query('organizationId') organizationId?: string,
   ) {
-    const userId = req.user.id || req.user.sub || req.user.userId;
     return this.service.getEmployeeCompliance(
-      userId,
+      req.user.sub,
       page ? parseInt(page, 10) : 1,
       limit ? parseInt(limit, 10) : 20,
       organizationId,
@@ -53,7 +49,6 @@ export class EnterpriseAnalyticsController {
 
   @Get('activity')
   getActivityFeed(@Request() req: any, @Query('organizationId') organizationId?: string) {
-    const userId = req.user.id || req.user.sub || req.user.userId;
-    return this.service.getActivityFeed(userId, organizationId);
+    return this.service.getActivityFeed(req.user.sub, organizationId);
   }
 }
