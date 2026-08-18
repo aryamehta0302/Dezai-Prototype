@@ -24,7 +24,6 @@ import { LeaderboardWidget } from "./widgets/LeaderboardWidget";
 import { CredentialWidget } from "./widgets/CredentialWidget";
 import { AssessmentProgressWidget } from "./widgets/AssessmentProgressWidget";
 import { NotificationWidget } from "./widgets/NotificationWidget";
-import { WelcomeModal } from "./welcome-modal";
 
 export function StudentDashboard() {
   const data = useDashboardData();
@@ -55,7 +54,6 @@ export function StudentDashboard() {
 
   return (
     <PageContainer className="py-12 space-y-10 pb-20">
-      <WelcomeModal />
       {/* Header */}
       <div className="flex flex-col lg:flex-row gap-8">
         <div className="flex-1 space-y-2">

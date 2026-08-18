@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -8,17 +8,14 @@ import { toast } from "sonner";
 import { GoogleSignInButton } from "../components/provider-sign-in-button";
 import { PremiumButton } from "@/shared/ui/premium-button";
 import { GraduationCap } from "lucide-react";
-import { useAuthStore } from "@/lib/stores/auth.store";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
-  
 
-
-  const handleSubmit = async (e: React.FormEvent | React.MouseEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password || isSubmitting) return;
     setIsSubmitting(true);
@@ -136,7 +133,6 @@ export function LoginPage() {
                 type="submit"
                 disabled={isSubmitting}
                 className="w-full rounded-xl px-4 py-2.5 text-sm"
-                
               >
                 {isSubmitting && (
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white shrink-0" />
