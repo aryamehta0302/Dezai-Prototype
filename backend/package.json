@@ -5,7 +5,9 @@
   "description": "Dezai AI EdTech Platform — Backend API",
   "scripts": {
     "dev": "nest start --watch",
+    "predev": "prisma generate",
     "build": "nest build",
+    "prebuild": "prisma generate",
     "start": "nest start",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,test}/**/*.ts\"",
@@ -15,7 +17,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "ts-node prisma/seeders/seed.ts",
-    "seed:status": "ts-node prisma/seeders/check-status.ts"
+    "seed:status": "ts-node prisma/seeders/check-status.ts",
+    "seed:notifications": "ts-node prisma/seeders/notifications-seed.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
