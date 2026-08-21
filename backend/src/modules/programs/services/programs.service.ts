@@ -68,9 +68,19 @@ export class ProgramsService {
 
   // ─────────────────── PROGRAMS ───────────────────
 
-  async getPrograms(institutionId?: string) {
+  async getPrograms(institutionId?: string, search?: string, category?: string, tier?: string) {
     return this.prisma.program.findMany({
-      where: institutionId ? { institutionId } : undefined,
+      where: {
+        ...(institutionId ? { institutionId } : {}),
+        ...(category && category !== 'ALL' ? { category: category as ProgramCategory } : {}),
+        ...(tier && tier !== 'ALL' ? { tier: tier as ProgramTier } : {}),
+        ...(search ? {
+          OR: [
+            { title: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+          ],
+        } : {}),
+      },
       include: {
         institution: { select: { name: true, logoUrl: true } },
         faculty: { include: { user: { select: { name: true } } } },
