@@ -3,6 +3,8 @@ export interface ApiProgram {
   title: string;
   description: string;
   thumbnail?: string | null;
+  category: "AI" | "COMMERCE" | "DESIGN";
+  tier: "TIER_1" | "TIER_2" | "TIER_3";
   institutionId: string;
   facultyId: string | null;
   createdAt: string;

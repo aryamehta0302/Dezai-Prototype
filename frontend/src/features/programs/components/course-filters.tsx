@@ -7,7 +7,7 @@ import { Search, X } from "lucide-react";
 import { useDebounce } from "@/shared/hooks/useDebounce";
 import { courseService } from "../services/course.service";
 import type { CourseFilter } from "../types/course.types";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface CourseFiltersProps {
   filters: CourseFilter;
@@ -27,14 +27,15 @@ export function CourseFilters({
   const [searchInput, setSearchInput] = useState(filters.search);
   const debouncedSearch = useDebounce(searchInput, 300);
 
-  const categories = useMemo(() => [
+  const [categories, setCategories] = useState<{ value: string; label: string; count: number }[]>([
     { value: "ALL", label: "All Categories", count: totalResults },
-    { value: "AI", label: "Artificial Intelligence", count: totalResults },
-    { value: "COMMERCE", label: "Commerce & Business", count: 0 },
-    { value: "DESIGN", label: "Design", count: 0 },
-  ], [totalResults]);
+  ]);
 
-  const tiers = useMemo(() => courseService.getTiers(), []);
+  useEffect(() => {
+    courseService.getCategories().then(setCategories);
+  }, []);
+
+  const tiers = courseService.getTiers();
 
   useEffect(() => {
     onFilterChange("search", debouncedSearch);
@@ -58,7 +59,7 @@ export function CourseFilters({
           onValueChange={(v) => onFilterChange("category", (v ?? "ALL") as CourseFilter["category"])}
         >
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Category" />
+            <SelectValue placeholder="Domain / Major" />
           </SelectTrigger>
           <SelectContent>
             {categories.map((cat) => (
@@ -77,7 +78,7 @@ export function CourseFilters({
             <SelectValue placeholder="Tier" />
           </SelectTrigger>
           <SelectContent>
-            {tiers.map((t) => (
+            {tiers.map((t: { value: string; label: string; description: string }) => (
               <SelectItem key={t.value} value={t.value}>
                 {t.label}
               </SelectItem>

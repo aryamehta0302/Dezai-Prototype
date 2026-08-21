@@ -15,8 +15,8 @@ function buildSlugMap(programs: ApiProgram[]): Map<string, ApiProgram> {
   return map;
 }
 
-function getCategoryFromProgram(_program: ApiProgram): CourseCategory {
-  return CourseCategory.AI;
+function getCategoryFromProgram(program: ApiProgram): CourseCategory {
+  return (program.category as CourseCategory) ?? CourseCategory.AI;
 }
 
 function getTierFromProgram(_program: ApiProgram): CertificateTier {
@@ -92,11 +92,14 @@ export const courseService = {
 
   async getCategories(): Promise<{ value: string; label: string; count: number }[]> {
     const courses = await this.loadPrograms();
+    const aiCount = courses.filter(c => c.category === CourseCategory.AI).length;
+    const commerceCount = courses.filter(c => c.category === CourseCategory.COMMERCE).length;
+    const designCount = courses.filter(c => c.category === CourseCategory.DESIGN).length;
     return [
       { value: "ALL", label: "All Categories", count: courses.length },
-      { value: CourseCategory.AI, label: "Artificial Intelligence", count: courses.length },
-      { value: CourseCategory.COMMERCE, label: "Commerce & Business", count: 0 },
-      { value: CourseCategory.DESIGN, label: "Design", count: 0 },
+      { value: CourseCategory.AI, label: "Artificial Intelligence", count: aiCount },
+      { value: CourseCategory.COMMERCE, label: "Commerce & Business", count: commerceCount },
+      { value: CourseCategory.DESIGN, label: "Design", count: designCount },
     ];
   },
 
