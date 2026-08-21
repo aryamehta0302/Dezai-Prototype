@@ -1,15 +1,25 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { AuditService } from '../../audit/services/audit.service';
+import { NotificationsService } from '../../notifications/services/notifications.service';
 import { AuditAction, EnrollmentStatus, Prisma } from '@prisma/client';
 
 type TxClient = Omit<PrismaService, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'>;
+
+/** Client-side slugifier — mirrored from frontend `shared/utils/slug.ts`. */
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
 
 @Injectable()
 export class EnrollmentService {
   constructor(
     private prisma: PrismaService,
     private auditService: AuditService,
+    private notificationsService: NotificationsService,
   ) { }
 
   /**
@@ -47,6 +57,15 @@ export class EnrollmentService {
       userId,
       AuditAction.ENROLLMENT_CREATED,
       `User ${userId} enrolled in program ${programId} (Enrollment ID: ${enrollment.id})`,
+    );
+
+    // Welcome the student into the course (REMINDER → learning focus)
+    await this.notificationsService.createNotification(
+      userId,
+      'Welcome to your new course',
+      `You are now enrolled in "${program.title}". Pick up where you left off or start the first lesson.`,
+      'REMINDER',
+      `/programs/${slugify(program.title)}`,
     );
 
     return enrollment;
@@ -105,6 +124,14 @@ export class EnrollmentService {
       userId,
       AuditAction.ENROLLMENT_DROPPED,
       `User ${userId} dropped enrollment in program ${programId} — bookmarks, notes, and progress cleaned up`,
+    );
+
+    await this.notificationsService.createNotification(
+      userId,
+      'Course dropped',
+      `You dropped "${enrollment.program.title}". You can re-enroll anytime from the catalog.`,
+      'UPDATE',
+      '/catalog',
     );
 
     return { success: true };

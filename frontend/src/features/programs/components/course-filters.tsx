@@ -27,76 +27,10 @@ export function CourseFilters({
   const [searchInput, setSearchInput] = useState(filters.search);
   const debouncedSearch = useDebounce(searchInput, 300);
 
-  const [categories, setCategories] = useState<{ value: string; label: string; count: number }[]>([
-    { value: "ALL", label: "All Categories", count: totalResults },
-  ]);
-
-  useEffect(() => {
-    courseService.getCategories().then(setCategories);
-  }, []);
-
-  const tiers = courseService.getTiers();
-
-  useEffect(() => {
-    onFilterChange("search", debouncedSearch);
-  }, [debouncedSearch, onFilterChange]);
-
-  return (
-    <div className="space-y-4 border-1 border-[#D1D5DB] rounded-md p-4 shadow-sm bg-white">
-      <div className="relative ">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-subtle" />
-        <Input
-          placeholder="Search courses..."
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <Select
-          value={filters.category as string}
-          onValueChange={(v) => onFilterChange("category", (v ?? "ALL") as CourseFilter["category"])}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Domain / Major" />
-          </SelectTrigger>
-          <SelectContent>
-            {categories.map((cat) => (
-              <SelectItem key={cat.value} value={cat.value}>
-                {cat.label} ({cat.count})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={filters.tier as string}
-          onValueChange={(v) => onFilterChange("tier", (v ?? "ALL") as CourseFilter["tier"])}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Tier" />
-          </SelectTrigger>
-          <SelectContent>
-            {tiers.map((t: { value: string; label: string; description: string }) => (
-              <SelectItem key={t.value} value={t.value}>
-                {t.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={onReset} className="gap-1 text-muted">
-            <X className="h-3 w-3" />
-            Clear
-          </Button>
-        )}
-
-        <span className="ml-auto text-sm text-text-subtle">
-          {totalResults} course{totalResults !== 1 ? "s" : ""}
-        </span>
-      </div>
-    </div>
-  );
-}
+  // Source of truth for filter values lives on the backend via courseService.
+  // Fallback list keeps the UI usable if the request fails or returns empty.
+  const [categories, setCategories] = useState
+    { value: string; label: string; count: number }[]
+  >([
+    { value: "ALL", label: "All Domains", count: totalResults },
+    { value: "AI", label: "Artificial Intelligence",

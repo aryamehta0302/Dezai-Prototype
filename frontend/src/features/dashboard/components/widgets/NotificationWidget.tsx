@@ -62,7 +62,7 @@ export function NotificationWidget() {
 
       {notifications.length > 0 && (
         <Link
-          href="/settings"
+          href="/profile/settings"
           className="block text-xs text-primary hover:underline text-center pt-1"
         >
           View all notifications

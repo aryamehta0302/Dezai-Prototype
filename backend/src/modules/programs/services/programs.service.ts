@@ -6,6 +6,7 @@ import {
 import { PrismaService } from "../../../database/prisma.service";
 import { UserRole, TrackType, AuditAction, ProgramCategory, ProgramTier } from "@prisma/client";
 import { AuditService } from "../../audit/services/audit.service";
+import { NotificationsService } from "../../notifications/services/notifications.service";
 import {
   CreateProgramDto,
   UpdateProgramDto,
@@ -21,7 +22,8 @@ import {
 export class ProgramsService {
   constructor(
     private prisma: PrismaService,
-    private auditService: AuditService
+    private auditService: AuditService,
+    private notificationsService: NotificationsService
   ) { }
 
   // ─────────────────── OWNERSHIP GUARD ───────────────────
@@ -206,6 +208,9 @@ export class ProgramsService {
       AuditAction.PROGRAM_CREATED,
       `Program "${program.title}" (ID: ${program.id}) created by ${userRole}`
     );
+
+    // Fan out a course-release UPDATE to everyone following this program's faculty
+    await this.notificationsService.notifyFollowersOfProgram(program);
 
     return this.getProgramById(program.id);
   }
