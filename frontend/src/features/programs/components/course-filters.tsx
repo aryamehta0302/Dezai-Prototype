@@ -27,60 +27,28 @@ export function CourseFilters({
   const [searchInput, setSearchInput] = useState(filters.search);
   const debouncedSearch = useDebounce(searchInput, 300);
 
-  // Source of truth for filter values lives on the backend via courseService.
-  // Fallback list keeps the UI usable if the request fails or returns empty.
-  const [categories, setCategories] = useState<
-    { value: string; label: string; count: number }[]
-  >([
+  type Category = { value: string; label: string; count: number };
+  const [categories, setCategories] = useState<Category[]>([
     { value: "ALL", label: "All Domains", count: totalResults },
     { value: "AI", label: "Artificial Intelligence", count: 0 },
+    { value: "COMMERCE", label: "Commerce & Business", count: 0 },
+    { value: "DESIGN", label: "Design", count: 0 },
   ]);
 
   useEffect(() => {
-    setSearchInput(filters.search);
-  }, [filters.search]);
+    let cancelled = false;
+    courseService.getCategories().then((cats) => {
+      if (cancelled || cats.length === 0) return;
+      setCategories(cats);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const tiers = courseService.getTiers();
 
   useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const response = await courseService.getCategories();
-
-        if (response?.data && response.data.length > 0) {
-          const mappedCategories = response.data.map((category) => ({
-            value: category.value ?? category.slug ?? category.name,
-            label: category.label ?? category.name,
-            count: category.count ?? 0,
-          }));
-
-          setCategories([
-            { value: "ALL", label: "All Domains", count: totalResults },
-            ...mappedCategories,
-          ]);
-        }
-      } catch {
-        setCategories([
-          { value: "ALL", label: "All Domains", count: totalResults },
-          { value: "AI", label: "Artificial Intelligence", count: 0 },
-        ]);
-      }
-    };
-
-    loadCategories();
-  }, [totalResults]);
-
-  useEffect(() => {
-    if (debouncedSearch !== filters.search) {
-      onFilterChange("search", debouncedSearch);
-    }
-  }, [debouncedSearch, filters.search, onFilterChange]);
-
-  const handleReset = () => {
-    setSearchInput("");
-    onReset();
-  };
-
-  const selectedCategory =
-    categories.find((category) => category.value === filters.category) ?? categories[0];
+    onFilterChange("search", debouncedSearch);
+  }, [debouncedSearch, onFilterChange]);
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm">
@@ -89,9 +57,9 @@ export function CourseFilters({
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search courses"
-            className="pl-9 pr-9"
+            className="pl-9"
           />
           {searchInput && (
             <Button
@@ -108,25 +76,54 @@ export function CourseFilters({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Select
-            value={selectedCategory?.value ?? "ALL"}
-            onValueChange={(value) => onFilterChange("category", value)}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select domain" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((category) => (
-                <SelectItem key={category.value} value={category.value}>
-                  {category.label} {category.count > 0 ? `(${category.count})` : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-muted-foreground">Domain</label>
+            <Select
+              value={filters.category as string}
+              onValueChange={(v) => onFilterChange("category", (v ?? "ALL") as CourseFilter["category"])}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select domain" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat: { value: string; label: string; count: number }) => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    {cat.label} {cat.count > 0 ? `(${cat.count})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Button type="button" variant="outline" onClick={handleReset} disabled={!hasActiveFilters}>
-            Reset
-          </Button>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-muted-foreground">Tier</label>
+            <Select
+              value={filters.tier as string}
+              onValueChange={(v) => onFilterChange("tier", (v ?? "ALL") as CourseFilter["tier"])}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select tier" />
+              </SelectTrigger>
+              <SelectContent>
+                {tiers.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={onReset} className="gap-1 self-end">
+              <X className="h-3 w-3" />
+              Clear
+            </Button>
+          )}
+
+          <span className="ml-auto self-end text-sm text-muted-foreground">
+            {totalResults} course{totalResults !== 1 ? "s" : ""}
+          </span>
         </div>
       </div>
     </div>
