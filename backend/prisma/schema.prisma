@@ -799,7 +799,7 @@ model Organization {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  departments                Organization[]               @ignore
+  Department                 Department[]
   employees                  Employee[]
   orgAdmins                  OrganizationAdmin[]
   enterpriseQuestionBanks    EnterpriseQuestionBank[]
@@ -808,7 +808,6 @@ model Organization {
   enterpriseTemplates        EnterpriseCredentialTemplate[]
   complianceDocuments        ComplianceDocument[]
   complianceGeneratedContent ComplianceGeneratedContent[]
-  Department                 Department[]
 
   @@map("organizations")
 }
