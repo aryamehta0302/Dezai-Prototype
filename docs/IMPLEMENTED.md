@@ -529,7 +529,6 @@ Implemented the backend modules, database schema migrations, and documentation f
 | CREATED | [docs/API/notifications.md](file:///d:/Dezai-Prototype-main/docs/API/notifications.md) |
 | CREATED | [docs/API/leaderboards.md](file:///d:/Dezai-Prototype-main/docs/API/leaderboards.md) |
 
-<<<<<<< HEAD
 ---
 
 ## 12. Sprint 5: Leaderboard Frontend Components (Krish Parmar)
@@ -1086,7 +1085,6 @@ Sprint 8 consumed existing models (`ComplianceAssessmentAttempt`, `EnterpriseCre
 ### Build Verification
 - **Backend:** `nest build` → ✅ 0 errors
 - **Frontend:** `tsc --noEmit` → ✅ 0 errors
-=======
 
 
 ## August 12 — Program Category + Tier (Backend Source of Truth)
@@ -1097,4 +1095,3 @@ Sprint 8 consumed existing models (`ComplianceAssessmentAttempt`, `EnterpriseCre
 - GET /api/programs now returns category + tier per program
 - Frontend filter labels (Domain/Major, Tier) should now use these backend values
   instead of hardcoded strings in course-filters.tsx and course.service.ts
->>>>>>> c37af80 (updated IMPLEMENTED.md)
