@@ -41,7 +41,9 @@ export function CourseFilters({
       if (cancelled || cats.length === 0) return;
       setCategories(cats);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const tiers = courseService.getTiers();
