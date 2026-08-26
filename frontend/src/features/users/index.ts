@@ -6,6 +6,8 @@
 export { ProfileHeaderCard } from "./components/profile-header-card";
 export { ProfileStatBento } from "./components/profile-stat-bento";
 export { ActivityTimeline } from "./components/activity-timeline";
+export { FacultyProfileView } from "./components/faculty-profile-view";
+export { AdminProfileView } from "./components/admin-profile-view";
 
 export { useProfile } from "./hooks/useProfile";
 export { userService } from "./services/user.service";

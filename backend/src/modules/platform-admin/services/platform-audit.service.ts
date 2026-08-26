@@ -19,7 +19,11 @@ export class PlatformAuditService {
     if (filters?.action) where.action = filters.action;
     if (filters?.userRole) where.userRole = filters.userRole;
     if (filters?.search) {
-      where.details = { contains: filters.search, mode: 'insensitive' };
+      where.OR = [
+        { details: { contains: filters.search, mode: 'insensitive' } },
+        { user: { name: { contains: filters.search, mode: 'insensitive' } } },
+        { user: { email: { contains: filters.search, mode: 'insensitive' } } },
+      ];
     }
 
     const [items, total] = await Promise.all([

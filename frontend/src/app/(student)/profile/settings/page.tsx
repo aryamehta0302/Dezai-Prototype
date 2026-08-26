@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { PageContainer } from "@/shared/components/page-container";
@@ -74,7 +74,31 @@ function ProfileSettings() {
   const { user, setUser } = useAuthStore();
   const { data: session, update: updateSession } = useSession();
   const [name, setName] = useState(user?.name || "");
+  const [department, setDepartment] = useState("");
+  const [designation, setDesignation] = useState("");
+  const [institutionName, setInstitutionName] = useState("");
   const [saving, setSaving] = useState(false);
+  const isFaculty = user?.role === "FACULTY";
+
+  useEffect(() => {
+    if (isFaculty) {
+      const token = (session as { accessToken?: string })?.accessToken;
+      if (token) {
+        fetch(`${API}/users/faculty/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data) => {
+            if (data) {
+              if (data.department) setDepartment(data.department);
+              if (data.designation) setDesignation(data.designation);
+              if (data.institution?.name) setInstitutionName(data.institution.name);
+            }
+          })
+          .catch(() => {});
+      }
+    }
+  }, [isFaculty, session]);
 
   const handleSave = async () => {
     if (!name.trim()) { toast.error("Name cannot be empty"); return; }
@@ -82,19 +106,31 @@ function ProfileSettings() {
     try {
       const token = (session as { accessToken?: string })?.accessToken;
       if (!token) throw new Error("No access token");
-      const res = await fetch(`${API}/users/profile`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name }),
-      });
-      if (!res.ok) {
-        const err = await res.text();
-        throw new Error(err || "Failed to update profile");
+
+      if (isFaculty) {
+        const res = await fetch(`${API}/users/faculty/profile`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ name, department, designation }),
+        });
+        if (!res.ok) {
+          const err = await res.text();
+          throw new Error(err || "Failed to update faculty profile");
+        }
+      } else {
+        const res = await fetch(`${API}/users/profile`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ name }),
+        });
+        if (!res.ok) {
+          const err = await res.text();
+          throw new Error(err || "Failed to update profile");
+        }
       }
-      const data = await res.json();
-      setUser({ ...user!, name: data.user?.name || name });
-      await updateSession({ name: data.user?.name || name });
-      toast.success("Profile updated");
+      setUser({ ...user!, name });
+      await updateSession({ name });
+      toast.success("Profile updated successfully");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to update profile");
     } finally { setSaving(false); }
@@ -104,7 +140,9 @@ function ProfileSettings() {
     <div className="rounded-2xl border border-border-light bg-white p-6 sm:p-8 shadow-level-1 space-y-6">
       <div>
         <h2 className="text-lg font-semibold text-on-surface">Profile Information</h2>
-        <p className="text-sm text-muted mt-1">Update your personal details</p>
+        <p className="text-sm text-muted mt-1">
+          {isFaculty ? "Update your instructor and departmental credentials" : "Update your personal details"}
+        </p>
       </div>
       <div className="space-y-4">
         <div className="space-y-1.5">
@@ -125,6 +163,43 @@ function ProfileSettings() {
             className="w-full rounded-xl border border-border-light bg-neutral-50 px-4 py-2.5 text-sm outline-hidden opacity-60 cursor-not-allowed"
           />
         </div>
+
+        {isFaculty && (
+          <>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-on-surface/80">Academic Department</label>
+              <input
+                type="text"
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+                placeholder="e.g. Computer Science & AI"
+                className="w-full rounded-xl border border-border-light bg-neutral-50 px-4 py-2.5 text-sm outline-hidden focus:border-primary focus:bg-white transition-all duration-200"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-on-surface/80">Academic Designation / Title</label>
+              <input
+                type="text"
+                value={designation}
+                onChange={(e) => setDesignation(e.target.value)}
+                placeholder="e.g. Associate Professor"
+                className="w-full rounded-xl border border-border-light bg-neutral-50 px-4 py-2.5 text-sm outline-hidden focus:border-primary focus:bg-white transition-all duration-200"
+              />
+            </div>
+            {institutionName && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-on-surface/80">Affiliated Institution (Read-Only)</label>
+                <input
+                  type="text"
+                  value={institutionName}
+                  disabled
+                  className="w-full rounded-xl border border-border-light bg-neutral-100 px-4 py-2.5 text-sm outline-hidden text-muted cursor-not-allowed"
+                />
+              </div>
+            )}
+          </>
+        )}
+
         <button
           onClick={handleSave}
           disabled={saving}

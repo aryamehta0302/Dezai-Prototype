@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import { PageContainer } from "@/shared/components/page-container";
 import { Input } from "@/shared/ui/input";
@@ -11,26 +12,32 @@ import { StudentTable } from "../components/StudentTable";
 import { MentorAssignmentModal } from "../components/MentorAssignmentModal";
 
 export const StudentManagementPage: React.FC = () => {
+  const searchParams = useSearchParams();
+  const initialSearch = searchParams?.get("search") || searchParams?.get("q") || "";
+
   const [students, setStudents] = useState<StudentEnrollmentDetail[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch);
   const [selectedStudent, setSelectedStudent] = useState<StudentEnrollmentDetail | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const loadStudents = () => {
+  const loadStudents = useCallback((querySearch?: string) => {
     setLoading(true);
+    const activeSearch = querySearch !== undefined ? querySearch : search;
     universityAdminService
-      .getAllStudents({ search: search || undefined })
+      .getAllStudents({ search: activeSearch || undefined })
       .then((data) => {
         setStudents(data || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  };
+  }, [search]);
 
   useEffect(() => {
-    loadStudents();
-  }, []);
+    const q = searchParams?.get("search") || searchParams?.get("q") || "";
+    setSearch(q);
+    loadStudents(q);
+  }, [searchParams]);
 
   const handleOpenMentorModal = (student: StudentEnrollmentDetail) => {
     setSelectedStudent(student);
@@ -52,7 +59,7 @@ export const StudentManagementPage: React.FC = () => {
           onKeyDown={(e) => e.key === "Enter" && loadStudents()}
           className="w-80"
         />
-        <Button onClick={loadStudents} variant="default" size="sm">
+        <Button onClick={() => loadStudents()} variant="default" size="sm">
           <Search className="h-4 w-4 mr-1" />
           Search
         </Button>
@@ -68,7 +75,7 @@ export const StudentManagementPage: React.FC = () => {
         student={selectedStudent}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSuccess={loadStudents}
+        onSuccess={() => loadStudents()}
       />
     </PageContainer>
   );

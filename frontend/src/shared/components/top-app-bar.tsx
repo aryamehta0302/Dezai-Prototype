@@ -7,6 +7,7 @@ import { cn } from "@/shared/utils/cn";
 import { Input } from "@/shared/ui/input";
 import { useNotificationStore } from "@/lib/stores/notification.store";
 import { formatDate } from "@/shared/utils/format";
+import { UserRole } from "@/shared/types/common.types";
 import {
   Search,
   Bell,
@@ -69,6 +70,42 @@ export function TopAppBar({
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotificationStore();
   const unread = unreadCount || notificationCount;
 
+  const getLogoHref = () => {
+    if (!user) return "/";
+    const role = user.role;
+    if (role === UserRole.DEZAI_ADMIN || variant === "admin") return "/admin/dashboard";
+    if (role === UserRole.FACULTY || role === UserRole.UNIVERSITY_ADMIN || variant === "university") return "/university/dashboard";
+    if (role === UserRole.ORGANIZATION_ADMIN || role === UserRole.ORGANIZATION_MANAGER || variant === "enterprise") return "/enterprise/dashboard";
+    if (role === UserRole.EMPLOYEE || variant === "employee") return "/enterprise/credentials";
+    return "/dashboard";
+  };
+
+  const getSearchConfig = () => {
+    const role = user?.role;
+    if (role === UserRole.DEZAI_ADMIN || variant === "admin") {
+      return {
+        placeholder: "Search platform users, institutions...",
+        buildUrl: (q: string) => (q ? `/admin/users?search=${encodeURIComponent(q)}` : "/admin/users"),
+      };
+    }
+    if (role === UserRole.FACULTY || role === UserRole.UNIVERSITY_ADMIN || variant === "university") {
+      return {
+        placeholder: "Search students, faculty...",
+        buildUrl: (q: string) => (q ? `/university/students?search=${encodeURIComponent(q)}` : "/university/students"),
+      };
+    }
+    if (role === UserRole.ORGANIZATION_ADMIN || role === UserRole.ORGANIZATION_MANAGER || variant === "enterprise") {
+      return {
+        placeholder: "Search directory, employees...",
+        buildUrl: (q: string) => (q ? `/enterprise/admin/directory?search=${encodeURIComponent(q)}` : "/enterprise/admin/directory"),
+      };
+    }
+    return {
+      placeholder: "Search courses...",
+      buildUrl: (q: string) => (q ? `/catalog?q=${encodeURIComponent(q)}` : "/catalog"),
+    };
+  };
+
   const getNav = () => {
     if (variant === "employee") return employeeNav;
     if (variant === "enterprise") return enterpriseNav;
@@ -77,25 +114,25 @@ export function TopAppBar({
   };
 
   const nav = getNav();
+  const searchConfig = getSearchConfig();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-white">
       <div className="mx-auto flex h-[72px] max-w-[var(--container-max)] items-center justify-between px-6 sm:px-8 lg:px-12">
         {/* Logo */}
-        <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2.5">
-        <Image 
-        src="/dezai.png"
-        alt="Dezai.ai Logo" 
-        width={70} 
-        height={55} 
-        className="object-contain"
-        />
-
+        <Link href={getLogoHref()} className="flex items-center gap-2.5">
+          <Image 
+            src="/dezai.png"
+            alt="Dezai.ai Logo" 
+            width={70} 
+            height={55} 
+            className="object-contain"
+          />
         </Link>
 
         {/* Desktop Nav */}
-        {/* {user && nav.length > 0 && (
-          <nav className="hidden md:flex items-center gap-1">
+        {user && nav.length > 0 && (
+          <nav className="hidden md:flex items-center gap-8 ml-6">
             {nav.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
               return (
@@ -103,42 +140,19 @@ export function TopAppBar({
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-2 rounded-xl px-4 h-11 text-sm font-medium transition-colors",
+                    "flex items-center gap-2.5 py-1.5 text-sm transition-all border-b-[3px]",
                     isActive
-                      ? "bg-primary-container text-primary"
-                      : "text-secondary hover:bg-surface-low hover:text-on-surface"
+                      ? "text-primary font-bold border-credential-gold"  // Navy text & Gold underline
+                      : "text-slate-500 font-medium border-transparent hover:text-[#0F172A]" // Clean inactive state
                   )}
                 >
-                  <item.icon className="h-4 w-4" />
+                  <item.icon className={cn("h-4 w-4", isActive ? "stroke-[2.5px]" : "stroke-2")} />
                   {item.label}
                 </Link>
               );
             })}
           </nav>
-        )} */}
-        {/* Desktop Nav */}
-{user && nav.length > 0 && (
-  <nav className="hidden md:flex items-center gap-8 ml-6">
-    {nav.map((item) => {
-      const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-      return (
-        <Link
-          key={item.href}
-          href={item.href}
-          className={cn(
-            "flex items-center gap-2.5 py-1.5 text-sm transition-all border-b-[3px]",
-            isActive
-              ? "text-primary font-bold border-credential-gold"  // Navy text & Gold underline
-              : "text-slate-500 font-medium border-transparent hover:text-[#0F172A]" // Clean inactive state
-          )}
-        >
-          <item.icon className={cn("h-4 w-4", isActive ? "stroke-[2.5px]" : "stroke-2")} />
-          {item.label}
-        </Link>
-      );
-    })}
-  </nav>
-)}
+        )}
 
         {/* Search */}
         {user && (
@@ -147,7 +161,7 @@ export function TopAppBar({
             onSubmit={(e) => {
               e.preventDefault();
               const q = searchQuery.trim();
-              router.push(q ? `/catalog?q=${encodeURIComponent(q)}` : "/catalog");
+              router.push(searchConfig.buildUrl(q));
             }}
             className="relative hidden md:block"
           >
@@ -156,7 +170,7 @@ export function TopAppBar({
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search courses..."
+              placeholder={searchConfig.placeholder}
               className="h-9 w-44 pl-9 lg:w-64"
             />
           </form>

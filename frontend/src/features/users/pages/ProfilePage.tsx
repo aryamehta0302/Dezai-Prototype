@@ -6,6 +6,8 @@ import { UserRole } from "@/shared/types/common.types";
 import { PageContainer } from "@/shared/components/page-container";
 import { ProfileHeaderCard } from "../components/profile-header-card";
 import { ProfileStatBento } from "../components/profile-stat-bento";
+import { FacultyProfileView } from "../components/faculty-profile-view";
+import { AdminProfileView } from "../components/admin-profile-view";
 import { ActivityChart } from "../components/activity-chart";
 import { ActivityTimeline } from "../components/activity-timeline";
 import { useProfile } from "../hooks/useProfile";
@@ -41,112 +43,112 @@ export function ProfilePage() {
   const { xpEarned, fetchEnrollments, fetchStats } = useEnrollmentStore();
 
   useEffect(() => {
-    fetchEnrollments();
-    fetchStats();
-  }, [fetchEnrollments, fetchStats]);
+    if (user?.role === UserRole.STUDENT || !user?.role) {
+      fetchEnrollments();
+      fetchStats();
+    }
+  }, [fetchEnrollments, fetchStats, user?.role]);
 
   if (!user) return <ProfilePageSkeleton />;
 
   return (
     <PageContainer className="py-12 space-y-8">
-      {(user.role === UserRole.FACULTY) && (
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-primary transition-colors w-fit"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
-        </Link>
-      )}
+      {user.role === UserRole.FACULTY ? (
+        <FacultyProfileView initialUser={user} />
+      ) : user.role === UserRole.DEZAI_ADMIN || user.role === UserRole.UNIVERSITY_ADMIN ? (
+        <AdminProfileView initialUser={user} />
+      ) : (
+        <>
+          <ProfileHeaderCard user={user} />
 
-      <ProfileHeaderCard user={user} />
+          <ProfileStatBento stats={stats} />
 
-      <ProfileStatBento stats={stats} />
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <div className="lg:col-span-1 space-y-6">
+              <LevelProgressCard xp={xpEarned} />
+            </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <div className="lg:col-span-1 space-y-6">
-          <LevelProgressCard xp={xpEarned} />
-        </div>
+            <div className="lg:col-span-3 space-y-6">
+              <Tabs defaultValue="overview" className="w-full">
+                <TabsList variant="line" className="mb-6 gap-6 bg-transparent border-0 p-0 h-auto">
+                  {[
+                    { value: "overview", icon: User, label: "Overview" },
+                    { value: "achievements", icon: Trophy, label: "Achievements" },
+                    { value: "activity", icon: Activity, label: "Activity" },
+                    { value: "credentials", icon: Award, label: "Credentials" },
+                  ].map(({ value, icon: Icon, label }) => (
+                    <TabsTrigger
+                      key={value}
+                      value={value}
+                      className="gap-2 bg-transparent border-0 shadow-none p-0 h-auto data-active:bg-transparent data-active:text-foreground data-active:shadow-none after:hidden"
+                    >
+                      <Icon className="h-4 w-4" /> {label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
 
-        <div className="lg:col-span-3 space-y-6">
-          <Tabs defaultValue="overview" className="w-full">
-            <TabsList variant="line" className="mb-6 gap-6 bg-transparent border-0 p-0 h-auto">
-              {[
-                { value: "overview", icon: User, label: "Overview" },
-                { value: "achievements", icon: Trophy, label: "Achievements" },
-                { value: "activity", icon: Activity, label: "Activity" },
-                { value: "credentials", icon: Award, label: "Credentials" },
-              ].map(({ value, icon: Icon, label }) => (
-                <TabsTrigger
-                  key={value}
-                  value={value}
-                  className="gap-2 bg-transparent border-0 shadow-none p-0 h-auto data-active:bg-transparent data-active:text-foreground data-active:shadow-none after:hidden"
-                >
-                  <Icon className="h-4 w-4" /> {label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+                <TabsContent value="overview" className="space-y-6">
+                  <ActivityChart />
 
-            <TabsContent value="overview" className="space-y-6">
-              <ActivityChart />
+                  <section className="card-elevation p-6 space-y-4">
+                    <h3 className="text-lg font-semibold text-on-surface">About</h3>
+                    <p className="text-sm text-muted leading-relaxed max-w-2xl">
+                      No bio added yet.
+                    </p>
+                  </section>
 
-              <section className="card-elevation p-6 space-y-4">
-                <h3 className="text-lg font-semibold text-on-surface">About</h3>
-                <p className="text-sm text-muted leading-relaxed max-w-2xl">
-                  No bio added yet.
-                </p>
-              </section>
+                  {achievements.length > 0 && (
+                    <section className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-on-surface">Recent Achievements</h3>
+                        <span className="text-xs text-muted">{achievements.filter(a => a.isUnlocked).length} unlocked</span>
+                      </div>
+                      <AchievementGrid achievements={achievements.slice(0, 6)} />
+                    </section>
+                  )}
+                </TabsContent>
 
-              {achievements.length > 0 && (
-                <section className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-on-surface">Recent Achievements</h3>
-                    <span className="text-xs text-muted">{achievements.filter(a => a.isUnlocked).length} unlocked</span>
+                <TabsContent value="achievements">
+                  {achievements.length > 0 ? (
+                    <AchievementGrid achievements={achievements} />
+                  ) : (
+                    <div className="card-elevation py-12 text-center space-y-3">
+                      <Trophy className="h-10 w-10 text-muted/30 mx-auto" />
+                      <p className="text-sm font-medium text-muted">No achievements yet</p>
+                      <p className="text-xs text-muted">Complete courses to start earning badges.</p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="activity">
+                  {activity.length > 0 ? (
+                    <ActivityTimeline activities={activity} />
+                  ) : (
+                    <div className="card-elevation py-12 text-center space-y-3">
+                      <Activity className="h-10 w-10 text-muted/30 mx-auto" />
+                      <p className="text-sm font-medium text-muted">No recent activity</p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="credentials">
+                  <div className="card-elevation py-16 text-center space-y-4">
+                    <div className="h-14 w-14 rounded-full bg-muted/10 flex items-center justify-center mx-auto">
+                      <Award className="h-7 w-7 text-muted" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-on-surface">No credentials yet</p>
+                      <p className="text-xs text-muted max-w-xs mx-auto">
+                        Complete a program and pass the assessment to earn your first credential.
+                      </p>
+                    </div>
                   </div>
-                  <AchievementGrid achievements={achievements.slice(0, 6)} />
-                </section>
-              )}
-            </TabsContent>
-
-            <TabsContent value="achievements">
-              {achievements.length > 0 ? (
-                <AchievementGrid achievements={achievements} />
-              ) : (
-                <div className="card-elevation py-12 text-center space-y-3">
-                  <Trophy className="h-10 w-10 text-muted/30 mx-auto" />
-                  <p className="text-sm font-medium text-muted">No achievements yet</p>
-                  <p className="text-xs text-muted">Complete courses to start earning badges.</p>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="activity">
-              {activity.length > 0 ? (
-                <ActivityTimeline activities={activity} />
-              ) : (
-                <div className="card-elevation py-12 text-center space-y-3">
-                  <Activity className="h-10 w-10 text-muted/30 mx-auto" />
-                  <p className="text-sm font-medium text-muted">No recent activity</p>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="credentials">
-              <div className="card-elevation py-16 text-center space-y-4">
-                <div className="h-14 w-14 rounded-full bg-muted/10 flex items-center justify-center mx-auto">
-                  <Award className="h-7 w-7 text-muted" />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-on-surface">No credentials yet</p>
-                  <p className="text-xs text-muted max-w-xs mx-auto">
-                    Complete a program and pass the assessment to earn your first credential.
-                  </p>
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
-      </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </div>
+        </>
+      )}
     </PageContainer>
   );
 }

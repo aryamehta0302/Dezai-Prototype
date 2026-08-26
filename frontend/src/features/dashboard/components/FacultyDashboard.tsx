@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { 
   LayoutDashboard, 
   BarChart3, 
@@ -21,7 +22,8 @@ import {
   ChevronRight,
   TrendingUp,
   MapPin,
-  Lightbulb
+  Lightbulb,
+  ExternalLink,
 } from "lucide-react";
 import { apiClient } from "@/core/api/client";
 import { useAuthStore } from "@/lib/stores/auth.store";
@@ -1387,7 +1389,16 @@ export function FacultyDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left Column: Form Editor */}
               <div className="bg-white border border-border-light rounded-2xl p-5 shadow-sm lg:col-span-2 space-y-4">
-                <h3 className="text-sm font-extrabold text-on-surface">Update Profile Details</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-extrabold text-on-surface">Update Profile Details</h3>
+                  <Link
+                    href="/profile"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border-light bg-neutral-50 hover:bg-neutral-100 text-2xs font-bold text-primary transition-all shadow-2xs"
+                  >
+                    View Public Profile
+                    <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </div>
                 <form onSubmit={handleSaveProfile} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">

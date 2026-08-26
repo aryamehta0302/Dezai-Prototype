@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { Search, Users, ShieldAlert, UserCheck } from "lucide-react";
 import { PageContainer } from "@/shared/components/page-container";
 import { Button } from "@/shared/ui/button";
@@ -10,25 +11,36 @@ import { platformAdminService } from "../services/platform-admin.service";
 import { PlatformUser } from "../types/platform-admin.types";
 
 export const UserManagementPage: React.FC = () => {
+  const searchParams = useSearchParams();
+  const initialSearch = searchParams?.get("search") || searchParams?.get("q") || "";
+  const initialRole = searchParams?.get("role") || "";
+
   const [users, setUsers] = useState<PlatformUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
+  const [search, setSearch] = useState(initialSearch);
+  const [roleFilter, setRoleFilter] = useState(initialRole);
 
-  const loadUsers = () => {
+  const loadUsers = useCallback((querySearch?: string, queryRole?: string) => {
     setLoading(true);
+    const activeSearch = querySearch !== undefined ? querySearch : search;
+    const activeRole = queryRole !== undefined ? queryRole : roleFilter;
+
     platformAdminService
-      .getAllUsers({ role: roleFilter || undefined, search: search || undefined })
+      .getAllUsers({ role: activeRole || undefined, search: activeSearch || undefined })
       .then((data) => {
         setUsers(data?.items || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  };
+  }, [search, roleFilter]);
 
   useEffect(() => {
-    loadUsers();
-  }, [roleFilter]);
+    const q = searchParams?.get("search") || searchParams?.get("q") || "";
+    const r = searchParams?.get("role") || "";
+    setSearch(q);
+    setRoleFilter(r);
+    loadUsers(q, r);
+  }, [searchParams]);
 
   const handleSuspend = async (id: string) => {
     if (confirm("Are you sure you want to suspend this user?")) {
@@ -70,7 +82,7 @@ export const UserManagementPage: React.FC = () => {
             <option value="DEZAI_ADMIN">Dezai Admin</option>
           </select>
         </div>
-        <Button onClick={loadUsers} variant="default" size="sm">
+        <Button onClick={() => loadUsers()} variant="default" size="sm">
           <Search className="h-4 w-4 mr-1" />
           Search
         </Button>

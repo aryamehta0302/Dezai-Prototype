@@ -18,6 +18,15 @@ export class UsersController {
   ) {}
 
   /**
+   * GET /api/users/profile
+   * Returns role-tailored profile details for any authenticated user.
+   */
+  @Get('profile')
+  async getProfile(@Req() req) {
+    return this.usersService.getUserProfile(req.user.id);
+  }
+
+  /**
    * GET /api/users/faculty/profile
    * Returns the authenticated faculty member's full profile:
    * name, email, institution, department, designation, verificationStatus.

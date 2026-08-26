@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import { PageContainer } from "@/shared/components/page-container";
 import { Input } from "@/shared/ui/input";
@@ -11,17 +12,21 @@ import { FacultyTable } from "../components/FacultyTable";
 import { DepartmentSelect } from "../../departments/components/DepartmentSelect";
 
 export const FacultyManagementPage: React.FC = () => {
+  const searchParams = useSearchParams();
+  const initialSearch = searchParams?.get("search") || searchParams?.get("q") || "";
+
   const [facultyList, setFacultyList] = useState<FacultyMemberDetail[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [departmentFilter, setDepartmentFilter] = useState<string>("");
 
-  const loadFaculty = () => {
+  const loadFaculty = useCallback((querySearch?: string) => {
     setLoading(true);
+    const activeSearch = querySearch !== undefined ? querySearch : search;
     universityAdminService
       .getAllFaculty({
-        search: search || undefined,
+        search: activeSearch || undefined,
         status: statusFilter || undefined,
         departmentId: departmentFilter || undefined,
       })
@@ -30,11 +35,13 @@ export const FacultyManagementPage: React.FC = () => {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  };
+  }, [search, statusFilter, departmentFilter]);
 
   useEffect(() => {
-    loadFaculty();
-  }, [statusFilter, departmentFilter]);
+    const q = searchParams?.get("search") || searchParams?.get("q") || "";
+    setSearch(q);
+    loadFaculty(q);
+  }, [searchParams, statusFilter, departmentFilter]);
 
   const handleApprove = async (id: string) => {
     await universityAdminService.approveFaculty(id);
@@ -96,7 +103,7 @@ export const FacultyManagementPage: React.FC = () => {
             />
           </div>
         </div>
-        <Button onClick={loadFaculty} variant="default" size="sm">
+        <Button onClick={() => loadFaculty()} variant="default" size="sm">
           <Search className="h-4 w-4 mr-1" />
           Filter
         </Button>

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { Search, ScrollText } from "lucide-react";
 import { PageContainer } from "@/shared/components/page-container";
 import { Input } from "@/shared/ui/input";
@@ -9,26 +10,32 @@ import { Button } from "@/shared/ui/button";
 import { platformAdminService } from "../services/platform-admin.service";
 
 export const AuditLogViewerPage: React.FC = () => {
+  const searchParams = useSearchParams();
+  const initialSearch = searchParams?.get("search") || searchParams?.get("q") || "";
+
   const [logs, setLogs] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch);
 
-  const loadLogs = () => {
+  const loadLogs = useCallback((querySearch?: string) => {
     setLoading(true);
+    const activeSearch = querySearch !== undefined ? querySearch : search;
     platformAdminService
-      .getAuditLogs({ search: search || undefined })
+      .getAuditLogs({ search: activeSearch || undefined })
       .then((data) => {
         setLogs(data?.items || []);
         setTotal(data?.total || 0);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  };
+  }, [search]);
 
   useEffect(() => {
-    loadLogs();
-  }, []);
+    const q = searchParams?.get("search") || searchParams?.get("q") || "";
+    setSearch(q);
+    loadLogs(q);
+  }, [searchParams]);
 
   return (
     <PageContainer className="py-8 space-y-6">

@@ -41,6 +41,16 @@ export class UsersService {
             city: true,
           },
         },
+        programs: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            thumbnail: true,
+            createdAt: true,
+            _count: { select: { enrollments: true } },
+          },
+        },
       },
     });
 
@@ -54,9 +64,246 @@ export class UsersService {
       id: facultyMember.id,
       department: facultyMember.department,
       designation: facultyMember.designation,
+      employeeId: facultyMember.employeeId,
+      contactNumber: facultyMember.contactNumber,
       verificationStatus: facultyMember.verificationStatus,
       user: facultyMember.user,
       institution: facultyMember.institution,
+      programs: facultyMember.programs,
+    };
+  }
+
+  // ─────────────────── UNIFIED ROLE-BASED PROFILE ───────────────────
+
+  /**
+   * Get the full role-specific profile for the currently authenticated user.
+   * Tailored for STUDENT, FACULTY, DEZAI_ADMIN, UNIVERSITY_ADMIN, and ENTERPRISE roles.
+   */
+  async getUserProfile(userId: string) {
+    const user: any = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        facultyInfo: {
+          include: {
+            institution: {
+              select: {
+                id: true,
+                name: true,
+                logoUrl: true,
+                country: true,
+                state: true,
+                city: true,
+              },
+            },
+            programs: {
+              select: {
+                id: true,
+                title: true,
+                description: true,
+                thumbnail: true,
+                createdAt: true,
+                _count: { select: { enrollments: true } },
+              },
+            },
+          },
+        },
+        instAdminInfo: {
+          include: {
+            institution: {
+              select: {
+                id: true,
+                name: true,
+                logoUrl: true,
+                country: true,
+                state: true,
+                city: true,
+                _count: {
+                  select: {
+                    faculty: true,
+                    programs: true,
+                    institutionDepartments: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        enrollments: {
+          include: {
+            program: {
+              select: {
+                id: true,
+                title: true,
+                description: true,
+                thumbnail: true,
+              },
+            },
+          },
+        },
+        credentials: {
+          where: { verificationStatus: 'ACTIVE' },
+          include: {
+            program: { select: { id: true, title: true } },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    if (user.role === 'FACULTY' && user.facultyInfo) {
+      const faculty = user.facultyInfo;
+      const totalPrograms = faculty.programs.length;
+      const enrollments = await this.prisma.enrollment.findMany({
+        where: {
+          program: { facultyId: faculty.id },
+        },
+        select: { userId: true },
+        distinct: ['userId'],
+      });
+      const totalStudents = enrollments.length;
+
+      const pendingAttempts = await this.prisma.assessmentAttempt.count({
+        where: {
+          completedAt: null,
+          assessment: {
+            module: {
+              track: {
+                program: { facultyId: faculty.id },
+              },
+            },
+          },
+        },
+      });
+
+      return {
+        role: user.role,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          createdAt: user.createdAt,
+          lastActiveAt: user.lastActiveAt,
+        },
+        faculty: {
+          id: faculty.id,
+          department: faculty.department,
+          designation: faculty.designation,
+          employeeId: faculty.employeeId,
+          contactNumber: faculty.contactNumber,
+          verificationStatus: faculty.verificationStatus,
+        },
+        institution: faculty.institution,
+        programs: faculty.programs,
+        stats: {
+          totalPrograms,
+          totalStudents,
+          pendingAttempts,
+        },
+      };
+    }
+
+    if (user.role === 'DEZAI_ADMIN') {
+      const [totalUsers, totalInstitutions, totalPrograms] = await Promise.all([
+        this.prisma.user.count(),
+        this.prisma.institution.count(),
+        this.prisma.program.count(),
+      ]);
+
+      return {
+        role: user.role,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          createdAt: user.createdAt,
+          lastActiveAt: user.lastActiveAt,
+        },
+        admin: {
+          roleTitle: 'Platform Super Administrator',
+          accessLevel: 'FULL_SYSTEM_ACCESS',
+          status: user.accountStatus,
+          capabilities: [
+            'User & Role Governance',
+            'Institution Onboarding & Approvals',
+            'System Health & Telemetry',
+            'Immutable Audit Trail Inspection',
+            'Platform Settings Configuration',
+          ],
+        },
+        stats: {
+          totalUsers,
+          totalInstitutions,
+          totalPrograms,
+        },
+      };
+    }
+
+    if (user.role === 'UNIVERSITY_ADMIN' && user.instAdminInfo) {
+      const institution = user.instAdminInfo.institution;
+      const studentCount = await this.prisma.user.count({
+        where: {
+          role: 'STUDENT',
+          enrollments: {
+            some: {
+              program: { institutionId: institution.id },
+            },
+          },
+        },
+      });
+
+      return {
+        role: user.role,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          createdAt: user.createdAt,
+          lastActiveAt: user.lastActiveAt,
+        },
+        institution: {
+          id: institution.id,
+          name: institution.name,
+          logoUrl: institution.logoUrl,
+          country: institution.country,
+          state: institution.state,
+          city: institution.city,
+        },
+        stats: {
+          totalFaculty: institution._count?.faculty || 0,
+          totalPrograms: institution._count?.programs || 0,
+          totalDepartments: institution._count?.institutionDepartments || 0,
+          totalStudents: studentCount,
+        },
+      };
+    }
+
+    // Default / Student profile
+    return {
+      role: user.role,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+        xp: user.xp,
+        streakCount: user.streakCount,
+      },
+      enrollments: user.enrollments,
+      credentials: user.credentials,
+      stats: {
+        enrolledCourses: user.enrollments.length,
+        completedCourses: user.enrollments.filter((e) => e.status === 'COMPLETED').length,
+        certificatesEarned: user.credentials.length,
+        xpEarned: user.xp,
+        learningStreak: user.streakCount,
+      },
     };
   }
 
