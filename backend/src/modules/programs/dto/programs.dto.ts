@@ -9,7 +9,7 @@ import {
   Min,
   MaxLength,
 } from "class-validator";
-import { TrackType } from "@prisma/client";
+import { TrackType, ProgramCategory, ProgramTier } from "@prisma/client";
 
 export class CreateProgramDto {
   @IsString()
@@ -20,6 +20,14 @@ export class CreateProgramDto {
   @IsString()
   @IsNotEmpty()
   description: string;
+
+  @IsEnum(ProgramCategory)
+  @IsOptional()
+  category?: ProgramCategory;
+
+  @IsEnum(ProgramTier)
+  @IsOptional()
+  tier?: ProgramTier;
 
   @IsString()
   @IsOptional()
@@ -40,6 +48,13 @@ export class UpdateProgramDto {
   @IsOptional()
   description?: string;
 
+  @IsEnum(ProgramCategory)
+  @IsOptional()
+  category?: ProgramCategory;
+
+  @IsEnum(ProgramTier)
+  @IsOptional()
+  tier?: ProgramTier;
   @IsString()
   @IsOptional()
   thumbnail?: string;

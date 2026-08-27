@@ -10,54 +10,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id            String        @id @default(uuid())
-  email         String        @unique
-  name          String?
-  passwordHash  String?
-  role          UserRole      @default(STUDENT)
-  accountStatus AccountStatus @default(ACTIVE)
-  onboarded     Boolean       @default(false)
-  xp            Int           @default(0)
-  streakCount   Int           @default(0)
-  lastActiveAt  DateTime?     @default(now())
-  suspendedAt   DateTime?
-  suspendedById String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  enrollments    Enrollment[]
-  attempts       AssessmentAttempt[]
-  notes          Note[]
-  bookmarks      Bookmark[]
-  progresses     Progress[]
-  credentials    Credential[]        @relation("EarnedCredentials")
-  issuedCerts    Credential[]        @relation("IssuedCredentials")
-  violations     ViolationLog[]
-  xpTransactions XpTransaction[]
-  chatSessions   ChatSession[]
-  notifications  Notification[]
-  uploads        Upload[]
-  auditLogs      AuditLog[]
-  examSessions   ExamSession[]
-  userAchievements UserAchievement[]
-
-  // ── Sprint: Notification preferences & faculty follows ──
-  notificationPreferences NotificationPreference[]
-  followers               Follow[]                @relation("Following")
-  following               Follow[]                @relation("Follower")
-
-  facultyInfo   FacultyMember?
-  instAdminInfo InstitutionAdmin?
-
-  // ── Sprint 8: Enterprise relations ──
-  organizationAdmin OrganizationAdmin?
-  employee          Employee?
-  complianceAttempts ComplianceAssessmentAttempt[]
-  complianceDocuments ComplianceDocument[]
-
-  @@map("users")
-}
+// ─────────────────── ENUMS ───────────────────
 
 enum UserRole {
   STUDENT
@@ -83,107 +36,10 @@ enum InstitutionStatus {
   SUSPENDED
 }
 
-model Institution {
-  id            String            @id @default(uuid())
-  name          String
-  logoUrl       String?
-  description   String?
-  country       String?
-  state         String?
-  city          String?
-  status        InstitutionStatus @default(PENDING)
-  approvedAt    DateTime?
-  approvedById  String?
-  suspendedAt   DateTime?
-  suspendedById String?
-  contactEmail  String?
-  contactPhone  String?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-
-  faculty                FacultyMember[]
-  admins                 InstitutionAdmin[]
-  programs               Program[]
-  credentials            Credential[]
-  questionBanks          QuestionBank[]
-  credentialTemplates    CredentialTemplate[]
-  institutionDepartments InstitutionDepartment[]
-
-  @@map("institutions")
-}
-
-model InstitutionAdmin {
-  id            String      @id @default(uuid())
-  userId        String      @unique
-  institutionId String
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-
-  @@map("institution_admins")
-}
-
-model FacultyMember {
-  id                 String                    @id @default(uuid())
-  userId             String                    @unique
-  institutionId      String
-  department         String?                   // Legacy free-text — will be dropped after backfill
-  departmentId       String?
-  designation        String?
-  employeeId         String?
-  contactNumber      String?
-  verificationStatus FacultyVerificationStatus @default(PENDING)
-  user               User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  institution        Institution               @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-  institutionDept    InstitutionDepartment?    @relation("InstitutionDepartmentMembers", fields: [departmentId], references: [id])
-  headOfDept         InstitutionDepartment[]   @relation("InstitutionDepartmentHead")
-  programs           Program[]
-  questionBanks      QuestionBank[]
-  mentorFor          Enrollment[]              @relation("MentorAssignments")
-
-  @@map("faculty_members")
-}
-
 enum FacultyVerificationStatus {
   PENDING
   APPROVED
   REJECTED
-}
-
-model Program {
-  id            String   @id @default(uuid())
-  title         String
-  description   String
-  thumbnail     String?
-  institutionId String
-  facultyId     String?
-  departmentId  String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  institution      Institution            @relation(fields: [institutionId], references: [id])
-  faculty          FacultyMember?         @relation(fields: [facultyId], references: [id])
-  institutionDept  InstitutionDepartment? @relation(fields: [departmentId], references: [id])
-  tracks           ProgramTrack[]
-  enrollments      Enrollment[]
-  credentials      Credential[]
-  chatSessions     ChatSession[]
-
-  @@map("programs")
-}
-
-model ProgramTrack {
-  id          String    @id @default(uuid())
-  programId   String
-  type        TrackType
-  title       String?
-  description String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  program Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
-  modules Module[]
-
-  @@map("program_tracks")
 }
 
 enum TrackType {
@@ -197,116 +53,21 @@ enum EnrollmentStatus {
   COMPLETED
 }
 
-model Enrollment {
-  id              String            @id @default(uuid())
-  userId          String
-  programId       String
-  mentorFacultyId String?
-  createdAt       DateTime          @default(now())
-  progress        Int               @default(0)
-  status          EnrollmentStatus  @default(ACTIVE)
-  completedAt     DateTime?
-
-  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  program Program        @relation(fields: [programId], references: [id], onDelete: Cascade)
-  mentor  FacultyMember? @relation("MentorAssignments", fields: [mentorFacultyId], references: [id])
-
-  @@unique([userId, programId])
-  @@map("enrollments")
+enum ContentFormat {
+  MARKDOWN
+  HTML
 }
 
-model Module {
-  id        String   @id @default(uuid())
-  trackId   String
-  title     String
-  order     Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  track        ProgramTrack  @relation(fields: [trackId], references: [id], onDelete: Cascade)
-  lessons      Lesson[]
-  assessments  Assessment[]
-  chatSessions ChatSession[]
-
-  @@map("modules")
+enum ProgramCategory {
+  AI
+  COMMERCE
+  DESIGN
 }
 
-model Lesson {
-  id            String        @id @default(uuid())
-  moduleId      String
-  title         String
-  content       String // Markdown or Rich Text structure
-  contentFormat ContentFormat @default(MARKDOWN)
-  videoUrl      String?
-  order         Int
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  module       Module        @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  progresses   Progress[]
-  bookmarks    Bookmark[]
-  notes        Note[]
-  chatSessions ChatSession[]
-  resources    Resource[]
-
-  @@map("lessons")
-}
-
-model Progress {
-  id          String   @id @default(uuid())
-  userId      String
-  lessonId    String
-  completedAt DateTime @default(now())
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, lessonId])
-  @@map("progresses")
-}
-
-model Bookmark {
-  id        String   @id @default(uuid())
-  userId    String
-  lessonId  String
-  createdAt DateTime @default(now())
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, lessonId])
-  @@map("bookmarks")
-}
-
-model Note {
-  id        String   @id @default(uuid())
-  userId    String
-  lessonId  String
-  content   String
-  updatedAt DateTime @updatedAt
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, lessonId])
-  @@map("notes")
-}
-
-model QuestionBank {
-  id            String   @id @default(uuid())
-  title         String
-  description   String?
-  institutionId String
-  facultyId     String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  institution Institution            @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-  faculty     FacultyMember?         @relation(fields: [facultyId], references: [id])
-  questions   QuestionBankQuestion[]
-  assessments Assessment[]
-
-  @@map("question_banks")
+enum ProgramTier {
+  TIER_1
+  TIER_2
+  TIER_3
 }
 
 enum Difficulty {
@@ -315,120 +76,10 @@ enum Difficulty {
   HARD
 }
 
-model QuestionBankQuestion {
-  id             String             @id @default(uuid())
-  questionBankId String
-  text           String
-  category       String?
-  difficulty     Difficulty         @default(MEDIUM)
-  tags           String[]           @default([])
-  timerSeconds   Int                @default(60) // countdown-per-question limit
-  createdAt      DateTime           @default(now())
-
-  questionBank   QuestionBank     @relation(fields: [questionBankId], references: [id], onDelete: Cascade)
-  options        QuestionOption[]
-  attemptAnswers AttemptAnswer[]
-
-  @@map("question_bank_questions")
-}
-
-model QuestionOption {
-  id         String  @id @default(uuid())
-  questionId String
-  text       String
-  isCorrect  Boolean @default(false)
-
-  question       QuestionBankQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  attemptAnswers AttemptAnswer[]
-
-  @@map("question_options")
-}
-
-model Assessment {
-  id               String   @id @default(uuid())
-  moduleId         String
-  questionBankId   String
-  title            String
-  passingScore     Int      @default(80) // Passing percentage
-  sampleSize       Int      @default(15) // Dynamic question pull count
-  timeLimit        Int      @default(1800) // Total exam duration in seconds (default 30 min)
-  timeLimitEnabled Boolean  @default(true) // Whether time limit is enforced
-  maxAttempts      Int      @default(8) // Max attempts allowed (faculty configurable)
-  allowResume      Boolean  @default(true) // Whether students can resume interrupted attempts
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  module       Module              @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  questionBank QuestionBank        @relation(fields: [questionBankId], references: [id])
-  attempts     AssessmentAttempt[]
-  examSessions ExamSession[]
-
-  @@map("assessments")
-}
-
-model AssessmentAttempt {
-  id           String    @id @default(uuid())
-  userId       String
-  assessmentId String
-  score        Int       @default(0)
-  passed       Boolean   @default(false)
-  startedAt    DateTime  @default(now())
-  completedAt  DateTime?
-
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assessment     Assessment      @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-  violations     ViolationLog[]
-  attemptAnswers AttemptAnswer[]
-
-  @@map("assessment_attempts")
-}
-
-model AttemptAnswer {
-  id               String   @id @default(uuid())
-  attemptId        String
-  questionId       String
-  selectedOptionId String
-  isCorrect        Boolean  @default(false)
-  answeredAt       DateTime @default(now())
-
-  attempt        AssessmentAttempt    @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  question       QuestionBankQuestion @relation(fields: [questionId], references: [id])
-  selectedOption QuestionOption       @relation(fields: [selectedOptionId], references: [id])
-
-  @@map("attempt_answers")
-}
-
-model ViolationLog {
-  id        String        @id @default(uuid())
-  attemptId String?
-  sessionId String?
-  userId    String
-  type      ViolationType
-  loggedAt  DateTime      @default(now())
-
-  attempt AssessmentAttempt? @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  session ExamSession?       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("violation_logs")
-}
-
 enum ViolationType {
   TAB_SWITCH
   COPY_PASTE
   FOCUS_LOSS
-}
-
-model XpTransaction {
-  id        String   @id @default(uuid())
-  userId    String
-  amount    Int
-  type      XpType
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("xp_transactions")
 }
 
 enum XpType {
@@ -436,22 +87,6 @@ enum XpType {
   MODULE_COMPLETION
   ASSESSMENT_PASS
   ACHIEVEMENT_REWARD
-}
-
-model Achievement {
-  id          String              @id @default(uuid())
-  key         String              @unique
-  title       String
-  description String
-  category    AchievementCategory
-  rarity      AchievementRarity
-  icon        String
-  xpReward    Int                 @default(0)
-  criteria    Json
-
-  userAchievements UserAchievement[]
-
-  @@map("achievements")
 }
 
 enum AchievementCategory {
@@ -469,48 +104,16 @@ enum AchievementRarity {
   LEGENDARY
 }
 
-model UserAchievement {
-  id            String    @id @default(uuid())
-  userId        String
-  achievementId String
-  unlockedAt    DateTime  @default(now())
-  progress      Int       @default(0)
-  current       Int       @default(0)
-
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, achievementId])
-  @@map("user_achievements")
-}
-
-model Credential {
-  id                 String         @id @default(uuid())
-  userId             String
-  programId          String
-  institutionId      String
-  issuedById         String
-  tier               CredentialTier
-  verificationCode   String         @unique
-  verificationUrl    String
-  verificationStatus VerifyStatus   @default(ACTIVE)
-  metadata           String?
-  issuedAt           DateTime       @default(now())
-
-  user                 User                @relation("EarnedCredentials", fields: [userId], references: [id], onDelete: Cascade)
-  program              Program             @relation(fields: [programId], references: [id], onDelete: Cascade)
-  institution          Institution         @relation(fields: [institutionId], references: [id])
-  issuer               User                @relation("IssuedCredentials", fields: [issuedById], references: [id])
-  credentialTemplate   CredentialTemplate? @relation(fields: [credentialTemplateId], references: [id])
-  credentialTemplateId String?
-
-  @@map("credentials")
-}
-
 enum CredentialTier {
   FORGE
   ARENA
   CITADEL
+}
+
+enum CredentialType {
+  PROGRAM
+  ASSESSMENT
+  MERIT
 }
 
 enum VerifyStatus {
@@ -519,72 +122,9 @@ enum VerifyStatus {
   SUSPENDED
 }
 
-model Upload {
-  id         String   @id @default(uuid())
-  userId     String
-  fileName   String
-  fileType   String
-  fileUrl    String
-  sizeBytes  Int
-  entityType String? // Optional type of entity attached (e.g. ProgramLogo)
-  entityId   String? // Optional ID of entity attached
-  createdAt  DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("uploads")
-}
-
-model ChatSession {
-  id              String   @id @default(uuid())
-  userId          String
-  title           String?
-  activeProgramId String?
-  activeModuleId  String?
-  activeLessonId  String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  program  Program?      @relation(fields: [activeProgramId], references: [id])
-  module   Module?       @relation(fields: [activeModuleId], references: [id])
-  lesson   Lesson?       @relation(fields: [activeLessonId], references: [id])
-  messages ChatMessage[]
-
-  @@map("chat_sessions")
-}
-
-model ChatMessage {
-  id        String     @id @default(uuid())
-  sessionId String
-  sender    ChatSender
-  content   String
-  createdAt DateTime   @default(now())
-
-  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
-  @@map("chat_messages")
-}
-
 enum ChatSender {
   USER
   MENTOR
-}
-
-model Notification {
-  id        String           @id @default(uuid())
-  userId    String
-  title     String
-  message   String
-  type      NotificationType
-  actionUrl String?
-  read      Boolean          @default(false)
-  archived  Boolean          @default(false)
-  createdAt DateTime         @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("notifications")
 }
 
 enum NotificationType {
@@ -595,31 +135,10 @@ enum NotificationType {
   ANNOUNCEMENT
 }
 
-model NotificationPreference {
-  id        String           @id @default(uuid())
-  userId    String
-  type      NotificationType
-  enabled   Boolean          @default(true)
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, type])
-  @@map("notification_preferences")
-}
-
-model Follow {
-  id          String   @id @default(uuid())
-  followerId  String
-  followingId String
-  createdAt   DateTime @default(now())
-
-  follower  User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
-  following User @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
-
-  @@unique([followerId, followingId])
-  @@map("follows")
+enum ExamStatus {
+  ACTIVE
+  SUBMITTED
+  TERMINATED
 }
 
 enum AuditAction {
@@ -655,7 +174,6 @@ enum AuditAction {
   QUESTION_BANK_CREATED
   QUESTION_BANK_UPDATED
   QUESTION_BANK_DELETED
-  // Sprint 8: Enterprise
   ORGANIZATION_CREATED
   EMPLOYEE_INVITED
   EMPLOYEE_JOINED
@@ -664,7 +182,6 @@ enum AuditAction {
   ENTERPRISE_QUESTION_BANK_UPDATED
   ENTERPRISE_QUESTION_BANK_DELETED
   ENTERPRISE_CREDENTIAL_ISSUED
-  // University Admin & Platform Admin
   DEPARTMENT_CREATED
   DEPARTMENT_UPDATED
   DEPARTMENT_DELETED
@@ -687,51 +204,276 @@ enum AuditAction {
   PLATFORM_SETTINGS_UPDATED
 }
 
-model AuditLog {
-  id        String      @id @default(uuid())
-  userId    String?
-  userHash  String      @default("")
-  userRole  UserRole    @default(STUDENT)
-  action    AuditAction
-  details   String? // Description or JSON metadata
-  ipAddress String?
-  createdAt DateTime    @default(now())
-
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  @@map("audit_logs")
+enum ComplianceTrack {
+  CYBER_SECURITY
+  PASSWORD_SECURITY
+  DATA_PRIVACY
+  SECURE_EMAIL
 }
 
-model ExamSession {
-  id             String     @id @default(uuid())
-  userId         String
-  assessmentId   String
-  status         ExamStatus @default(ACTIVE)
-  warningsCount  Int        @default(0)
-  scoreDeduction Int        @default(0)
-  startedAt      DateTime   @default(now())
-  endedAt        DateTime?
-  lockoutUntil   DateTime?
-  questionSet    Json? // locked, shuffled questions+options for this session
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-
-  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assessment Assessment     @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-  violations ViolationLog[]
-
-  @@map("exam_sessions")
+enum QuestionBankSourceType {
+  MANUAL
+  AI_GENERATED
+  SEEDED_DEMO
 }
 
-enum ExamStatus {
+enum OrgSize {
+  SMALL
+  MEDIUM
+  LARGE
+  ENTERPRISE
+}
+
+enum OrgAdminRole {
+  OWNER
+  ADMIN
+  MANAGER
+}
+
+enum EmploymentStatus {
+  INVITED
   ACTIVE
-  SUBMITTED
-  TERMINATED
+  SUSPENDED
+  OFFBOARDED
 }
 
-enum ContentFormat {
-  MARKDOWN
-  HTML
+enum ComplianceGeneratedContentType {
+  LESSON
+  SUMMARY
+  FLASHCARD
+  ASSESSMENT
+}
+
+// ─────────────────── MODELS ───────────────────
+
+model User {
+  id            String        @id @default(uuid())
+  email         String        @unique
+  name          String?
+  passwordHash  String?
+  role          UserRole      @default(STUDENT)
+  accountStatus AccountStatus @default(ACTIVE)
+  onboarded     Boolean       @default(false)
+  xp            Int           @default(0)
+  streakCount   Int           @default(0)
+  lastActiveAt  DateTime?     @default(now())
+  suspendedAt   DateTime?
+  suspendedById String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  enrollments          Enrollment[]
+  attempts             AssessmentAttempt[]
+  auditLogs            AuditLog[]
+  bookmarks            Bookmark[]
+  chatSessions         ChatSession[]
+  issuedCerts          Credential[]                  @relation("IssuedCredentials")
+  credentials          Credential[]                  @relation("EarnedCredentials")
+  examSessions         ExamSession[]
+  facultyInfo          FacultyMember?
+  instAdminInfo        InstitutionAdmin?
+  notes                Note[]
+  notifications        Notification[]
+  progresses           Progress[]
+  uploads              Upload[]
+  violations           ViolationLog[]
+  xpTransactions       XpTransaction[]
+  userAchievements     UserAchievement[]
+  organizationAdmin    OrganizationAdmin?
+  employee             Employee?
+  complianceAttempts   ComplianceAssessmentAttempt[]
+  complianceDocuments  ComplianceDocument[]
+
+  @@map("users")
+}
+
+model Institution {
+  id            String            @id @default(uuid())
+  name          String
+  logoUrl       String?
+  description   String?
+  country       String?
+  state         String?
+  city          String?
+  status        InstitutionStatus @default(PENDING)
+  approvedAt    DateTime?
+  approvedById  String?
+  suspendedAt   DateTime?
+  suspendedById String?
+  contactEmail  String?
+  contactPhone  String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  faculty                FacultyMember[]
+  admins                 InstitutionAdmin[]
+  programs               Program[]
+  credentials            Credential[]
+  questionBanks          QuestionBank[]
+  credentialTemplates    CredentialTemplate[]
+  institutionDepartments InstitutionDepartment[]
+
+  @@map("institutions")
+}
+
+model InstitutionAdmin {
+  id            String      @id @default(uuid())
+  userId        String      @unique
+  institutionId String
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("institution_admins")
+}
+
+model FacultyMember {
+  id                 String                    @id @default(uuid())
+  userId             String                    @unique
+  institutionId      String
+  department         String?
+  departmentId       String?
+  designation        String?
+  employeeId         String?
+  contactNumber      String?
+  verificationStatus FacultyVerificationStatus @default(PENDING)
+  institution        Institution               @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  user               User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  institutionDept    InstitutionDepartment?    @relation("InstitutionDepartmentMembers", fields: [departmentId], references: [id])
+  headOfDept         InstitutionDepartment[]   @relation("InstitutionDepartmentHead")
+  programs           Program[]
+  questionBanks      QuestionBank[]
+  mentorFor          Enrollment[]              @relation("MentorAssignments")
+
+  @@map("faculty_members")
+}
+
+model Program {
+  id            String          @id @default(uuid())
+  title         String
+  description   String
+  category      ProgramCategory @default(AI)
+  tier          ProgramTier     @default(TIER_1)
+  thumbnail     String?
+  institutionId String
+  facultyId     String?
+  departmentId  String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  institution     Institution            @relation(fields: [institutionId], references: [id])
+  faculty         FacultyMember?         @relation(fields: [facultyId], references: [id])
+  institutionDept InstitutionDepartment? @relation(fields: [departmentId], references: [id])
+  tracks          ProgramTrack[]
+  enrollments     Enrollment[]
+  credentials     Credential[]
+  chatSessions    ChatSession[]
+
+  @@map("programs")
+}
+
+model ProgramTrack {
+  id          String    @id @default(uuid())
+  programId   String
+  type        TrackType
+  title       String?
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  modules     Module[]
+  program     Program   @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@map("program_tracks")
+}
+
+model Enrollment {
+  id              String           @id @default(uuid())
+  userId          String
+  programId       String
+  mentorFacultyId String?
+  createdAt       DateTime         @default(now())
+  progress        Int              @default(0)
+  status          EnrollmentStatus @default(ACTIVE)
+  completedAt     DateTime?
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  program Program        @relation(fields: [programId], references: [id], onDelete: Cascade)
+  mentor  FacultyMember? @relation("MentorAssignments", fields: [mentorFacultyId], references: [id])
+
+  @@unique([userId, programId])
+  @@map("enrollments")
+}
+
+model Module {
+  id           String        @id @default(uuid())
+  trackId      String
+  title        String
+  order        Int
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  assessments  Assessment[]
+  chatSessions ChatSession[]
+  lessons      Lesson[]
+  track        ProgramTrack  @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@map("modules")
+}
+
+model Lesson {
+  id            String        @id @default(uuid())
+  moduleId      String
+  title         String
+  content       String
+  contentFormat ContentFormat @default(MARKDOWN)
+  videoUrl      String?
+  order         Int
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  module       Module        @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  notes        Note[]
+  progresses   Progress[]
+  bookmarks    Bookmark[]
+  chatSessions ChatSession[]
+  resources    Resource[]
+
+  @@map("lessons")
+}
+
+model Progress {
+  id          String   @id @default(uuid())
+  userId      String
+  lessonId    String
+  completedAt DateTime @default(now())
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("progresses")
+}
+
+model Bookmark {
+  id        String   @id @default(uuid())
+  userId    String
+  lessonId  String
+  createdAt DateTime @default(now())
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("bookmarks")
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  userId    String
+  lessonId  String
+  content   String
+  updatedAt DateTime @updatedAt
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("notes")
 }
 
 model Resource {
@@ -743,16 +485,201 @@ model Resource {
   order     Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@map("resources")
 }
 
-enum CredentialType {
-  PROGRAM
-  ASSESSMENT
-  MERIT
+model QuestionBank {
+  id            String                 @id @default(uuid())
+  title         String
+  description   String?
+  institutionId String
+  facultyId     String?
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  assessments   Assessment[]
+  questions     QuestionBankQuestion[]
+  faculty       FacultyMember?         @relation(fields: [facultyId], references: [id])
+  institution   Institution            @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@map("question_banks")
+}
+
+model QuestionBankQuestion {
+  id             String           @id @default(uuid())
+  questionBankId String
+  text           String
+  category       String?
+  difficulty     Difficulty       @default(MEDIUM)
+  tags           String[]         @default([])
+  timerSeconds   Int              @default(60)
+  createdAt      DateTime         @default(now())
+  attemptAnswers AttemptAnswer[]
+  questionBank   QuestionBank     @relation(fields: [questionBankId], references: [id], onDelete: Cascade)
+  options        QuestionOption[]
+
+  @@map("question_bank_questions")
+}
+
+model QuestionOption {
+  id             String               @id @default(uuid())
+  questionId     String
+  text           String
+  isCorrect      Boolean              @default(false)
+  attemptAnswers AttemptAnswer[]
+  question       QuestionBankQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("question_options")
+}
+
+model Assessment {
+  id               String              @id @default(uuid())
+  moduleId         String
+  questionBankId   String
+  title            String
+  passingScore     Int                 @default(80)
+  sampleSize       Int                 @default(15)
+  timeLimit        Int                 @default(1800)
+  timeLimitEnabled Boolean             @default(true)
+  maxAttempts      Int                 @default(8)
+  allowResume      Boolean             @default(true)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  module       Module              @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  questionBank QuestionBank        @relation(fields: [questionBankId], references: [id])
+  attempts     AssessmentAttempt[]
+  examSessions ExamSession[]
+
+  @@map("assessments")
+}
+
+model AssessmentAttempt {
+  id             String          @id @default(uuid())
+  userId         String
+  assessmentId   String
+  score          Int             @default(0)
+  passed         Boolean         @default(false)
+  startedAt      DateTime        @default(now())
+  completedAt    DateTime?
+  assessment     Assessment      @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attemptAnswers AttemptAnswer[]
+  violations     ViolationLog[]
+
+  @@map("assessment_attempts")
+}
+
+model AttemptAnswer {
+  id               String               @id @default(uuid())
+  attemptId        String
+  questionId       String
+  selectedOptionId String
+  isCorrect        Boolean              @default(false)
+  answeredAt       DateTime             @default(now())
+  attempt          AssessmentAttempt    @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question         QuestionBankQuestion @relation(fields: [questionId], references: [id])
+  selectedOption   QuestionOption       @relation(fields: [selectedOptionId], references: [id])
+
+  @@map("attempt_answers")
+}
+
+model ViolationLog {
+  id        String             @id @default(uuid())
+  attemptId String?
+  sessionId String?
+  userId    String
+  type      ViolationType
+  loggedAt  DateTime           @default(now())
+  attempt   AssessmentAttempt? @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  session   ExamSession?       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("violation_logs")
+}
+
+model ExamSession {
+  id             String         @id @default(uuid())
+  userId         String
+  assessmentId   String
+  status         ExamStatus     @default(ACTIVE)
+  warningsCount  Int            @default(0)
+  scoreDeduction Int            @default(0)
+  startedAt      DateTime       @default(now())
+  endedAt        DateTime?
+  lockoutUntil   DateTime?
+  questionSet    Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  assessment     Assessment     @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  violations     ViolationLog[]
+
+  @@map("exam_sessions")
+}
+
+model XpTransaction {
+  id        String   @id @default(uuid())
+  userId    String
+  amount    Int
+  type      XpType
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("xp_transactions")
+}
+
+model Achievement {
+  id          String              @id @default(uuid())
+  key         String              @unique
+  title       String
+  description String
+  category    AchievementCategory
+  rarity      AchievementRarity
+  icon        String
+  xpReward    Int                 @default(0)
+  criteria    Json
+
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String      @id @default(uuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime    @default(now())
+  progress      Int         @default(0)
+  current       Int         @default(0)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model Credential {
+  id                   String              @id @default(uuid())
+  userId               String
+  programId            String
+  institutionId        String
+  issuedById           String
+  tier                 CredentialTier
+  verificationCode     String              @unique
+  verificationUrl      String
+  verificationStatus   VerifyStatus        @default(ACTIVE)
+  metadata             String?
+  issuedAt             DateTime            @default(now())
+  credentialTemplateId String?
+  credentialTemplate   CredentialTemplate? @relation(fields: [credentialTemplateId], references: [id])
+  institution          Institution         @relation(fields: [institutionId], references: [id])
+  issuer               User                @relation("IssuedCredentials", fields: [issuedById], references: [id])
+  program              Program             @relation(fields: [programId], references: [id], onDelete: Cascade)
+  user                 User                @relation("EarnedCredentials", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("credentials")
 }
 
 model CredentialTemplate {
@@ -765,20 +692,89 @@ model CredentialTemplate {
   designUrl     String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
-
-  institution Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-  credentials Credential[]
+  institution   Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  credentials   Credential[]
 
   @@map("credential_templates")
 }
 
-// ── Institution-scoped Department (separate from enterprise Department) ──
+model Upload {
+  id         String   @id @default(uuid())
+  userId     String
+  fileName   String
+  fileType   String
+  fileUrl    String
+  sizeBytes  Int
+  entityType String?
+  entityId   String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("uploads")
+}
+
+model ChatSession {
+  id              String        @id @default(uuid())
+  userId          String
+  title           String?
+  activeProgramId String?
+  activeModuleId  String?
+  activeLessonId  String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  messages        ChatMessage[]
+  lesson          Lesson?       @relation(fields: [activeLessonId], references: [id])
+  module          Module?       @relation(fields: [activeModuleId], references: [id])
+  program         Program?      @relation(fields: [activeProgramId], references: [id])
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id        String      @id @default(uuid())
+  sessionId String
+  sender    ChatSender
+  content   String
+  createdAt DateTime    @default(now())
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType
+  read      Boolean          @default(false)
+  archived  Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model AuditLog {
+  id        String      @id @default(uuid())
+  userId    String?
+  userHash  String      @default("")
+  userRole  UserRole    @default(STUDENT)
+  action    AuditAction
+  details   String?
+  ipAddress String?
+  createdAt DateTime    @default(now())
+  user      User?       @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
 
 model InstitutionDepartment {
   id            String   @id @default(uuid())
   institutionId String
   name          String
-  code          String?               // optional short code e.g. "CS", "ME"
+  code          String?
   description   String?
   headFacultyId String?
   createdAt     DateTime @default(now())
@@ -793,26 +789,24 @@ model InstitutionDepartment {
   @@map("institution_departments")
 }
 
-// Proposed Sprint 8 Enterprise Additions
-
 model Organization {
-  id           String    @id @default(uuid())
+  id           String   @id @default(uuid())
   name         String
   logoUrl      String?
   industry     String?
   size         OrgSize?
   billingEmail String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  departments             Department[]
-  employees               Employee[]
-  orgAdmins               OrganizationAdmin[]
-  enterpriseQuestionBanks EnterpriseQuestionBank[]
-  complianceAssessments   ComplianceAssessment[]
-  enterpriseCredentials   EnterpriseCredential[]
-  enterpriseTemplates     EnterpriseCredentialTemplate[]
-  complianceDocuments     ComplianceDocument[]
+  Department                 Department[]
+  employees                  Employee[]
+  orgAdmins                  OrganizationAdmin[]
+  enterpriseQuestionBanks    EnterpriseQuestionBank[]
+  complianceAssessments      ComplianceAssessment[]
+  enterpriseCredentials      EnterpriseCredential[]
+  enterpriseTemplates        EnterpriseCredentialTemplate[]
+  complianceDocuments        ComplianceDocument[]
   complianceGeneratedContent ComplianceGeneratedContent[]
 
   @@map("organizations")
@@ -830,13 +824,13 @@ model OrganizationAdmin {
 }
 
 model Department {
-  id             String       @id @default(uuid())
+  id             String   @id @default(uuid())
   organizationId String
   name           String
   description    String?
   managerId      String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   organization            Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   manager                 Employee?                @relation("DepartmentManager", fields: [managerId], references: [id], onDelete: SetNull)
@@ -852,7 +846,7 @@ model Employee {
   userId           String           @unique
   organizationId   String
   departmentId     String?
-  managerId        String?          // Employee's direct manager (self-referential)
+  managerId        String?
   title            String?
   employmentStatus EmploymentStatus @default(INVITED)
   invitedAt        DateTime?
@@ -860,12 +854,12 @@ model Employee {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
-  user                  User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization          Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  department            Department?                    @relation("DepartmentEmployees", fields: [departmentId], references: [id], onDelete: SetNull)
-  manager               Employee?                      @relation("EmployeeManager", fields: [managerId], references: [id], onDelete: SetNull)
-  directReports         Employee[]                     @relation("EmployeeManager")
-  managedDepartments    Department[]                   @relation("DepartmentManager")
+  user                  User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization          Organization                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  department            Department?                   @relation("DepartmentEmployees", fields: [departmentId], references: [id], onDelete: SetNull)
+  manager               Employee?                     @relation("EmployeeManager", fields: [managerId], references: [id], onDelete: SetNull)
+  directReports         Employee[]                    @relation("EmployeeManager")
+  managedDepartments    Department[]                  @relation("DepartmentManager")
   complianceAttempts    ComplianceAssessmentAttempt[]
   enterpriseCredentials EnterpriseCredential[]
 
@@ -888,7 +882,7 @@ model EnterpriseQuestionBank {
   department            Department?            @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   questions             EnterpriseQuestion[]
   complianceAssessments ComplianceAssessment[]
-  sourceDocument        ComplianceDocument? @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+  sourceDocument        ComplianceDocument?    @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
 
   @@map("enterprise_question_banks")
 }
@@ -905,7 +899,7 @@ model EnterpriseQuestion {
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @updatedAt
 
-  questionBank   EnterpriseQuestionBank @relation(fields: [questionBankId], references: [id], onDelete: Cascade)
+  questionBank   EnterpriseQuestionBank    @relation(fields: [questionBankId], references: [id], onDelete: Cascade)
   options        EnterpriseQuestionOption[]
   attemptAnswers ComplianceAttemptAnswer[]
 
@@ -918,31 +912,31 @@ model EnterpriseQuestionOption {
   text       String
   isCorrect  Boolean            @default(false)
 
-  question       EnterpriseQuestion     @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  question       EnterpriseQuestion        @relation(fields: [questionId], references: [id], onDelete: Cascade)
   attemptAnswers ComplianceAttemptAnswer[]
 
   @@map("enterprise_question_options")
 }
 
 model ComplianceAssessment {
-  id               String                       @id @default(uuid())
+  id               String          @id @default(uuid())
   organizationId   String
   departmentId     String?
   questionBankId   String
   title            String
   complianceTrack  ComplianceTrack
-  passingScore     Int                          @default(80)
-  sampleSize       Int                          @default(15)
-  timeLimit        Int                          @default(900)
-  timeLimitEnabled Boolean                      @default(true)
-  maxAttempts      Int                          @default(3)
-  allowResume      Boolean                      @default(true)
-  createdAt        DateTime                     @default(now())
-  updatedAt        DateTime                     @updatedAt
+  passingScore     Int             @default(80)
+  sampleSize       Int             @default(15)
+  timeLimit        Int             @default(900)
+  timeLimitEnabled Boolean         @default(true)
+  maxAttempts      Int             @default(3)
+  allowResume      Boolean         @default(true)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
-  organization          Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  department            Department?                 @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  questionBank          EnterpriseQuestionBank      @relation(fields: [questionBankId], references: [id])
+  organization          Organization                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  department            Department?                   @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  questionBank          EnterpriseQuestionBank        @relation(fields: [questionBankId], references: [id])
   attempts              ComplianceAssessmentAttempt[]
   enterpriseCredentials EnterpriseCredential[]
 
@@ -950,72 +944,72 @@ model ComplianceAssessment {
 }
 
 model ComplianceAssessmentAttempt {
-  id               String                     @id @default(uuid())
+  id               String    @id @default(uuid())
   userId           String
   employeeId       String
   assessmentId     String
-  score            Int                        @default(0)
-  percentage       Float                      @default(0.0)
-  passed           Boolean                    @default(false)
-  startedAt        DateTime                   @default(now())
+  score            Int       @default(0)
+  percentage       Float     @default(0.0)
+  passed           Boolean   @default(false)
+  startedAt        DateTime  @default(now())
   completedAt      DateTime?
   timeTakenSeconds Int?
 
-  user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  employee       Employee                 @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  assessment     ComplianceAssessment     @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  user           User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employee       Employee                  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  assessment     ComplianceAssessment      @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
   attemptAnswers ComplianceAttemptAnswer[]
 
   @@map("compliance_assessment_attempts")
 }
 
 model ComplianceAttemptAnswer {
-  id               String                      @id @default(uuid())
+  id               String   @id @default(uuid())
   attemptId        String
   questionId       String
   selectedOptionId String
-  isCorrect        Boolean                     @default(false)
-  answeredAt       DateTime                    @default(now())
+  isCorrect        Boolean  @default(false)
+  answeredAt       DateTime @default(now())
 
-  attempt        ComplianceAssessmentAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  question       EnterpriseQuestion           @relation(fields: [questionId], references: [id])
-  selectedOption EnterpriseQuestionOption     @relation(fields: [selectedOptionId], references: [id])
+  attempt        ComplianceAssessmentAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question       EnterpriseQuestion          @relation(fields: [questionId], references: [id])
+  selectedOption EnterpriseQuestionOption    @relation(fields: [selectedOptionId], references: [id])
 
   @@map("compliance_attempt_answers")
 }
 
 model EnterpriseCredential {
-  id                     String                       @id @default(uuid())
+  id                     String          @id @default(uuid())
   employeeId             String
   organizationId         String
   complianceAssessmentId String?
   complianceTrack        ComplianceTrack
-  verificationCode       String                       @unique
+  verificationCode       String          @unique
   qrCodeUrl              String?
   verificationUrl        String
-  verificationStatus     VerifyStatus                 @default(ACTIVE)
-  issuedAt               DateTime                     @default(now())
+  verificationStatus     VerifyStatus    @default(ACTIVE)
+  issuedAt               DateTime        @default(now())
+  templateId             String?
 
-  employee             Employee                     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  organization         Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  complianceAssessment ComplianceAssessment?        @relation(fields: [complianceAssessmentId], references: [id], onDelete: SetNull)
+  employee             Employee                      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  organization         Organization                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  complianceAssessment ComplianceAssessment?         @relation(fields: [complianceAssessmentId], references: [id], onDelete: SetNull)
   template             EnterpriseCredentialTemplate? @relation(fields: [templateId], references: [id])
-  templateId           String?
 
   @@map("enterprise_credentials")
 }
 
 model EnterpriseCredentialTemplate {
-  id             String                 @id @default(uuid())
-  name           String
+  id              String          @id @default(uuid())
+  name            String
   complianceTrack ComplianceTrack
-  organizationId String
-  designUrl      String?
-  createdAt      DateTime               @default(now())
-  updatedAt      DateTime               @updatedAt
+  organizationId  String
+  designUrl       String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
-  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  credentials    EnterpriseCredential[]
+  organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  credentials  EnterpriseCredential[]
 
   @@map("enterprise_credential_templates")
 }
@@ -1072,44 +1066,3 @@ model ComplianceGeneratedContent {
   @@index([organizationId, documentId, type])
   @@map("compliance_generated_content")
 }
-
-enum ComplianceGeneratedContentType {
-  LESSON
-  SUMMARY
-  FLASHCARD
-  ASSESSMENT
-}
-
-enum ComplianceTrack {
-  CYBER_SECURITY
-  PASSWORD_SECURITY
-  DATA_PRIVACY
-  SECURE_EMAIL
-}
-
-enum QuestionBankSourceType {
-  MANUAL
-  AI_GENERATED
-  SEEDED_DEMO
-}
-
-enum OrgSize {
-  SMALL
-  MEDIUM
-  LARGE
-  ENTERPRISE
-}
-
-enum OrgAdminRole {
-  OWNER
-  ADMIN
-  MANAGER
-}
-
-enum EmploymentStatus {
-  INVITED
-  ACTIVE
-  SUSPENDED
-  OFFBOARDED
-}
-

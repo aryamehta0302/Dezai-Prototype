@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from "@nestjs/common";
 import { PrismaService } from "../../../database/prisma.service";
-import { UserRole, TrackType, AuditAction } from "@prisma/client";
+import { UserRole, TrackType, AuditAction, ProgramCategory, ProgramTier } from "@prisma/client";
 import { AuditService } from "../../audit/services/audit.service";
 import { NotificationsService } from "../../notifications/services/notifications.service";
 import {
@@ -70,9 +70,19 @@ export class ProgramsService {
 
   // ─────────────────── PROGRAMS ───────────────────
 
-  async getPrograms(institutionId?: string) {
+  async getPrograms(institutionId?: string, search?: string, category?: string, tier?: string) {
     return this.prisma.program.findMany({
-      where: institutionId ? { institutionId } : undefined,
+      where: {
+        ...(institutionId ? { institutionId } : {}),
+        ...(category && category !== 'ALL' ? { category: category as ProgramCategory } : {}),
+        ...(tier && tier !== 'ALL' ? { tier: tier as ProgramTier } : {}),
+        ...(search ? {
+          OR: [
+            { title: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+          ],
+        } : {}),
+      },
       include: {
         institution: { select: { name: true, logoUrl: true } },
         faculty: { include: { user: { select: { name: true } } } },
@@ -169,6 +179,8 @@ export class ProgramsService {
       data: {
         title: data.title,
         description: data.description,
+        category: data.category ?? ProgramCategory.AI,
+        tier: data.tier ?? ProgramTier.TIER_1,
         thumbnail: data.thumbnail,
         institutionId,
         facultyId,
@@ -206,7 +218,12 @@ export class ProgramsService {
   async updateProgram(id: string, data: UpdateProgramDto, userId: string) {
     const program = await this.prisma.program.update({
       where: { id },
-      data,
+      data: {
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        tier: data.tier,
+      },
     });
     await this.auditService.logAction(
       userId,

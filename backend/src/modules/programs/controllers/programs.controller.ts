@@ -37,14 +37,19 @@ import {
 @UseGuards(InstitutionActiveGuard)
 @UseInterceptors(FacultyDataAccessInterceptor)
 export class ProgramsController {
-  constructor(private readonly programsService: ProgramsService) {}
+  constructor(private readonly programsService: ProgramsService) { }
 
   // ─────────────────── PROGRAMS ───────────────────
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  async getAllPrograms(@Query("institutionId") institutionId?: string) {
-    const programs = await this.programsService.getPrograms(institutionId);
+  async getAllPrograms(
+    @Query("institutionId") institutionId?: string,
+    @Query("search") search?: string,
+    @Query("category") category?: string,
+    @Query("tier") tier?: string,
+  ) {
+    const programs = await this.programsService.getPrograms(institutionId, search, category, tier);
     return { success: true, programs };
   }
 
